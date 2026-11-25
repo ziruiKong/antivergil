@@ -516,28 +516,93 @@ const NAV = [
 
 const AUTH_REQUIRED_VIEWS = new Set(["rankings", "analysis", "history", "instructor", "department", "me"]);
 
-function authViewHash(id) {
-  if (id === "instructor") return `#/instructor/${encodeURIComponent(state.instructorName)}`;
-  if (id === "department") return `#/department/${encodeURIComponent(state.departmentCode)}`;
-  if (id === "search") return `#/search${searchHash() ? `?${searchHash()}` : ""}`;
-  return `#/${id}`;
+const VIEW_PATHS = {
+  browse: "/browse/",
+  rankings: "/rankings/",
+  analysis: "/enrollment/",
+  planner: "/planner/",
+  calendar: "/calendar/",
+  map: "/map/",
+  history: "/history/",
+  me: "/account/",
+  search: "/search/",
+  instructor: "/instructor/",
+  department: "/department/",
+};
+
+const PATH_VIEWS = {
+  browse: "browse",
+  rankings: "rankings",
+  ranking: "rankings",
+  enrollment: "analysis",
+  analysis: "analysis",
+  planner: "planner",
+  calendar: "calendar",
+  map: "map",
+  history: "history",
+  account: "me",
+  me: "me",
+  search: "search",
+  instructor: "instructor",
+  department: "department",
+};
+
+const VIEW_TITLES = {
+  browse: "Browse",
+  rankings: "Ranking",
+  analysis: "Enrollment",
+  planner: "Plan",
+  calendar: "Calendar",
+  map: "Map",
+  history: "History",
+  me: "Account",
+  search: "Search",
+  instructor: "Instructor",
+  department: "Department",
+};
+
+function routeSlug(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-function redirectToLogin(nextHash = location.hash) {
-  const next = `${location.pathname}${location.search}${nextHash || "#/browse"}`;
-  location.assign(`login.html?next=${encodeURIComponent(next)}`);
+function authViewPath(id) {
+  const base = VIEW_PATHS[id] || VIEW_PATHS.browse;
+  if (id === "instructor") {
+    const name = routeSlug(state.instructorName);
+    return `${base}${name ? `?name=${name}` : ""}`;
+  }
+  if (id === "department") {
+    const code = String(state.departmentCode || "").trim().toUpperCase();
+    return `${base}${code ? `?code=${encodeURIComponent(code)}` : ""}`;
+  }
+  if (id === "search") {
+    const query = searchHash();
+    return `${base}${query ? `?${query}` : ""}`;
+  }
+  return base;
 }
 
-function requireAuthenticated(nextHash = location.hash) {
+function redirectToLogin(nextPath) {
+  const next = nextPath || `${location.pathname}${location.search}`;
+  try { sessionStorage.setItem("antivergil-next", next || "/browse/"); } catch { /* ignore storage errors */ }
+  location.assign("/login/");
+}
+
+function requireAuthenticated(nextPath) {
   if (authUser) return true;
-  redirectToLogin(nextHash);
+  redirectToLogin(nextPath);
   return false;
 }
 
 const viewStack = [];
 let viewIndex = -1;
 
-function viewEntryFromHash(hash = location.hash) {
+function legacyViewEntry(hash = location.hash) {
   const rawHash = String(hash || "").replace(/^#\/?/, "");
   const [path, queryString = ""] = rawHash.split("?");
   const params = new URLSearchParams(queryString);
@@ -551,6 +616,9 @@ function viewEntryFromHash(hash = location.hash) {
       departmentCode: null,
     };
   }
+  if (path === "me") {
+    return { view: "me", q: null, dept: null, instructor: null, instructorName: null, departmentCode: null };
+  }
   if (path.startsWith("instructor/")) {
     let instructorName = "";
     try { instructorName = decodeURIComponent(path.slice("instructor/".length)); } catch { /* ignore malformed hashes */ }
@@ -563,6 +631,50 @@ function viewEntryFromHash(hash = location.hash) {
   }
   const view = NAV.some(([id]) => id === path) ? path : "browse";
   return { view, q: null, dept: null, instructor: null, instructorName: null, departmentCode: null };
+}
+
+function pathViewEntry(pathname = location.pathname, search = location.search) {
+  const segments = String(pathname || "/").split("/").filter(Boolean);
+  const first = (segments[0] || "").toLowerCase();
+  const view = PATH_VIEWS[first] || "browse";
+  const params = new URLSearchParams(search || "");
+  if (view === "search") {
+    return {
+      view,
+      q: params.get("q") || "",
+      dept: params.get("dept") || "all",
+      instructor: params.get("instructor") || "",
+      instructorName: null,
+      departmentCode: null,
+    };
+  }
+  if (view === "instructor") {
+    const encodedName = params.get("name") || segments.slice(1).join(" ");
+    let instructorName = encodedName || "";
+    try { instructorName = decodeURIComponent(instructorName); } catch { /* keep raw value */ }
+    return { view, q: null, dept: null, instructor: null, instructorName, departmentCode: null };
+  }
+  if (view === "department") {
+    const encodedCode = params.get("code") || segments.slice(1).join("/");
+    let departmentCode = encodedCode || "";
+    try { departmentCode = decodeURIComponent(departmentCode); } catch { /* keep raw value */ }
+    return {
+      view,
+      q: null,
+      dept: null,
+      instructor: null,
+      instructorName: null,
+      departmentCode: String(departmentCode).trim().toUpperCase(),
+    };
+  }
+  return { view, q: null, dept: null, instructor: null, instructorName: null, departmentCode: null };
+}
+
+function currentViewEntry() {
+  const isLegacyDocument = /\/index\.html?$/i.test(location.pathname) || location.pathname === "/";
+  if (isLegacyDocument && /^#\/?/.test(location.hash)) return legacyViewEntry(location.hash);
+  if (location.pathname === "/" && !location.hash) return pathViewEntry("/browse/");
+  return pathViewEntry();
 }
 
 function sameViewEntry(a, b) {
@@ -587,7 +699,7 @@ function restoreViewEntry(entry) {
 }
 
 function handleBrowserPopState(event) {
-  const entry = event.state?.appViewEntry || viewEntryFromHash();
+  const entry = event.state?.appViewEntry || currentViewEntry();
   restoreViewEntry(entry);
   let index = viewStack.findIndex((item) => sameViewEntry(item, entry));
   if (index < 0) {
@@ -630,8 +742,8 @@ function goView(delta) {
 
 function switchView(id, opts = {}) {
   $("#mobile-nav-toggle").setAttribute("aria-expanded", "false");
-  const targetHash = authViewHash(id);
-  if (AUTH_REQUIRED_VIEWS.has(id) && !requireAuthenticated(targetHash)) return;
+  const targetPath = authViewPath(id);
+  if (AUTH_REQUIRED_VIEWS.has(id) && !requireAuthenticated(targetPath)) return;
   $$(".view").forEach((v) => (v.hidden = v.id !== `view-${id}`));
   const navId = id === "search" || id === "instructor" || id === "department" ? "browse" : id;
   $$(".nav button").forEach((button) => {
@@ -641,13 +753,14 @@ function switchView(id, opts = {}) {
     else button.removeAttribute("aria-current");
   });
   $("#mobile-nav-label").textContent = NAV.find(([view]) => view === navId)?.[1] || "Menu";
+  document.title = `${VIEW_TITLES[id] || "Planner"} · Antivergil`;
   if (id !== "browse") setFilterPanelOpen(false);
   document.body.dataset.view = id;
   if (id === "calendar") {
     document.body.style.overflow = "auto";
     document.documentElement.style.overflow = "";
   }
-  let historyEntry = viewStack[viewIndex] || viewEntryFromHash(targetHash);
+  let historyEntry = viewStack[viewIndex] || currentViewEntry();
   if (!opts.noHistory) {
     historyEntry = {
       view: id,
@@ -667,14 +780,15 @@ function switchView(id, opts = {}) {
     historyEntry = viewStack[viewIndex] || historyEntry;
   }
   updateViewNav();
-  const hash = targetHash;
+  const nextUrl = targetPath;
   if (!opts.noBrowserHistory) {
     const currentState = history.state && typeof history.state === "object" ? history.state : {};
     const nextState = { ...currentState, appViewEntry: historyEntry };
-    if (opts.replaceHistory || opts.noHistory || location.hash === hash) {
-      history.replaceState(nextState, "", hash);
+    const currentUrl = `${location.pathname}${location.search}`;
+    if (opts.replaceHistory || opts.noHistory || currentUrl === nextUrl) {
+      history.replaceState(nextState, "", nextUrl);
     } else {
-      history.pushState(nextState, "", hash);
+      history.pushState(nextState, "", nextUrl);
     }
   }
   if (id === "map") { initMap(); refreshMapPins(); }
@@ -1561,7 +1675,7 @@ function openCourse(code, sectionId = "") {
       try {
         sessionStorage.setItem(PENDING_COURSE_KEY, JSON.stringify({ code, sectionId }));
       } catch { /* ignore storage errors */ }
-      redirectToLogin(location.hash);
+      redirectToLogin();
     });
     $("#modal").hidden = false;
     document.body.style.overflow = "hidden";
@@ -5554,8 +5668,7 @@ function googleConfigured() {
 
 function openAccount() {
   if (!authUser) {
-    const next = `${location.pathname}${location.search}${location.hash}`;
-    location.assign(`login.html?next=${encodeURIComponent(next)}`);
+    redirectToLogin();
     return;
   }
   switchView("me");
@@ -5716,7 +5829,7 @@ function renderMyPage() {
   const host = $("#my-page");
   if (!host) return;
   if (!authUser) {
-    redirectToLogin("#/me");
+    redirectToLogin("/account/");
     return;
   }
   const ratings = Object.entries(readCourseRatings())
@@ -6478,8 +6591,7 @@ function bindGlobal() {
   });
   const joinCta = $("#floating-plan-cta");
   joinCta?.addEventListener("click", () => {
-    const next = `${location.pathname}${location.search}${location.hash}`;
-    location.assign(`login.html?next=${encodeURIComponent(next)}`);
+    redirectToLogin();
   });
   $("#floating-plan-later")?.addEventListener("click", () => {
     const banner = $("#floating-cta-banner");
@@ -6851,33 +6963,13 @@ function init() {
     state.taken = ["COMS W1004"];
     renderTaken();
   }
-  const rawHash = (location.hash || "").replace(/^#\/?/, "");
-  const [initialView, queryStr] = rawHash.split("?");
-  let initial = NAV.some(([id]) => id === initialView) ? initialView : "browse";
-  if (initialView === "search") {
-    const params = new URLSearchParams(queryStr || "");
-    state.searchQuery = params.get("q") || "";
-    state.searchDepartment = params.get("dept") || "all";
-    state.searchInstructor = params.get("instructor") || "";
-    initial = "search";
-  }
-  if (initialView.startsWith("instructor/")) {
-    try {
-      state.instructorName = decodeURIComponent(initialView.slice("instructor/".length));
-      initial = "instructor";
-    } catch {
-      state.instructorName = "";
-    }
-  }
-  if (initialView.startsWith("department/")) {
-    try {
-      state.departmentCode = decodeURIComponent(initialView.slice("department/".length)).trim().toUpperCase();
-      initial = "department";
-    } catch {
-      state.departmentCode = "";
-    }
-  }
-  switchView(initial, { replaceHistory: true });
+  const initialEntry = currentViewEntry();
+  const legacyQuery = (location.hash || "").includes("?")
+    ? location.hash.slice(location.hash.indexOf("?") + 1)
+    : "";
+  const queryStr = location.search.replace(/^\?/, "") || legacyQuery;
+  restoreViewEntry(initialEntry);
+  switchView(initialEntry.view, { replaceHistory: true });
   if (authUser) {
     try {
       const pendingCourse = JSON.parse(sessionStorage.getItem(PENDING_COURSE_KEY) || "null");

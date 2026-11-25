@@ -1,5 +1,6 @@
 const STORAGE_KEY = "cu-auth-user";
-const DEFAULT_NEXT = "index.html#/browse";
+const NEXT_KEY = "antivergil-next";
+const DEFAULT_NEXT = "/browse/";
 const $ = (selector) => document.querySelector(selector);
 
 function isColumbiaEmail(value) {
@@ -7,11 +8,15 @@ function isColumbiaEmail(value) {
 }
 
 function safeNextPath() {
-  const raw = new URLSearchParams(location.search).get("next");
+  let raw = "";
+  try { raw = sessionStorage.getItem(NEXT_KEY) || ""; } catch (_) {}
+  if (!raw) raw = new URLSearchParams(location.search).get("next") || "";
   if (!raw) return DEFAULT_NEXT;
   try {
     const next = new URL(raw, location.href);
-    if (next.origin === location.origin) return `${next.pathname}${next.search}${next.hash}`;
+    if (next.origin === location.origin && !/^\/login\/?$/i.test(next.pathname)) {
+      return `${next.pathname}${next.search}`;
+    }
   } catch (_) {}
   return DEFAULT_NEXT;
 }
@@ -45,7 +50,9 @@ function completeSignIn(user) {
     return;
   }
   saveUser({ ...user, email: user.email.toLowerCase() });
-  location.assign(safeNextPath());
+  const next = safeNextPath();
+  try { sessionStorage.removeItem(NEXT_KEY); } catch (_) {}
+  location.assign(next);
 }
 
 function localSignIn(email) {
@@ -149,7 +156,7 @@ async function startGoogleLogin() {
   }
 }
 
-$("#login-back").href = safeNextPath();
+$("#login-back").href = "/home/";
 $("#google-login").addEventListener("click", startGoogleLogin);
 $("#email-form input").addEventListener("input", clearStatus);
 $("#email-form").addEventListener("submit", (event) => {

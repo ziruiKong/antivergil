@@ -4,8 +4,34 @@
   <script>
     let visitor = true;
     try { visitor = !JSON.parse(localStorage.getItem("cu-auth-user")); } catch {}
-    if (visitor) location.replace("home.html" + location.search + location.hash);
+    if (visitor) {
+      const legacy = String(location.hash || "").replace(/^#\/?/, "").split("?")[0];
+      const legacyPaths = {
+        browse: "/browse/",
+        rankings: "/rankings/",
+        analysis: "/enrollment/",
+        planner: "/planner/",
+        calendar: "/calendar/",
+        map: "/map/",
+        history: "/history/",
+        me: "/account/",
+        search: "/search/",
+        instructor: "/instructor/",
+        department: "/department/",
+      };
+      const isDocumentRoot = location.pathname === "/" || /\/index\.html?$/i.test(location.pathname);
+      const next = isDocumentRoot
+        ? (legacy ? `${legacyPaths[legacy.split("/")[0]] || "/browse/"}${location.search}` : "/home/")
+        : `${location.pathname}${location.search}`;
+      if (next === "/home/" || next === "/") {
+        location.replace("/home/");
+      } else {
+        try { sessionStorage.setItem("antivergil-next", next); } catch {}
+        location.replace("/login/");
+      }
+    }
   </script>
+  <base href="/" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ANTIVERGIL · Columbia Course Planner</title>
@@ -381,6 +407,6 @@
   <script src="data/enrollment-history/index.js"></script>
   <script src="data/maps-config.js"></script>
   <script src="data/auth-config.js?v=20261124-google-login-2"></script>
-  <script src="app.js?v=20261124-mobile-layout-3"></script>
+  <script src="app.js?v=20261125-clean-urls-1"></script>
 </body>
 </html>

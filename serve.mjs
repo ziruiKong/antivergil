@@ -128,6 +128,25 @@ async function getCulpaCourse(code) {
 const server = http.createServer(async (req, res) => {
   let urlPath = decodeURIComponent(req.url.split("?")[0]);
   if (urlPath === "/") urlPath = "/index.html";
+  const cleanPath = urlPath.replace(/\/+$/, "") || "/";
+  if (cleanPath === "/home") urlPath = "/home.html";
+  else if (cleanPath === "/login") urlPath = "/login.html";
+  else if (new Set([
+    "/browse",
+    "/rankings",
+    "/ranking",
+    "/enrollment",
+    "/analysis",
+    "/planner",
+    "/calendar",
+    "/map",
+    "/history",
+    "/account",
+    "/me",
+    "/search",
+    "/instructor",
+    "/department",
+  ]).has(cleanPath)) urlPath = "/index.html";
   if (urlPath === "/api/culpa-course") {
     const requestUrl = new URL(req.url, "http://localhost");
     const code = requestUrl.searchParams.get("code") || "";
