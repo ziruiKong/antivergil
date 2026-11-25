@@ -1794,18 +1794,20 @@ function openCourse(code, sectionId = "") {
   const comp = comparisonFor(c.code);
   body.innerHTML = `
     <div class="m-folder${locked ? " course-detail-locked" : ""}">
+      <div class="m-folder-head">
+        <div class="course-code-label">${esc(c.code)} · Section ${esc(sectionLabel(selected))}</div>
+        <h2>${esc(c.title)}</h2>
+        <div class="m-sub"><button class="m-dept-link" type="button" data-department="${esc(c.deptCode)}">${esc(c.dept)} ↗</button></div>
+        <div class="course-entry-links">
+          <a href="${esc(coursePermalink(c.code, term, callNumber))}">Permalink</a>
+          <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
+          ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button>' : ""}
+        </div>
+        <p id="course-email-status" role="status"></p>
+      </div>
       <div class="m-folder-tabs" role="tablist" aria-label="Course details">
         <button class="m-folder-tab active" type="button" role="tab" id="m-tab-overview" aria-controls="m-panel-overview" aria-selected="true" data-mtab="overview">Overview</button>
         <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" data-mtab="materials">Course materials</button>
-      </div>
-      <div class="m-folder-head">
-        <h2>${esc(c.code)} · ${esc(c.title)}</h2>
-        <div class="m-sub"><button class="m-dept-link" type="button" data-department="${esc(c.deptCode)}">${esc(c.dept)} ↗</button>${c.sections[0].subtitle && c.sections[0].subtitle !== c.title ? " · " + esc(c.sections[0].subtitle) : ""} · Section ${esc(sectionLabel(selected))}</div>
-        <div class="course-entry-links">
-          <a href="${esc(coursePermalink(c.code, term, callNumber))}">Course permalink</a>
-          <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
-          ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button><span id="course-email-status" role="status"></span>' : ""}
-        </div>
       </div>
       <section class="m-folder-panel" id="m-panel-overview" role="tabpanel" aria-labelledby="m-tab-overview" data-mpanel="overview">
         <div class="m-grid">
@@ -1814,6 +1816,7 @@ function openCourse(code, sectionId = "") {
           <div><b>Type</b>${esc([...new Set(c.sections.map((s) => s.type).filter(Boolean))].join(" / ") || "—")}</div>
           <div><b>Instructor</b>${selected.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(selected.instructor)}">${esc(selected.instructor)}</button>` : "TBA"}</div>
         </div>
+        ${an ? renderEnrollAnalysis(selectedCard, an) : ""}
         <details class="m-desc-details">
           <summary>
             <span>Description</span>
@@ -1824,7 +1827,6 @@ function openCourse(code, sectionId = "") {
           </summary>
           <div class="m-desc">${esc(description)}</div>
         </details>
-        ${an ? renderEnrollAnalysis(selectedCard, an) : ""}
         <div class="culpa-review-host" id="culpa-review-host">
           <div class="culpa-review-loading">Loading CULPA reviews…</div>
         </div>

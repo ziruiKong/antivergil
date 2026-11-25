@@ -13799,3 +13799,45 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
 .course-entry-links { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; font-size: 12px; }
 .course-entry-links button { font: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 3px; padding: 4px 7px; cursor: pointer; }
 .course-entry-links button[aria-pressed="true"] { background: #222; color: #fff; }
+
+#modal > .modal:has(.m-folder) {
+  max-width: 790px;
+  border: 1px solid #292924;
+  border-radius: 7px;
+  background: var(--bg, #f4f4f0);
+  box-shadow: none;
+}
+.m-folder-head { margin-bottom: 15px; }
+.course-code-label { margin-bottom: 5px; font-size: 11px; font-weight: 700; color: #595953; }
+.m-folder-head h2 { margin: 0 0 6px; font-size: clamp(19px, 3vw, 25px); line-height: 1.15; overflow-wrap: anywhere; }
+.m-folder .m-folder-tabs {
+  position: static;
+  display: flex;
+  margin: 0 0 14px;
+  padding: 0;
+  gap: 14px;
+  background: transparent;
+  border-bottom: 1px solid #c9c9c1;
+  border-radius: 0;
+}
+.m-folder .m-folder-tabs::after { display: none; }
+.m-folder .m-folder-tab {
+  margin: 0;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #62625a;
+  white-space: nowrap;
+}
+.m-folder .m-folder-tab:is(.active, :hover) { color: #20201d; border-bottom-color: #20201d; background: transparent; }
+#m-panel-overview > .m-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.m-folder .enroll-analysis { border-radius: 5px; box-shadow: none; }
+.course-entry-links a, #course-email-status a { color: inherit; text-underline-offset: 3px; }
+.course-entry-links button:disabled { cursor: default; opacity: .55; }
+#course-email-status { margin: 7px 0 0; color: #595953; font-size: 11px; }
+#course-email-status:empty { display: none; }
+@media (max-width: 600px) {
+  #m-panel-overview > .m-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
