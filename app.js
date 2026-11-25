@@ -1745,11 +1745,21 @@ async function bindEnrollmentAlert(button, status, term, callNumber, code) {
   if (!button || !status || !user || !cloud?.enabled) return;
   function display(active, ready) {
     button.disabled = false;
-    button.textContent = active ? "Turn off email alert" : "Follow by email";
+    button.textContent = active ? "Email alerts on" : "Follow by email";
     button.setAttribute("aria-pressed", String(active));
-    status.textContent = ready
-      ? "Alerts for almost full, full, or reopened seats."
-      : "Email delivery is pending setup.";
+    status.textContent = ready ? "" : "Email delivery pending.";
+  }
+  function showError(error) {
+    if (error.status === 401) {
+      button.hidden = true;
+      const reconnect = document.createElement("a");
+      reconnect.className = "course-email-reconnect";
+      reconnect.href = "/login/?next=" + encodeURIComponent(coursePermalink(code, term, callNumber));
+      reconnect.textContent = "Sign in for email alerts";
+      status.replaceChildren(reconnect);
+    } else {
+      status.textContent = error.message;
+    }
   }
   try {
     const { watches, ready } = await cloud.courseAlerts(user);
@@ -1763,14 +1773,97 @@ async function bindEnrollmentAlert(button, status, term, callNumber, code) {
         display(active, result.ready);
       } catch (error) {
         button.disabled = false;
-        status.textContent = error.message;
-        if (error.status === 401) status.insertAdjacentHTML("beforeend", ' <a href="/login/?next=' + encodeURIComponent(coursePermalink(code, term, callNumber)) + '">Reconnect</a>');
+        showError(error);
       }
     });
   } catch (error) {
-    status.textContent = error.message;
-    if (error.status === 401) status.insertAdjacentHTML("beforeend", ' <a href="/login/?next=' + encodeURIComponent(coursePermalink(code, term, callNumber)) + '">Reconnect</a>');
+    showError(error);
   }
+}
+
+function bindCourseCommunity(host, course, section, files) {
+  if (!host) return;
+  const cloud = window.AntivergilScheduleCloud;
+  const user = authUser;
+  const code = normCode(course);
+  const signIn = () => {
+    host.innerHTML = `<a class="btn ghost" href="/login/?next=${encodeURIComponent(coursePermalink(code, state.term, section))}">Sign in to ${files ? "access files" : "join the discussion"}</a>`;
+  };
+  if (!cloud?.enabled || !user) { signIn(); return; }
+  const call = (method, body, id) => cloud.courseCommunity(user, code, { method, body, id, files });
+  const status = host.querySelector("[role=status]");
+  const list = host.querySelector("[data-community-list]");
+  const form = host.querySelector("form");
+  const field = form.elements.entry;
+  const submit = form.querySelector("[type=submit]");
+  let own = null;
+  function failure(error) {
+    status.textContent = error.status === 401 ? "Reconnect Google to use this section." : error.message;
+    if (error.status === 401) {
+      const link = document.createElement("a");
+      link.href = "/login/?next=" + encodeURIComponent(coursePermalink(code, state.term, section));
+      link.textContent = "Reconnect";
+      status.append(" ", link);
+    }
+  }
+  async function load() {
+    const result = await call("GET");
+    if (files) {
+      list.innerHTML = result.files.map((file) => `<li><button type="button" data-download="${esc(file.id)}">${esc(file.name)}</button>${file.own ? `<button type="button" data-remove="${esc(file.id)}">Remove</button>` : ""}</li>`).join("") || "<li>No files yet.</li>";
+    } else {
+      own = result.own;
+      const comments = own ? [{ ...own, author: "You" }, ...result.comments] : result.comments;
+      list.innerHTML = comments.map((comment) => `<li><strong>${esc(comment.author)}</strong><p>${esc(comment.body)}</p></li>`).join("") || "<li>No comments yet.</li>";
+      if (document.activeElement !== field) field.value = own?.body || "";
+      submit.textContent = own ? "Update comment" : "Post comment";
+      form.querySelector("[data-remove]").hidden = !own;
+    }
+    submit.disabled = false;
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    try {
+      if (files) {
+        const file = field.files[0];
+        if (!file || file.size > 1048576) throw new Error("Choose a PDF up to 1 MB.");
+        const data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(",")[1]);
+          reader.onerror = () => reject(new Error("The file could not be read."));
+          reader.readAsDataURL(file);
+        });
+        await call("PUT", { name: file.name, content: data });
+        form.reset();
+      } else {
+        await call("PUT", { body: field.value });
+      }
+      await load();
+      status.textContent = files ? "PDF uploaded." : "Comment saved.";
+    } catch (error) { failure(error); submit.disabled = false; }
+  });
+  host.addEventListener("click", async (event) => {
+    const action = event.target.closest("[data-remove], [data-download]");
+    if (!action || action.disabled) return;
+    action.disabled = true;
+    try {
+      if (action.hasAttribute("data-remove")) {
+        await call("DELETE", undefined, action.dataset.remove || undefined);
+        await load();
+        status.textContent = files ? "File removed." : "Comment removed.";
+      } else {
+        const file = await call("GET", undefined, action.dataset.download);
+        const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(file.content), (char) => char.charCodeAt(0))], { type: "application/pdf" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      }
+    } catch (error) { failure(error); }
+    finally { action.disabled = false; }
+  });
+  load().catch(failure);
 }
 
 function openCourse(code, sectionId = "") {
@@ -1797,12 +1890,14 @@ function openCourse(code, sectionId = "") {
   const description = (c.sections.find((s) => s.desc)?.desc || "No description available.")
     .replace(/^Description\.\s*/i, "");
   const an = enrollAnalysis(selectedCard);
-  const comp = comparisonFor(c.code);
+  const enrollmentHistory = an ? renderEnrollAnalysis(selectedCard, an) : "";
+  const termComparison = renderComparison(comparisonFor(c.code));
   body.innerHTML = `
     <div class="m-folder${locked ? " course-detail-locked" : ""}">
       <div class="m-folder-tabs" role="tablist" aria-label="Course details">
         <button class="m-folder-tab active" type="button" role="tab" id="m-tab-overview" aria-controls="m-panel-overview" aria-selected="true" data-mtab="overview">Overview</button>
-        <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" tabindex="-1" data-mtab="materials">Sections &amp; materials</button>
+        <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" tabindex="-1" data-mtab="materials">Materials</button>
+        ${enrollmentHistory || termComparison ? '<button class="m-folder-tab" type="button" role="tab" id="m-tab-enrollment" aria-controls="m-panel-enrollment" aria-selected="false" tabindex="-1" data-mtab="enrollment">Enrollment history</button>' : ""}
         <button class="m-folder-tab" type="button" role="tab" id="m-tab-reviews" aria-controls="m-panel-reviews" aria-selected="false" tabindex="-1" data-mtab="reviews">Reviews</button>
       </div>
       <div class="m-folder-head">
@@ -1818,70 +1913,99 @@ function openCourse(code, sectionId = "") {
               <div><b>Capacity</b><strong>${selected.capacity ?? "—"}</strong></div>
               <div><b>Open seats</b><strong>${Number.isFinite(selected.enrolled) && selected.capacity > 0 ? Math.max(0, selected.capacity - selected.enrolled) : "—"}</strong></div>
             </div>
-            <details class="m-desc-details">
-              <summary>
-                <span>Description</span>
-                <span class="m-desc-toggle" aria-hidden="true">
-                  <span class="m-desc-expand">Expand</span>
-                  <span class="m-desc-collapse">Collapse</span>
-                </span>
-              </summary>
-              <div class="m-desc">${esc(description)}</div>
-            </details>
-            ${an ? renderEnrollAnalysis(selectedCard, an) : ""}
-            ${renderComparison(comp)}
+            ${description !== "No description available." ? `
+              <details class="m-desc-details course-disclosure" open>
+                <summary>Description</summary>
+                <div class="m-desc">${esc(description)}</div>
+              </details>` : ""}
           </div>
           <aside class="course-overview-side" aria-label="Section details">
-            <h3>Section at a glance</h3>
             <div class="course-facts">
-              <div><b>Term</b>${esc(termLabel(state.term))}</div>
-              <div><b>Credits</b>${selected.points != null ? selected.points : "—"}</div>
-              <div><b>Type</b>${esc([...new Set(c.sections.map((s) => s.type).filter(Boolean))].join(" / ") || "—")}</div>
+              <div><b>Academic term</b><strong>${esc(termLabel(term))}</strong></div>
+              <div><b>Credits</b><strong>${esc(selected.pointsLabel || (selected.points ?? "—"))}</strong></div>
+              <div><b>Format</b><strong>${esc([selected.type, selected.method].filter(Boolean).join(" · ") || "TBA")}</strong></div>
+              <div><b>Meets</b><strong>${selected.start == null ? "TBA" : esc([(selected.days || []).map((day) => DAY_SHORT[day - 1]).join(" / "), timeRangeLabel(selected.start, selected.end)].filter(Boolean).join(" · "))}</strong></div>
+              ${selected.location ? `<div><b>Location</b><strong>${esc(cleanLocation(selected.location))}</strong></div>` : ""}
               <div><b>Instructor</b>${selected.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(selected.instructor)}">${esc(selected.instructor)}</button>` : "TBA"}</div>
             </div>
             <div class="course-entry-links">
-              <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
+              <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open Vergil ↗</a>
               ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button>' : ""}
             </div>
             <p id="course-email-status" role="status"></p>
           </aside>
         </div>
+        <section class="course-section-details" aria-label="Teaching sections">
+          <div class="m-grid">
+            <div class="m-prereq-cell"><b>Prerequisites</b>${prereqHTML || "None"}</div>
+          </div>
+          <h3 class="section-title m-folder-section-title">Section details</h3>
+          <div class="course-sections-scroll"><table class="sections-table">
+            <thead><tr><th>Section</th><th>Instructor</th><th>Days</th><th>Time</th><th>Location</th><th>Enrolled</th></tr></thead>
+            <tbody>
+            ${c.sections.map((s) => `
+              <tr class="${s.classId === selected.classId ? "selected" : ""}">
+                <td title="${esc(s.classId || "")}"><a href="${esc(coursePermalink(c.code, term, s.callNumber || s.classId))}">${esc(sectionLabel(s) || "—")}</a> · <a href="${esc(vergilSectionURL(term, s.callNumber))}" target="_blank" rel="noopener">Vergil ↗</a></td>
+                <td>${s.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(s.instructor)}">${esc(s.instructor)}</button>` : "TBA"}</td>
+                <td>${esc((s.days || []).map((d) => DAY_MINI[d - 1]).join("/") || "TBA")}</td>
+                <td>${s.start != null ? esc(timeRangeLabel(s.start, s.end)) : "TBA"}</td>
+                <td>${s.location
+                  ? (matchBuilding(s.location)
+                    ? `<button class="loc-link" data-loc="${esc(s.location)}" title="${esc(cleanLocation(s.location))}">${esc(cleanLocation(s.location))}</button>`
+                    : esc(cleanLocation(s.location)))
+                  : "TBA"}</td>
+                <td>${s.enrolled != null ? s.enrolled : "—"}${s.capacity != null ? "/" + s.capacity : ""}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table></div>
+        </section>
       </section>
+      ${enrollmentHistory || termComparison ? `
+        <section class="m-folder-panel" id="m-panel-enrollment" role="tabpanel" aria-labelledby="m-tab-enrollment" data-mpanel="enrollment" hidden>
+          ${enrollmentHistory}
+          ${termComparison}
+        </section>` : ""}
       <section class="m-folder-panel" id="m-panel-reviews" role="tabpanel" aria-labelledby="m-tab-reviews" data-mpanel="reviews" hidden>
-        <div class="culpa-review-host" id="culpa-review-host">
-          <div class="culpa-review-loading">Loading CULPA reviews…</div>
+        <div class="course-review-layout">
+          <section aria-labelledby="course-discussion-title">
+            <h3 id="course-discussion-title">Course discussion</h3>
+            <div id="course-discussion">
+              <form><label for="course-comment">Your comment</label>
+                <textarea id="course-comment" name="entry" maxlength="1000" rows="3" required placeholder="What should other students know?"></textarea>
+                <small>Visible to signed-in students under your name.</small>
+                <div class="community-actions">
+                  <button class="btn primary" type="submit" disabled>Post comment</button>
+                  <button class="btn ghost" type="button" data-remove hidden>Remove comment</button>
+                </div>
+              </form>
+              <p role="status"></p>
+              <ul data-community-list></ul>
+            </div>
+          </section>
+          <aside aria-label="Ratings and external reviews">
+            <div id="course-rating-host"></div>
+            <div class="culpa-review-host" id="culpa-review-host"></div>
+          </aside>
         </div>
-        <div id="course-rating-host"></div>
       </section>
       <section class="m-folder-panel" id="m-panel-materials" role="tabpanel" aria-labelledby="m-tab-materials" data-mpanel="materials" hidden>
-        <div class="m-grid">
-          <div class="m-prereq-cell"><b>Prerequisites</b>${prereqHTML || "None"}</div>
-        </div>
-        <h3 class="section-title m-folder-section-title">Section details</h3>
-        <div class="course-sections-scroll"><table class="sections-table">
-          <thead><tr><th>Section</th><th>Instructor</th><th>Days</th><th>Time</th><th>Location</th><th>Enrolled</th></tr></thead>
-          <tbody>
-          ${c.sections.map((s) => `
-            <tr class="${s.classId === selected.classId ? "selected" : ""}">
-              <td title="${esc(s.classId || "")}"><a href="${esc(coursePermalink(c.code, term, s.callNumber || s.classId))}">${esc(sectionLabel(s) || "—")}</a> · <a href="${esc(vergilSectionURL(term, s.callNumber))}" target="_blank" rel="noopener">Vergil ↗</a></td>
-              <td>${s.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(s.instructor)}">${esc(s.instructor)}</button>` : "TBA"}</td>
-              <td>${esc((s.days || []).map((d) => DAY_MINI[d - 1]).join("/") || "TBA")}</td>
-              <td>${s.start != null ? esc(timeRangeLabel(s.start, s.end)) : "TBA"}</td>
-              <td>${s.location
-                ? (matchBuilding(s.location)
-                  ? `<button class="loc-link" data-loc="${esc(s.location)}" title="${esc(cleanLocation(s.location))}">${esc(cleanLocation(s.location))}</button>`
-                  : esc(cleanLocation(s.location)))
-                : "TBA"}</td>
-              <td>${s.enrolled != null ? s.enrolled : "—"}${s.capacity != null ? "/" + s.capacity : ""}</td>
-            </tr>`).join("")}
-          </tbody>
-        </table></div>
-        ${c.sections[0].method ? `<div class="m-grid"><div><b>Mode</b>${esc(c.sections[0].method)}</div></div>` : ""}
+        <section class="course-file-section" aria-labelledby="course-file-title">
+          <h3 id="course-file-title">Shared files</h3>
+          <div id="course-files">
+            <form><label for="course-file">PDF files · up to 1 MB each</label>
+              <div class="community-actions">
+                <input id="course-file" name="entry" type="file" accept=".pdf,application/pdf" required>
+                <button class="btn primary" type="submit" disabled>Upload PDF</button>
+              </div>
+            </form>
+            <p role="status"></p>
+            <ul data-community-list></ul>
+          </div>
+        </section>
       </section>
       <div class="modal-actions">
-        <button class="btn primary" data-addcal="${esc(c.code)}">Add to schedule</button>
         <button class="btn ghost" data-addplan="${esc(c.code)}">Add to plan</button>
-        ${c.sections[0].link ? `<a class="btn ghost m-course-link" href="${esc(c.sections[0].link)}" target="_blank" rel="noopener">Official course page ↗</a>` : ""}
+        <button class="btn primary" data-addcal="${esc(c.code)}">Add to schedule</button>
       </div>
       ${locked ? `
         <div class="course-lock-overlay">
@@ -1910,7 +2034,13 @@ function openCourse(code, sectionId = "") {
     return;
   }
   const folderTabs = [...body.querySelectorAll(".m-folder-tab")];
+  const loadedCommunity = new Set();
   const selectFolderTab = (name) => {
+    if ((name === "reviews" || name === "materials") && !loadedCommunity.has(name)) {
+      loadedCommunity.add(name);
+      bindCourseCommunity($(name === "reviews" ? "#course-discussion" : "#course-files"), c.code, callNumber, name === "materials");
+      if (name === "reviews") loadCulpaReviews(c.code, selected.instructor || "");
+    }
     folderTabs.forEach((tab) => {
       const active = tab.dataset.mtab === name;
       tab.classList.toggle("active", active);
@@ -1958,7 +2088,6 @@ function openCourse(code, sectionId = "") {
   $("#modal").hidden = false;
   document.body.style.overflow = "hidden";
   document.documentElement.style.overflow = "hidden";
-  loadCulpaReviews(c.code, selected.instructor || "");
 }
 
 function renderCulpaReviews(data, instructor, host) {
@@ -1968,9 +2097,7 @@ function renderCulpaReviews(data, instructor, host) {
     ? `<a class="review-outlink" href="https://www.google.com/search?q=${encodeURIComponent(rmpQuery)}" target="_blank" rel="noopener" title="RateMyProfessors profile pages are unavailable; search RMP on Google">Search RateMyProfessors ↗</a>`
     : "";
   if (!data?.ok) {
-    const message = data?.unavailable
-      ? "CULPA reviews are unavailable in this static deployment."
-      : "No matching CULPA course page was found.";
+    const message = "";
     host.innerHTML = `
       <div class="culpa-empty">
         <span>${message}</span>

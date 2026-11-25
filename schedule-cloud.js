@@ -129,6 +129,13 @@
       if (value?.sub === user?.sub && value?.token) await request("DELETE", null, value.token);
     },
     sync,
+    courseCommunity(user, code, { method, body, id, files }) {
+      const url = new URL(endpoint, location.href);
+      url.searchParams.set("reviews", code);
+      if (files) url.searchParams.set("files", "1");
+      if (id) url.searchParams.set("file", id);
+      return request(method, body, session(user), url);
+    },
     courseAlerts(user, body) {
       const url = new URL(endpoint, location.href);
       url.searchParams.set("alerts", "1");
