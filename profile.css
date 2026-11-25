@@ -23,7 +23,7 @@
   --accent: #1e6ef3;
   --surface: #fff;
   --surface-hover: #f0f0ea;
-  --profile-max: 940px;
+  --profile-max: 1180px;
   --profile-gutter: 24px;
   --marker-size: 24px;
   --step-column: 32px;
@@ -122,28 +122,15 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-progress::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: max(
-    calc(var(--profile-gutter) + (var(--marker-size) / 2)),
-    calc(((100% - var(--profile-max)) / 2) + (var(--marker-size) / 2))
-  );
-  width: 1px;
-  height: 28px;
-  background: var(--soft-line);
-  transform: translateX(-50%);
-  transform-origin: top;
-  transition: opacity 160ms ease, transform 220ms ease;
+  display: none;
 }
 
 .profile-progress.has-progress::after {
-  background: var(--accent);
+  display: none;
 }
 
 .profile-progress.is-stuck::after {
-  opacity: 0;
-  transform: translate(-50%, -4px);
+  display: none;
 }
 
 .profile-progress > i > b {
@@ -172,18 +159,11 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-step::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--marker-size) / 2);
-  width: 1px;
-  background: var(--line);
-  transform: translateX(-50%);
+  display: none;
 }
 
 .profile-step.is-complete:not(.is-active)::before {
-  background: var(--accent);
+  display: none;
 }
 
 .profile-step:last-child::before { display: none; }
@@ -403,7 +383,6 @@ a { -webkit-tap-highlight-color: transparent; }
     margin: 10px 0 0;
     padding: 4px 0 0;
   }
-  .profile-progress::after { height: 24px; }
   .profile-step {
     gap: 10px;
   }
