@@ -884,6 +884,8 @@
     return monumentMesh(place,[ring(bottom),ring(top)],palette);
   }
 
+  const LOCATION_PIN_PATH = "M0 0C-3-4-11-12-11-19a11 11 0 0 1 22 0C11-12 3-4 0 0Z";
+
   function drawSubwayEntrance(project) {
     // Campus-side sidewalk, north of the Broadway Gate.
     const point=(east,north,z=0)=>{
@@ -906,19 +908,19 @@
       return `<polyline points="${pointsAttr([point(east,-4),top])}" stroke="#28463b" stroke-width="1"/>
         <circle cx="${top[0]}" cy="${top[1]}" r="1.18" fill="#a2bb85" stroke="#28463b" stroke-width=".4"/>`;
     }).join("");
-    const [x,y]=point(0,-2,2.3);
+    const [x,y]=point(0,-2);
     return `<g role="img" aria-label="116th Street–Columbia University subway entrance, line 1">
       <title>116 St–Columbia University · 1 subway entrance</title>
       <polygon points="${pointsAttr(footprint)}" fill="#515651" stroke="#29352e" stroke-width=".65"/>
       <g fill="none" stroke="#abae9f" stroke-width=".42">${stairTreads}</g>
       <g fill="none" stroke="#28463b" stroke-width=".88">${rails}</g>
       ${posts}
-      <g transform="translate(${x} ${y})">
-        <path d="M0 0l-7-8" stroke="#222823" stroke-width=".85"/>
-        <rect x="-58" y="-23" width="62" height="16" rx="2" fill="#232522" stroke="#e4e2d9" stroke-width=".65"/>
-        <circle cx="-49" cy="-15" r="5.4" fill="#c93536"/>
-        <text x="-49" y="-15" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="7.2" font-family="Arial,sans-serif" font-weight="bold">1</text>
-        <text x="-41" y="-12.5" fill="#fff" font-size="7.5" font-family="Arial,sans-serif" font-weight="bold">Subway</text>
+      <g class="campus-course-cursor" style="--course-pin-color:#242522" transform="translate(${x} ${y})">
+        <path class="course-cursor-pin" d="${LOCATION_PIN_PATH}"/>
+        <circle cy="-19" r="5.6" fill="#c93536"/>
+        <text class="course-cursor-label" y="-19" text-anchor="middle" dominant-baseline="central">1</text>
+        <rect class="course-cursor-label-bg" x="-27" y="-51" width="54" height="16" rx="4"/>
+        <text class="course-cursor-label" y="-40" text-anchor="middle">Subway</text>
       </g>
     </g>`;
   }
@@ -1029,7 +1031,7 @@
       const width = Math.max(54, label.length * 6.4 + 14);
       return `<g class="campus-course-cursor ${offCampus ? "off-campus" : ""}" transform="translate(${top[0]} ${top[1]})" data-course-cursor="${index}">
         <title>${escapeXml(label)} · ${escapeXml(target.name)}</title>
-        <path class="course-cursor-pin" d="M0 0C-3-4-11-12-11-19a11 11 0 0 1 22 0C11-12 3-4 0 0Z"/>
+        <path class="course-cursor-pin" d="${LOCATION_PIN_PATH}"/>
         <circle cx="0" cy="-19" r="3.7" fill="#fff"/>
         <rect class="course-cursor-label-bg" x="${-width/2}" y="-51" width="${width}" height="16" rx="4"/>
         <text class="course-cursor-label" y="-40" text-anchor="middle">${escapeXml(label)}</text>
