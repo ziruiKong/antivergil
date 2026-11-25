@@ -4,6 +4,8 @@ import { OAuth2Client } from "google-auth-library";
 
 import { campusSocial, registerCampusPerson } from "./lib/campus-social.mjs";
 
+import { courseAlerts } from "./lib/course-alerts.mjs";
+
 const google = new OAuth2Client();
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
 const termPattern = /^\d{4}-(Spring|Summer|Fall|Winter)$/;
@@ -47,7 +49,7 @@ export default async function schedule(request) {
   const origin = request.headers.get("origin");
   const requestOrigin = new URL(request.url).origin;
   const allowedOrigin = origin && [requestOrigin, "https://antivergil.cc"].includes(origin);
-  const headers = { "Cache-Control": "no-store", Vary: "Origin", "X-Antivergil-Calendar-Sync": "1", "X-Antivergil-Friends": "1" };
+  const headers = { "Cache-Control": "no-store", Vary: "Origin", "X-Antivergil-Calendar-Sync": "1", "X-Antivergil-Friends": "1", "X-Antivergil-Enrollment-Alerts": "1" };
   if (allowedOrigin) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
@@ -60,7 +62,8 @@ export default async function schedule(request) {
   try {
     const { sql } = getDatabase();
     const social = new URL(request.url).searchParams.has("social");
-    if (!social && request.method === "POST") {
+    const alerts = new URL(request.url).searchParams.has("alerts");
+    if (!social && !alerts && request.method === "POST") {
       const audience = process.env.GOOGLE_WEB_CLIENT_ID;
       if (!audience) return send({ error: "Google sign-in is not configured." }, 503);
       const { credential } = await request.json();
@@ -74,6 +77,8 @@ export default async function schedule(request) {
       const token = randomBytes(32).toString("base64url");
       const expires = new Date(Date.now() + sessionLifetime).toISOString();
       await registerCampusPerson(sql, user.sub, user.name);
+      await sql`INSERT INTO course_alert_recipients (subject, email) VALUES (${user.sub}, ${email})
+        ON CONFLICT (subject) DO UPDATE SET email = excluded.email`;
       await sql`INSERT INTO course_schedule_sessions (token_hash, google_subject, expires_at)
         VALUES (${hash(token)}, ${user.sub}, ${expires})`;
       return send({ token, user: { email, name: user.name, picture: user.picture, sub: user.sub, provider: "google" } });
@@ -82,7 +87,7 @@ export default async function schedule(request) {
     const token = request.headers.get("authorization")?.match(/^Bearer ([\w-]{43})$/)?.[1];
     if (!token) return send({ error: "Sign in again to sync your schedule." }, 401);
     const tokenHash = hash(token);
-    if (!social && request.method === "DELETE") {
+    if (!social && !alerts && request.method === "DELETE") {
       await sql`DELETE FROM course_schedule_sessions WHERE token_hash = ${tokenHash}`;
       return send({ signedOut: true });
     }
@@ -91,6 +96,7 @@ export default async function schedule(request) {
     if (!session) return send({ error: "Your cloud session expired. Sign in again." }, 401);
     const id = session.google_subject;
     if (social) return await campusSocial(request, send, sql, id);
+    if (alerts) return await courseAlerts(request, send, sql, id);
     if (request.method === "GET") {
       const schedules = await sql`SELECT term, sections, revision FROM course_schedules
         WHERE google_subject = ${id}`;
