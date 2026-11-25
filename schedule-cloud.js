@@ -1,4 +1,5 @@
 (function () {
+  const calendarTerm = "_calendar";
   const sessionKey = "antivergil-schedule-session";
   const endpoint = window.COLUMBIA_AUTH?.scheduleApi;
   let pending = Promise.resolve();
@@ -40,16 +41,30 @@
 
   const serialize = (sections) => sections.map(({ classId, code }) => ({ classId: String(classId), code }));
 
+  const sectionKey = (item) => item.classId + ":" + String(item.code || "").trim().toUpperCase().replace(/\s+/g, " ");
+
   function applyChanges(sections, changes) {
-    const selected = new Map(sections.map((item) => [item.classId, item]));
-    for (const id of changes.remove) selected.delete(id);
-    for (const item of changes.add) selected.set(item.classId, item);
+    const key = changes.term === calendarTerm ? (item) => item.id : sectionKey;
+    const selected = new Map(sections.map((item) => [key(item), item]));
+    for (const id of changes.remove) {
+      selected.delete(id);
+      // Older course outboxes used the section ID alone.
+      if (changes.term !== calendarTerm && !id.includes(":")) {
+        for (const [entry, item] of selected) if (item.classId === id) selected.delete(entry);
+      }
+    }
+    for (const item of changes.add) selected.set(key(item), item);
     return [...selected.values()];
+  }
+
+  async function fetchRows(token) {
+    const { schedules, calendar } = await request("GET", null, token);
+    return calendar ? [...schedules, calendar] : schedules;
   }
 
   async function synchronize(user, previousSchedules) {
     const token = session(user);
-    const remote = new Map((await request("GET", null, token)).schedules.map((row) => [row.term, row]));
+    const remote = new Map((await fetchRows(token)).map((row) => [row.term, row]));
     for (const [term, sections] of Object.entries(previousSchedules)) {
       if (remote.has(term) || !sections.length) continue;
       try {
@@ -57,7 +72,7 @@
         remote.set(term, row);
       } catch (error) {
         if (error.status !== 409) throw error;
-        for (const row of (await request("GET", null, token)).schedules) remote.set(row.term, row);
+        for (const row of await fetchRows(token)) remote.set(row.term, row);
       }
     }
 
@@ -71,7 +86,7 @@
           break;
         } catch (error) {
           if (error.status !== 409) throw error;
-          for (const row of (await request("GET", null, token)).schedules) remote.set(row.term, row);
+          for (const row of await fetchRows(token)) remote.set(row.term, row);
         }
       }
       if (!saved) throw new Error("Your schedule changed on another device. Sync will retry next time.");
@@ -79,13 +94,26 @@
       const remaining = read(queueKey(user), []).filter((item) => item.id !== changes.id);
       localStorage.setItem(queueKey(user), JSON.stringify(remaining));
     }
-    return Object.fromEntries([...remote].map(([term, row]) => [term, row.sections]));
+    const calendar = remote.get(calendarTerm)?.sections;
+    remote.delete(calendarTerm);
+    return { schedules: Object.fromEntries([...remote].map(([term, row]) => [term, row.sections])), calendar };
   }
 
   function sync(user, previousSchedules = {}) {
     const task = pending.catch(() => {}).then(() => synchronize(user, previousSchedules));
     pending = task;
     return task;
+  }
+
+  function enqueue(user, term, before, after, key) {
+    const old = new Map(before.map((item) => [key(item), item]));
+    const next = new Map(after.map((item) => [key(item), item]));
+    const remove = [...old.keys()].filter((id) => !next.has(id));
+    const add = [...next.values()].filter((item) => JSON.stringify(old.get(key(item))) !== JSON.stringify(item));
+    if (!remove.length && !add.length) return;
+    const queue = read(queueKey(user), []);
+    queue.push({ id: crypto.randomUUID(), term, add, remove });
+    localStorage.setItem(queueKey(user), JSON.stringify(queue));
   }
 
   window.AntivergilScheduleCloud = {
@@ -102,16 +130,12 @@
     },
     sync,
     update(user, term, before, after) {
-      const old = new Map(serialize(before).map((item) => [item.classId, item]));
-      const next = new Map(serialize(after).map((item) => [item.classId, item]));
-      const remove = [...old.keys()].filter((id) => !next.has(id));
-      const add = [...next.values()].filter((item) => old.get(item.classId)?.code !== item.code);
-      if (remove.length || add.length) {
-        const queue = read(queueKey(user), []);
-        queue.push({ id: crypto.randomUUID(), term, add, remove });
-        localStorage.setItem(queueKey(user), JSON.stringify(queue));
-      }
+      enqueue(user, term, serialize(before), serialize(after), sectionKey);
       return sync(user, { [term]: before });
+    },
+    updateCalendar(user, before, after) {
+      enqueue(user, calendarTerm, before, after, (event) => event.id);
+      return sync(user);
     },
   };
 })();

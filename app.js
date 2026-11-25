@@ -141,18 +141,24 @@ function currentProfile() {
     : null;
 }
 
+function savedCourseSchedules() {
+  return authUser ? window.AntivergilProfile?.readSchedules(authUser.email) || {} : {};
+}
+
 function restoreProfileSchedule() {
-  const saved = currentProfile()?.schedules?.[state.term];
+  const saved = savedCourseSchedules()[state.term];
   if (!Array.isArray(saved)) {
     state.schedule = [];
     return;
   }
-  const sections = new Map(state.courses.map((section) => [String(section.classId), section]));
+  const key = (section) => String(section.classId) + ":" + normCode(section.code);
+  const sections = new Map(state.courses.map((section) => [key(section), section]));
   const seen = new Set();
   state.schedule = saved.flatMap((item) => {
-    const id = String(item?.classId ?? "");
+    if (!item) return [];
+    const id = key(item);
     const section = sections.get(id);
-    if (!section || seen.has(id) || normCode(section.code) !== normCode(item.code)) return [];
+    if (!section || seen.has(id)) return [];
     seen.add(id);
     return [section];
   });
@@ -167,10 +173,10 @@ function showCloudScheduleStatus(status) {
   cloudScheduleStatus = status;
   if (!window.AntivergilScheduleCloud?.enabled) return;
   const messages = {
-    pending: "Syncing course schedule…",
-    saved: "Course schedule synced",
-    signIn: "Sign in to sync courses",
-    failed: "Course schedule sync failed",
+    pending: "Syncing calendar…",
+    saved: "Calendar synced",
+    signIn: "Sign in to sync your calendar",
+    failed: "Calendar sync failed",
   };
   document.querySelectorAll("[data-cloud-schedule-status]").forEach((host) => {
     host.hidden = !authUser;
@@ -188,14 +194,27 @@ function showCloudScheduleStatus(status) {
       retry.addEventListener("click", () => refreshCloudSchedule({ force: true }));
       host.append(retry);
     }
+    if (status === "saved" && host.closest("#calendar-sidebar") && legacyCalendarEvents().length) {
+      const importButton = document.createElement("button");
+      importButton.type = "button";
+      importButton.textContent = "Import browser events";
+      importButton.addEventListener("click", importLegacyCalendarEvents);
+      host.append(importButton);
+    }
   });
 }
 
-function applyCloudSchedules(user, schedules, revision, repaint) {
+function applyCloudSchedules(user, { schedules, calendar }, revision, repaint) {
   if (authUser?.sub !== user.sub || cloudScheduleRevision !== revision) return;
-  const before = currentProfile()?.schedules?.[state.term] || [];
+  const before = savedCourseSchedules()[state.term] || [];
   window.AntivergilProfile.cacheSchedules(user.email, schedules);
-  if (repaint && JSON.stringify(before) !== JSON.stringify(schedules[state.term] || [])) {
+  const coursesChanged = JSON.stringify(before) !== JSON.stringify(schedules[state.term] || []);
+  const calendarChanged = Array.isArray(calendar) && JSON.stringify(state.calendarEvents) !== JSON.stringify(calendar);
+  if (calendarChanged) {
+    state.calendarEvents = calendar;
+    cacheCalendarEvents(calendar);
+  }
+  if (repaint && (coursesChanged || calendarChanged)) {
     restoreProfileSchedule();
     renderCalendar();
     refreshMapPins();
@@ -206,14 +225,13 @@ function applyCloudSchedules(user, schedules, revision, repaint) {
 
 function refreshCloudSchedule({ force = false, repaint = true } = {}) {
   const cloud = window.AntivergilScheduleCloud;
-  const profile = currentProfile();
-  if (!cloud?.enabled || !profile || (!force && document.hidden)) return;
+  if (!cloud?.enabled || !authUser || (!force && document.hidden)) return;
   if (cloudScheduleRefresh) return cloudScheduleRefresh;
   if (!force && (cloudScheduleStatus === "signIn" || Date.now() - cloudScheduleLastChecked < 15000)) return;
   const user = authUser;
   const revision = cloudScheduleRevision;
   cloudScheduleLastChecked = Date.now();
-  cloudScheduleRefresh = cloud.sync(user, profile.schedules || {}).then(
+  cloudScheduleRefresh = cloud.sync(user, savedCourseSchedules()).then(
     (schedules) => applyCloudSchedules(user, schedules, revision, repaint),
     (error) => {
       if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
@@ -228,7 +246,7 @@ function persistProfileSchedule() {
   if (!authUser) return true;
   const cloud = window.AntivergilScheduleCloud;
   try {
-    const previous = currentProfile()?.schedules?.[state.term] || [];
+    const previous = savedCourseSchedules()[state.term] || [];
     const saved = Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
     if (saved && cloud?.enabled) {
       const user = authUser;
@@ -4155,21 +4173,74 @@ function defaultCalendarEvents() {
   ];
 }
 
+function calendarEventsKey() {
+  return authUser?.sub ? CALENDAR_EVENTS_KEY + ":" + authUser.sub : CALENDAR_EVENTS_KEY;
+}
+
 function loadCalendarEvents() {
   try {
-    const raw = localStorage.getItem(CALENDAR_EVENTS_KEY);
+    const raw = localStorage.getItem(calendarEventsKey());
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
-  const seeded = defaultCalendarEvents();
-  saveCalendarEvents(seeded);
+  const seeded = authUser?.sub ? [] : defaultCalendarEvents();
+  cacheCalendarEvents(seeded);
   return seeded;
 }
 
+function legacyCalendarEvents() {
+  try {
+    if (localStorage.getItem(CALENDAR_EVENTS_KEY + ":imported")) return [];
+    const events = JSON.parse(localStorage.getItem(CALENDAR_EVENTS_KEY) || "[]");
+    const exampleTitles = ["Deep work · Butler 4", "Problem set review", "Dinner with study group"];
+    return Array.isArray(events) ? events.filter((event) => event?.id && !exampleTitles.includes(event.title)) : [];
+  } catch { return []; }
+}
+
+function importLegacyCalendarEvents() {
+  if (!authUser?.sub) return;
+  initializeCalendarState();
+  const existing = new Set(state.calendarEvents.map((event) => event.id));
+  const added = legacyCalendarEvents().filter((event) => !existing.has(event.id));
+  state.calendarEvents = [...state.calendarEvents, ...added];
+  if (saveCalendarEvents()) {
+    localStorage.setItem(CALENDAR_EVENTS_KEY + ":imported", "true");
+    renderCalendar();
+  }
+}
+
+function cacheCalendarEvents(events) {
+  try { localStorage.setItem(calendarEventsKey(), JSON.stringify(events)); } catch {}
+}
+
 function saveCalendarEvents(events = state.calendarEvents) {
-  try { localStorage.setItem(CALENDAR_EVENTS_KEY, JSON.stringify(events || [])); } catch {}
+  const user = authUser;
+  const cloud = window.AntivergilScheduleCloud;
+  if (!user?.sub || !cloud?.enabled) {
+    cacheCalendarEvents(events);
+    return true;
+  }
+  const before = loadCalendarEvents();
+  const revision = ++cloudScheduleRevision;
+  showCloudScheduleStatus("pending");
+  try {
+    const sync = cloud.updateCalendar(user, before, events);
+    cacheCalendarEvents(events);
+    sync.then(
+      (result) => applyCloudSchedules(user, result, revision, true),
+      (error) => {
+        if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
+          showCloudScheduleStatus(error.status === 401 ? "signIn" : "failed");
+        }
+      },
+    );
+    return true;
+  } catch {
+    showCloudScheduleStatus("failed");
+    return false;
+  }
 }
 
 function loadCalendarVisibility() {
@@ -4702,7 +4773,6 @@ function openCalendarReadonlyEvent(event) {
     </div>`;
   $("#modal").hidden = false;
   document.body.style.overflow = "hidden";
-  $("#modal-body [data-close-calendar-modal]")?.addEventListener("click", closeModal);
 }
 
 function openCalendarCourseEvent(event) {
@@ -4857,8 +4927,25 @@ function showCalendarEventById(id) {
   else openCalendarReadonlyEvent(event);
 }
 
+const shareSeasons = { A: "Spring", B: "Summer", C: "Fall" };
+
 function makeScheduleShareCode() {
   if (!state.schedule.length) return "";
+  const term = /^(\d{4})-(Spring|Summer|Fall)$/.exec(state.term);
+  if (term) {
+    const season = Object.keys(shareSeasons).find((key) => shareSeasons[key] === term[2]);
+    const termPart = "-" + term[1] + (season.charCodeAt(0) - 64) + "-";
+    const sections = state.schedule.map(({ code, classId }) => {
+      const id = String(classId || "");
+      if (!/^[a-z0-9-]+$/i.test(id)) return "";
+      const shortId = id.replace(termPart, "~");
+      const matches = state.courses.filter((course) => String(course.classId) === id);
+      const courseCode = normCode(code).replace(/\s+/g, "");
+      if (matches.length === 1 && normCode(matches[0].code) === normCode(code)) return shortId;
+      return /^[a-z0-9]+$/i.test(courseCode) ? shortId + ":" + courseCode : "";
+    });
+    if (sections.every(Boolean)) return "AVC2." + term[1] + season + "." + sections.join(".");
+  }
   const payload = {
     v: 1,
     t: state.term,
@@ -4869,6 +4956,19 @@ function makeScheduleShareCode() {
 
 function parseScheduleShareCode(input) {
   const compact = String(input || "").trim().replace(/\s+/g, "");
+  const match = /^AVC2\.(\d{4})([ABC])\.([a-z0-9~-]+(?::[a-z0-9]+)?(?:\.[a-z0-9~-]+(?::[a-z0-9]+)?)*)$/i.exec(compact);
+  if (match && shareSeasons[match[2]]) {
+    const [, year, season, sections] = match;
+    const termPart = "-" + year + (season.charCodeAt(0) - 64) + "-";
+    return {
+      v: 2,
+      t: year + "-" + shareSeasons[season],
+      c: sections.split(".").map((section) => {
+        const [id, c] = section.split(":");
+        return { id: id.replace("~", termPart), c };
+      }),
+    };
+  }
   if (!compact.startsWith("AVC1.")) throw new Error("This is not a valid Antivergil course code.");
   const encoded = compact.slice(5).replace(/-/g, "+").replace(/_/g, "/");
   const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
@@ -4895,10 +4995,17 @@ function importScheduleShareCode(input) {
   for (const item of payload.c) {
     const code = Array.isArray(item) ? item[0] : item?.c;
     const classId = Array.isArray(item) ? item[1] : item?.id;
-    const candidates = state.courses.filter((course) => profileAllowsCourse(course.code) && normCode(course.code) === normCode(code));
-    const section = candidates.find((course) => course.classId === classId)
-      || candidates.find((course) => course.start != null && (course.days || []).length)
-      || candidates[0];
+    let section;
+    if (payload.v === 2) {
+      const matches = state.courses.filter((course) => String(course.classId) === classId &&
+        (!code || normCode(course.code).replace(/\s+/g, "") === code));
+      if (matches.length === 1 && profileAllowsCourse(matches[0].code)) section = matches[0];
+    } else {
+      const candidates = state.courses.filter((course) => profileAllowsCourse(course.code) && normCode(course.code) === normCode(code));
+      section = candidates.find((course) => course.classId === classId)
+        || candidates.find((course) => course.start != null && (course.days || []).length)
+        || candidates[0];
+    }
     if (!section) {
       missing += 1;
     } else if (state.schedule.some((course) => course.classId === section.classId)) {
@@ -4935,30 +5042,24 @@ async function copyScheduleShareCode(text) {
 function openCalendarShareDialog() {
   const shareCode = makeScheduleShareCode();
   $("#modal-body").innerHTML = `
-    <div class="calendar-event-form calendar-share-dialog">
-      <div class="form-head">
-        <div>
-          <div class="form-kicker">Calendar sharing</div>
-          <h2>Share / import courses</h2>
+    <div class="calendar-share-dialog">
+      <h2>Share courses</h2>
+      <div class="calendar-share-group">
+        <label for="calendar-share-output">Your course code</label>
+        <div class="calendar-share-row">
+          <input id="calendar-share-output" type="text" readonly spellcheck="false" value="${esc(shareCode)}" placeholder="Add courses to get a code">
+          <button class="btn small ghost calendar-copy-code" id="calendar-share-copy" type="button" ${shareCode ? "" : "disabled"}>Copy code</button>
         </div>
-        <span class="calendar-share-count">${state.schedule.length} ${state.schedule.length === 1 ? "course" : "courses"}</span>
       </div>
-      <label class="calendar-share-field">
-        <span>Your course code</span>
-        <textarea id="calendar-share-output" readonly spellcheck="false" placeholder="Add courses to your calendar to create a code.">${esc(shareCode)}</textarea>
-      </label>
-      <button class="btn small ghost calendar-copy-code" id="calendar-share-copy" type="button" ${shareCode ? "" : "disabled"}>Copy code</button>
-      <div class="calendar-share-divider"><span>or import a code</span></div>
-      <label class="calendar-share-field">
-        <span>Paste a classmate’s course code</span>
-        <textarea id="calendar-share-input" spellcheck="false" autocomplete="off" placeholder="AVC1.…"></textarea>
-      </label>
-      <p class="calendar-share-note">Only course selections are shared. Personal events stay private.</p>
-      <div class="calendar-share-status" id="calendar-share-status" role="status" aria-live="polite" hidden></div>
-      <div class="form-actions">
-        <button class="btn ghost" type="button" data-close-calendar-modal>Cancel</button>
-        <button class="btn primary" id="calendar-share-import" type="button" disabled>Import &amp; add courses</button>
-      </div>
+      <form id="calendar-share-form" class="calendar-share-group">
+        <label for="calendar-share-input">Import a course code</label>
+        <div class="calendar-share-row">
+          <input id="calendar-share-input" type="text" spellcheck="false" autocomplete="off" placeholder="Paste a code">
+          <button class="btn small primary" id="calendar-share-import" type="submit" disabled>Import</button>
+        </div>
+      </form>
+      <p class="calendar-share-note">Shares course sections only.</p>
+      <div class="calendar-share-status" id="calendar-share-status" role="status" hidden></div>
     </div>`;
   $("#modal").hidden = false;
   document.body.style.overflow = "hidden";
@@ -4988,7 +5089,8 @@ function openCalendarShareDialog() {
       button.classList.remove("is-copied");
     }, 1400);
   });
-  importButton.addEventListener("click", () => {
+  $("#calendar-share-form").addEventListener("submit", (event) => {
+    event.preventDefault();
     try {
       const result = importScheduleShareCode(input.value);
       const notes = [`${result.added} added`];
@@ -5001,7 +5103,7 @@ function openCalendarShareDialog() {
       showStatus(error.message || "This code could not be imported.", true);
     }
   });
-  input.focus();
+  $("#modal-close")?.focus();
 }
 
 function bindCalendarFeature() {

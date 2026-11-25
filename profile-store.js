@@ -135,17 +135,25 @@
     return value;
   }
 
+  function readSchedules(email) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(storageKey(email) + ":schedules") || "null");
+      if (cached && typeof cached === "object" && !Array.isArray(cached)) return cached;
+    } catch {}
+    return read(email)?.schedules || {};
+  }
+
   function saveSchedule(email, term, sections) {
-    const profile = read(email);
-    if (!profile) return false;
-    const schedules = { ...profile.schedules, [term]: sections.map(({classId, code}) => ({classId, code})) };
-    localStorage.setItem(storageKey(email), JSON.stringify({ ...profile, schedules, updatedAt: new Date().toISOString() }));
+    const schedules = {
+      ...readSchedules(email),
+      [term]: sections.map(({ classId, code }) => ({ classId, code })),
+    };
+    cacheSchedules(email, schedules);
     return true;
   }
 
   function cacheSchedules(email, schedules) {
-    const profile = read(email);
-    if (profile) localStorage.setItem(storageKey(email), JSON.stringify({ ...profile, schedules }));
+    localStorage.setItem(storageKey(email) + ":schedules", JSON.stringify(schedules));
   }
 
   function schoolLabel(profile) {
@@ -217,6 +225,7 @@
     normalizeEmail,
     read,
     save,
+    readSchedules,
     saveSchedule,
     cacheSchedules,
     schoolLabel,

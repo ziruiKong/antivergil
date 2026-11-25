@@ -10220,84 +10220,69 @@ body[data-view="calendar"] .data-as-of {
   transition: transform 180ms ease;
 }
 
-.calendar-share-count {
-  flex: 0 0 auto;
-  padding: 4px 8px;
+#modal:has(.calendar-share-dialog) {
+  backdrop-filter: none;
+}
+
+#modal > .modal:has(.calendar-share-dialog) {
+  max-width: 480px;
+  padding: clamp(16px, 4vw, 24px);
   border: 1px solid var(--sa-line);
-  border-radius: 999px;
-  color: var(--sa-ink-2);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  border-radius: 6px;
+  background: var(--bg, #f4f4f0);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
-.calendar-share-field {
-  gap: 7px !important;
+.calendar-share-dialog { display: grid; gap: 14px; }
+.calendar-share-dialog h2 { margin: 0; padding-right: 36px; font-size: 19px; }
+
+.calendar-share-group {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--sa-line);
+  font-size: 11px;
 }
 
-.calendar-share-field textarea {
-  min-height: 82px !important;
-  resize: vertical;
-  font-family: "Courier New", Courier, monospace !important;
-  font-size: 11px !important;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
+.calendar-share-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 8px;
 }
 
-#calendar-share-output {
-  background: #eeeeea !important;
+.calendar-share-row input {
+  min-width: 0;
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--sa-line);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 
-.calendar-copy-code {
-  align-self: flex-start;
+.calendar-share-row .btn {
+  min-height: 34px;
+  padding: 0 4px;
+  border-radius: 3px;
+  box-shadow: none;
+  white-space: nowrap;
 }
 
-.calendar-copy-code.is-copied {
-  border-color: var(--sa-green) !important;
-  color: var(--sa-green) !important;
-}
+.calendar-copy-code.is-copied { color: var(--sa-green); }
 
-.calendar-share-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--sa-ink-2);
-  font-size: 9px;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
-
-.calendar-share-divider::before,
-.calendar-share-divider::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: var(--sa-line);
-}
-
-.calendar-share-note {
-  margin: -3px 0 0;
+.calendar-share-note,
+.calendar-share-status {
+  margin: 0;
   color: var(--sa-ink-2);
   font-size: 10px;
   line-height: 1.5;
 }
 
-.calendar-share-status {
-  padding: 9px 11px;
-  border: 1px solid rgba(48, 108, 77, .3);
-  border-radius: 6px;
-  background: rgba(48, 108, 77, .07);
-  color: #265e43;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.calendar-share-status.is-error {
-  border-color: rgba(181, 62, 55, .32);
-  background: rgba(181, 62, 55, .07);
-  color: #8f2d2d;
-}
+.calendar-share-status.is-error { color: #8f2d2d; }
 
 .join-page {
   --join-navy: #4169e1;
