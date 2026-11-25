@@ -343,7 +343,7 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-interest.is-selected {
-  border-color: var(--accent);
+  border-color: var(--ink);
   background: var(--accent);
   color: #fff;
 }
