@@ -5,6 +5,7 @@ const $ = (selector) => document.querySelector(selector);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let statusTimer = 0;
 let statusHideTimer = 0;
+let googleButtonRendered = false;
 
 function isValidEmail(value) {
   const email = String(value || "").trim();
@@ -104,6 +105,11 @@ function loadGoogleScript() {
   });
 }
 
+function setGoogleControlVisible(visible) {
+  $("#google-login-mount").hidden = !(visible && googleButtonRendered);
+  $("#google-login").hidden = visible && googleButtonRendered ? true : !visible;
+}
+
 $("#login-back").href = "/about/";
 if (window.AntivergilScheduleCloud?.enabled) {
   const button = $("#google-login");
@@ -134,15 +140,9 @@ if (window.AntivergilScheduleCloud?.enabled) {
         type: "standard", theme: "filled_black", shape: "rectangular", size: "large",
         text: "continue_with", logo_alignment: "left", width,
       });
-      localizeGoogleLabel();
+      googleButtonRendered = true;
+      button.hidden = true;
     };
-    const localizeGoogleLabel = () => {
-      mount.querySelectorAll(".nsm7Bb-HzV7m-LgbsSe-BPrWId").forEach(label => {
-        if (/continue with google/i.test(label.textContent || "")) label.textContent = "Continue with LionMail";
-      });
-    };
-    new MutationObserver(localizeGoogleLabel).observe(mount, { childList: true, characterData: true, subtree: true });
-    button.hidden = true;
     renderGoogleButton();
     new ResizeObserver(renderGoogleButton).observe(container);
   }).catch(() => setStatus("Google sign-in is temporarily unavailable. Reload to try again."));
@@ -187,7 +187,7 @@ function showCodeEntry(email) {
   codeInput.value = "";
   codeInput.dispatchEvent(new Event("input"));
   resendAvailableAt = Date.now() + 60000;
-  $("#google-login-mount").hidden = true;
+  setGoogleControlVisible(false);
   $("#show-email-register").hidden = true;
   $("#email-register-form").hidden = true;
   $("#code-form").hidden = false;
@@ -266,7 +266,7 @@ codeInput.addEventListener("input", () => {
 });
 $("#show-email-register").addEventListener("click", () => {
   manualEmailMode = true;
-  $("#google-login-mount").hidden = true;
+  setGoogleControlVisible(false);
   $("#show-email-register").hidden = true;
   $("#email-register-form").hidden = false;
   $("#registration-email").focus();
@@ -275,7 +275,7 @@ $("#back-to-google").addEventListener("click", () => {
   manualEmailMode = false;
   $("#email-register-form").hidden = true;
   $("#show-email-register").hidden = false;
-  $("#google-login-mount").hidden = false;
+  setGoogleControlVisible(true);
   clearStatus();
 });
 $("#email-register-form").addEventListener("submit", event => { event.preventDefault(); requestEmailCode(); });
@@ -287,7 +287,8 @@ $("#change-email").addEventListener("click", () => {
     $("#email-register-form").hidden = false;
     $("#registration-email").focus();
   } else {
-    $("#google-login-mount").hidden = false;
+    setGoogleControlVisible(true);
+    $("#show-email-register").hidden = false;
   }
   verificationCredential = "";
 });

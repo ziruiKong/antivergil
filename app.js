@@ -6083,11 +6083,12 @@ function clearAuthUser() {
 let authUser = loadAuthUser();
 let googleScriptPromise = null;
 
-function isAllowedUniversityEmail(value) {
-  return /^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/i.test(String(value || "").trim());
+function isValidEmail(value) {
+  const email = String(value || "").trim();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-if (authUser && !isAllowedUniversityEmail(authUser.email || "")) {
+if (authUser && !isValidEmail(authUser.email || "")) {
   authUser = null;
   clearAuthUser();
 }
@@ -6148,6 +6149,11 @@ function renderAccount() {
   const body = $("#account-body");
   if (!body) return;
   if (authUser) {
+    const providerStatus = authUser.provider === "google"
+      ? "Signed in with LionMail."
+      : authUser.provider === "email"
+        ? "Signed in with email."
+        : "Signed in on this device.";
     const avatar = authUser.picture
       ? `<img src="${esc(authUser.picture)}" alt="" referrerpolicy="no-referrer" />`
       : `<span class="account-initials">${esc(initialsOf(authUser))}</span>`;
@@ -6158,7 +6164,7 @@ function renderAccount() {
       <div class="account-user">
         ${avatar}
         <div>
-          <div class="au-name">${esc(authUser.name || "Columbia student")}</div>
+          <div class="au-name">${esc(authUser.name || "Antivergil user")}</div>
           <div class="au-email">${esc(authUser.email || "")}</div>
         </div>
       </div>
@@ -6167,7 +6173,7 @@ function renderAccount() {
         <button type="button" id="account-profile">Edit profile</button>
         <button type="button" id="account-signout">Sign out</button>
       </div>
-      <div class="account-status">${authUser.provider === "google" ? "Signed in with Google." : "Preview sign-in (Google OAuth not configured)."}</div>
+      <div class="account-status">${providerStatus}</div>
     `;
     $("#account-signout")?.addEventListener("click", signOut);
     $("#account-profile")?.addEventListener("click", () => location.assign("/profile/?edit=1"));
@@ -6192,7 +6198,7 @@ function renderAccount() {
   body.innerHTML = `
     <div class="account-logo">CU</div>
     <h2 id="account-title">Sign in</h2>
-    <p>Continue with a supported university account to personalise the planner.</p>
+    <p>Continue with LionMail or an email account to personalise the planner.</p>
     <div class="account-google" id="google-button">${configured ? "" : googleFallback}</div>
     <div class="account-hint">${fileHint}</div>
   `;
@@ -6201,14 +6207,14 @@ function renderAccount() {
 }
 
 function previewSignIn() {
-  const email = window.prompt("Enter your university email for preview sign-in:");
+  const email = window.prompt("Enter your email for preview sign-in:");
   if (email) localSignIn(email);
 }
 
 function localSignIn(email) {
   const clean = String(email || "").trim().toLowerCase();
-  if (!isAllowedUniversityEmail(clean)) {
-    toast("Use an email ending in @columbia.edu or @student.ubc.ca.");
+  if (!isValidEmail(clean)) {
+    toast("Use a valid email address.");
     return false;
   }
   const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -6269,11 +6275,11 @@ function handleGoogleCredential(response) {
     let b64 = String(response.credential || "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     b64 += "=".repeat((4 - (b64.length % 4)) % 4);
     const payload = JSON.parse(atob(b64));
-    if (!isAllowedUniversityEmail(payload.email)) {
+    if (!isValidEmail(payload.email)) {
       authUser = null;
       clearAuthUser();
       renderRailBrand();
-      toast("Use a supported university Google account.");
+      toast("Use a valid Google account email.");
       return;
     }
     authUser = {
@@ -6332,7 +6338,7 @@ function renderMyPage() {
         <div class="my-avatar">${avatar}</div>
         <div class="my-identity-copy">
           <span class="my-section-kicker">Student account</span>
-          <h1>${esc(authUser.name || "Columbia student")}</h1>
+          <h1>${esc(authUser.name || "Antivergil user")}</h1>
           <p>${esc(authUser.email || "")}</p>
         </div>
       </div>
@@ -7101,19 +7107,6 @@ function bindGlobal() {
       selectTerm(b.dataset.termOption);
       requestAnimationFrame(() => labelEl?.classList.remove("switching"));
     }, 120);
-  });
-  const joinCta = $("#floating-plan-cta");
-  joinCta?.addEventListener("click", () => {
-    redirectToLogin();
-  });
-  $("#floating-plan-later")?.addEventListener("click", () => {
-    const banner = $("#floating-cta-banner");
-    if (!banner) return;
-    banner.classList.add("is-dismissing");
-    setTimeout(() => {
-      banner.hidden = true;
-      toast("No problem. We’ll leave your plan right here.");
-    }, 160);
   });
   $("#rail-brand")?.addEventListener("click", () => switchView("browse"));
   $("#topbar-account")?.addEventListener("click", openAccount);

@@ -18,7 +18,6 @@
   --paper: #f3f3f0;
   --ink: #121212;
   --rule: rgba(18, 18, 18, .24);
-  --accent: #fff28a;
   --danger: #7a211d;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Segoe UI Variable", "Segoe UI", "Helvetica Neue", "PingFang SC",
@@ -211,13 +210,36 @@ a { -webkit-tap-highlight-color: transparent; }
 .login-auth { margin: 0; }
 
 .google-login-mount {
+  position: relative;
   width: 100%;
-  min-height: 44px;
+  height: 44px;
   display: flex;
   justify-content: center;
+  overflow: hidden;
+  background: #202124;
 }
 
+.google-login-mount[hidden] { display: none; }
 .google-login-mount:empty { display: none; }
+.google-login-mount iframe { opacity: 0; }
+.google-login-mount::before {
+  content: "Continue with LionMail";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: #202124;
+  color: #f3f3f0;
+  font-family: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .015em;
+  pointer-events: none;
+  transition: background-color 160ms ease;
+}
+
+.google-login-mount:hover::before { background: #333; }
 
 .google-login {
   position: relative;
@@ -226,7 +248,6 @@ a { -webkit-tap-highlight-color: transparent; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
   padding: 8px 12px;
   border: 1.5px solid var(--ink);
   border-radius: 0;
@@ -236,27 +257,9 @@ a { -webkit-tap-highlight-color: transparent; }
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: .015em;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.google-icon {
-  position: absolute;
-  top: 50%;
-  left: 13px;
-  width: 21px;
-  height: 21px;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  transform: translateY(-50%);
-  transition: transform 220ms ease;
-}
-
-.google-icon svg {
-  width: 16px;
-  height: 16px;
 }
 
 .google-login:hover {
@@ -264,7 +267,6 @@ a { -webkit-tap-highlight-color: transparent; }
   color: var(--paper);
 }
 
-.google-login:hover .google-icon { transform: translateY(-50%) scale(1.08); }
 .google-login:active { transform: translateY(1px); }
 .google-login:disabled { opacity: .58; cursor: wait; }
 
@@ -367,11 +369,6 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .email-form input::placeholder { color: #68675f; }
-
-.email-form input:focus {
-  background: #f8f8f0;
-  box-shadow: inset 0 -4px 0 var(--accent);
-}
 
 .email-submit {
   width: 100%;

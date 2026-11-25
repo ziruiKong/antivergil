@@ -7,6 +7,7 @@
       { id: "engineering", label: "Fu Foundation School of Engineering and Applied Science" },
       { id: "general-studies", label: "School of General Studies" },
       { id: "barnard", label: "Barnard College" },
+      { id: "other-school", label: "Other school / Institution" },
     ],
     graduate: [
       { id: "gsas", label: "Graduate School of Arts and Sciences" },
@@ -17,6 +18,7 @@
       { id: "journalism", label: "Columbia Journalism School" },
       { id: "law", label: "Columbia Law School" },
       { id: "teachers-college", label: "Teachers College" },
+      { id: "other-school", label: "Other school / Institution" },
     ],
   };
 
@@ -93,6 +95,7 @@
     "columbia-college": ["COMS", "ECON", "STAT", "POLS", "SOCI", "HIST", "ENGL"],
     "general-studies": ["COMS", "ECON", "STAT", "POLS", "SOCI"],
     barnard: ["COMS", "ECON", "STAT", "POLS", "SOCI", "ENGL"],
+    "other-school": [],
   };
 
   function normalizeEmail(email) {
