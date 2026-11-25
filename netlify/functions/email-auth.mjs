@@ -28,7 +28,9 @@ export default async function emailAuth(request) {
     const email = String(googleUser.email || '').toLowerCase();
     if (!/^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/.test(email)) return send({ error: 'Use your university email.' }, 400);
     const { sql } = getDatabase();
-    if (code === undefined) {
+    const [grant] = await sql`SELECT google_subject FROM email_verification_grants
+      WHERE google_subject = ${googleUser.sub} AND email = ${email} AND verified_until > now()`;
+    if (code === undefined && !grant) {
       const config = aliyunMailConfig();
       if (!config) return send({ error: 'Email sign-in is temporarily unavailable.' }, 503);
       const value = String(randomInt(100000, 1000000));
@@ -40,12 +42,17 @@ export default async function emailAuth(request) {
       catch (error) { await sql`DELETE FROM email_login_codes WHERE email = ${email} AND code_hash = ${hash}`; throw error; }
       return send({ sent: true, email });
     }
+    if (!grant) {
     if (!/^\d{6}$/.test(String(code))) return send({ error: 'Enter the six-digit code.' }, 400);
     const hash = digest(email + ':' + code);
     const rows = await sql`UPDATE email_login_codes SET attempts = attempts + 1 WHERE email = ${email} AND expires_at > now() AND attempts < 5 RETURNING code_hash, attempts`;
     if (!rows.length || rows[0].code_hash !== hash) return send({ error: 'Invalid or expired code.' }, 401);
     const consumed = await sql`DELETE FROM email_login_codes WHERE email = ${email} AND code_hash = ${hash} AND attempts <= 5 RETURNING email`;
     if (!consumed.length) return send({ error: 'Code already used. Request another.' }, 401);
+    await sql`INSERT INTO email_verification_grants (google_subject, email, verified_until)
+      VALUES (${googleUser.sub}, ${email}, now() + interval '24 hours')
+      ON CONFLICT (google_subject) DO UPDATE SET email = excluded.email, verified_until = excluded.verified_until`;
+    }
     const [existing] = await sql`SELECT subject FROM course_alert_recipients WHERE email = ${email} ORDER BY subject LIMIT 1`;
     const sub = existing?.subject || googleUser.sub;
     const name = googleUser.name || email.split('@')[0];

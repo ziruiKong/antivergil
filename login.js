@@ -161,6 +161,11 @@ async function sendCode() {
     const payload = JSON.parse(atob(verificationCredential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
     result = { email: payload.email };
   }
+  if (result.token && result.user) {
+    localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
+    completeSignIn(result.user);
+    return;
+  }
   verificationEmailAddress = result.email;
   $("#code-destination").textContent = verificationEmailAddress;
   lastSubmittedCode = "";
