@@ -51,7 +51,7 @@ export default async function schedule(request) {
   const origin = request.headers.get("origin");
   const requestOrigin = new URL(request.url).origin;
   const allowedOrigin = origin && [requestOrigin, "https://antivergil.cc"].includes(origin);
-  const headers = { "Cache-Control": "no-store", Vary: "Origin", "X-Antivergil-Calendar-Sync": "1", "X-Antivergil-Friends": "1", "X-Antivergil-Enrollment-Alerts": "1", "X-Antivergil-Community": "1" };
+  const headers = { "Cache-Control": "no-store", Vary: "Origin", "X-Antivergil-Calendar-Sync": "1", "X-Antivergil-Friends": "1", "X-Antivergil-Enrollment-Alerts": "1", "X-Antivergil-Community": "2" };
   if (allowedOrigin) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
