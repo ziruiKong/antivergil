@@ -13654,3 +13654,19 @@ body.auth-authenticated .my-page {
     flex-basis: 100%;
   }
 }
+
+/* Instructor trend history uses the full dashboard width at every size. */
+.prof-dashboard {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prof-trend-panel {
+  grid-column: 1 / -1;
+  padding-right: 0;
+}
+
+.prof-trend-panel .prof-term-chart {
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
