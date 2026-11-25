@@ -211,7 +211,7 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-step h2 {
   margin: 0 0 22px;
-  font-size: clamp(25px, 3.2vw, 36px);
+  font-size: clamp(24px, 2.8vw, 32px);
   font-weight: 600;
   letter-spacing: -.05em;
   line-height: 1.08;
@@ -389,7 +389,7 @@ a { -webkit-tap-highlight-color: transparent; }
   }
   .profile-step h2 {
     margin-bottom: 18px;
-    font-size: 26px;
+    font-size: 24px;
   }
   .profile-options,
   .profile-major-grid { grid-template-columns: 1fr; }
