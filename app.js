@@ -881,6 +881,7 @@ function switchView(id, opts = {}) {
   $("#mobile-nav-label").textContent = NAV.find(([view]) => view === navId)?.[1] || "Menu";
   document.title = "Antivergil";
   if (id !== "browse") setFilterPanelOpen(false);
+  if (document.body.dataset.view === "map" && id !== "map") window.CampusSocial?.stop();
   document.body.dataset.view = id;
   if (id === "calendar") {
     document.body.style.overflow = "auto";
@@ -6091,6 +6092,7 @@ function renderMyPage() {
     redirectToLogin("/account/");
     return;
   }
+  window.CampusSocial?.setAccount(authUser, state.term);
   const ratings = Object.entries(readCourseRatings())
     .map(([code, value]) => ({ code, value: Number(value?.value) || 0 }))
     .filter((item) => item.value > 0)
@@ -6529,6 +6531,7 @@ async function deleteGoogleCalendarEvent(event) {
 }
 
 function signOut() {
+  window.CampusSocial?.stop();
   if (window.AntivergilScheduleCloud?.enabled) {
     window.AntivergilScheduleCloud.signOut(authUser).catch(() => {});
   }
@@ -7231,6 +7234,7 @@ function startIntro() {
 }
 
 async function init() {
+  window.CampusSocial?.setAccount(authUser, state.term);
   if (window.AntivergilScheduleCloud?.enabled) {
     await refreshCloudSchedule({ force: true, repaint: false });
     const refreshVisibleSchedule = () => {

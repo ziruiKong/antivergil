@@ -21,6 +21,7 @@ const runtimeFiles = [
   "profile.css",
   "profile.js",
   "campus-model.js",
+  "campus-social.js",
 ];
 
 const appRoutes = [

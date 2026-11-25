@@ -37,7 +37,7 @@
   <title>Antivergil</title>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="styles.css?v=20261125-course-share" />
+  <link rel="stylesheet" href="styles.css?v=20261125-campus-live" />
 </head>
 <body>
   <svg class="ink-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -125,6 +125,7 @@
     <!-- Personal page -->
     <section class="view" id="view-me" hidden>
       <div id="my-page" class="my-page" aria-live="polite"></div>
+      <section id="campus-friends" class="my-panel campus-friends" hidden></section>
     </section>
 
     <!-- Instructor profile -->
@@ -311,6 +312,13 @@
         <div class="campus-model-main">
           <div class="campus-model-viewport" id="campus-model-viewport">
             <svg id="campus-model-svg" viewBox="0 0 1500 960" role="img" aria-label="Columbia University main campus map"></svg>
+            <div id="campus-street-map" aria-label="Campus street map" hidden></div>
+            <div class="campus-live-controls">
+              <button type="button" id="campus-base-switch" aria-pressed="false">Street map</button>
+              <button type="button" id="campus-locate" aria-pressed="false">Locate me</button>
+              <button type="button" id="campus-share-location" aria-pressed="false" hidden>Share with friends</button>
+              <span id="campus-location-status" role="status"></span>
+            </div>
             <div id="map-loading" class="campus-model-loading">Drawing campus model…</div>
             <div class="campus-model-compass" aria-hidden="true">
               <span>N</span><i></i><small>Broadway</small>
@@ -392,7 +400,7 @@
   <script src="data/buildings.js"></script>
   <script src="data/campus-3d.js?v=20261122-campus-model"></script>
   <script src="data/campus-osm.js?v=20261122-campus-greenery-2"></script>
-  <script src="campus-model.js?v=20261125-campus-model-28"></script>
+  <script src="campus-model.js?v=20261125-campus-live"></script>
   <script src="data/courses-2026-Fall.js"></script>
   <script src="data/courses-2026-Spring.js"></script>
   <script src="data/courses-2027-Spring.js"></script>
@@ -401,7 +409,8 @@
   <script src="data/maps-config.js"></script>
   <script src="data/auth-config.js?v=20261125-schedule-cloud"></script>
   <script src="profile-store.js?v=20261125-calendar-sync"></script>
-  <script src="schedule-cloud.js?v=3"></script>
-  <script src="app.js?v=20261125-calendar-sync"></script>
+  <script src="schedule-cloud.js?v=4"></script>
+  <script src="campus-social.js?v=1"></script>
+  <script src="app.js?v=20261125-friends"></script>
 </body>
 </html>

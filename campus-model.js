@@ -1436,7 +1436,9 @@
         <g id="campus-model-transit">${drawSubwayEntrance(project)}</g>
         <g id="campus-model-labels">${roadLabels}</g>
         <g id="campus-model-course-pointers">${drawCoursePointers(project, centralBuildings)}</g>
+        <g id="campus-model-live-points"></g>
       </g>`;
+    window.updateCampusLivePoints(window.CAMPUS_LIVE_POINTS, project);
     applyCampusCamera();
     if (loading) loading.hidden = true;
     const fallback = document.querySelector("#map-fallback");
@@ -1541,6 +1543,30 @@
     }
 
   }
+
+  window.updateCampusLivePoints = (points = [], projection) => {
+    window.CAMPUS_LIVE_POINTS = points;
+    const group = document.querySelector("#campus-model-live-points");
+    if (!group) return;
+    const base = makeProjection(MODEL_STATE.rotation, MODEL_STATE.pitch);
+    const project = projection || ((lat, lon) => base(lat, lon, campusElevation(lat, lon)));
+    group.replaceChildren();
+    for (const point of points) {
+      if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude) ||
+        point.latitude < 40.804 || point.latitude > 40.811 ||
+        point.longitude < -73.967 || point.longitude > -73.957) continue;
+      const [x, y] = project(point.latitude, point.longitude);
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.setAttribute("cx", x);
+      marker.setAttribute("cy", y);
+      marker.setAttribute("r", "7");
+      marker.setAttribute("class", point.self ? "campus-live-self" : "campus-live-friend");
+      const title = document.createElementNS(marker.namespaceURI, "title");
+      title.textContent = point.name;
+      marker.append(title);
+      group.append(marker);
+    }
+  };
 
   window.renderCampusModel = renderCampusModel;
   window.focusCampusModel = focusCampusModel;

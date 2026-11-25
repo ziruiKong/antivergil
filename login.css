@@ -212,21 +212,12 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .google-login-mount {
   width: 100%;
-  min-height: 52px;
+  min-height: 44px;
   display: flex;
   justify-content: center;
-  overflow: hidden;
-  border: 1.5px solid var(--ink);
-  background: var(--paper);
 }
 
 .google-login-mount:empty { display: none; }
-.google-login-mount > div,
-.google-login-mount iframe {
-  width: 100% !important;
-  max-width: 100%;
-  display: block;
-}
 
 .google-login {
   position: relative;

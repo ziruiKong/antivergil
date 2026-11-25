@@ -10,8 +10,8 @@
     catch { return fallback; }
   }
 
-  async function request(method, body, token) {
-    const response = await fetch(endpoint, {
+  async function request(method, body, token, url = endpoint) {
+    const response = await fetch(url, {
       method,
       headers: {
         ...(body ? { "Content-Type": "application/json" } : {}),
@@ -129,6 +129,11 @@
       if (value?.sub === user?.sub && value?.token) await request("DELETE", null, value.token);
     },
     sync,
+    social(user, body) {
+      const url = new URL(endpoint, location.href);
+      url.searchParams.set("social", "1");
+      return request(body ? "PUT" : "GET", body, session(user), url);
+    },
     update(user, term, before, after) {
       enqueue(user, term, serialize(before), serialize(after), sectionKey);
       return sync(user, { [term]: before });

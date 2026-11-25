@@ -200,7 +200,7 @@ if (window.AntivergilScheduleCloud?.enabled) {
       },
     });
     window.google.accounts.id.renderButton(mount, {
-      type: "standard", theme: "outline", size: "large", text: "continue_with",
+      type: "standard", theme: "filled_black", shape: "rectangular", size: "large", text: "continue_with", logo_alignment: "left",
       width: Math.max(200, Math.min(330, mount.clientWidth || 300)),
     });
     button.hidden = true;
