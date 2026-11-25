@@ -129,6 +129,11 @@
       if (value?.sub === user?.sub && value?.token) await request("DELETE", null, value.token);
     },
     sync,
+    courseAlerts(user, body) {
+      const url = new URL(endpoint, location.href);
+      url.searchParams.set("alerts", "1");
+      return request(body ? "PUT" : "GET", body, session(user), url);
+    },
     social(user, body) {
       const url = new URL(endpoint, location.href);
       url.searchParams.set("social", "1");

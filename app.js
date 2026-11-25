@@ -1722,6 +1722,55 @@ function renderCourseRatingPanel(host, code) {
 }
 
 /* ---------- 课程详情 ---------- */
+function coursePermalink(code, term, section = "") {
+  const slug = normCode(code).toLowerCase().replace(/\s+/g, "-");
+  const params = new URLSearchParams({ term });
+  if (section) params.set("section", section);
+  return `/course/${encodeURIComponent(slug)}/?${params}`;
+}
+
+function vergilSectionURL(term, callNumber) {
+  const [year, semester] = term.split("-");
+  const index = { Spring: 1, Summer: 2, Fall: 3 }[semester];
+  return index && /^\d{4,6}$/.test(String(callNumber))
+    ? `https://vergil.columbia.edu/vergil/course/${year}${index}/${callNumber}`
+    : "https://vergil.columbia.edu/vergil/";
+}
+
+async function bindEnrollmentAlert(button, status, term, callNumber, code) {
+  const cloud = window.AntivergilScheduleCloud;
+  const user = authUser;
+  if (!button || !status || !user || !cloud?.enabled) return;
+  function display(active, ready) {
+    button.disabled = false;
+    button.textContent = active ? "Turn off email alert" : "Follow by email";
+    button.setAttribute("aria-pressed", String(active));
+    status.textContent = ready
+      ? "Alerts for almost full, full, or reopened seats."
+      : "Email delivery is pending setup.";
+  }
+  try {
+    const { watches, ready } = await cloud.courseAlerts(user);
+    let active = watches.some((watch) => watch.term === term && watch.callNumber === callNumber);
+    display(active, ready);
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const result = await cloud.courseAlerts(user, { term, callNumber, enabled: !active });
+        active = result.enabled;
+        display(active, result.ready);
+      } catch (error) {
+        button.disabled = false;
+        status.textContent = error.message;
+        if (error.status === 401) status.insertAdjacentHTML("beforeend", ' <a href="/login/?next=' + encodeURIComponent(coursePermalink(code, term, callNumber)) + '">Reconnect</a>');
+      }
+    });
+  } catch (error) {
+    status.textContent = error.message;
+    if (error.status === 401) status.insertAdjacentHTML("beforeend", ' <a href="/login/?next=' + encodeURIComponent(coursePermalink(code, term, callNumber)) + '">Reconnect</a>');
+  }
+}
+
 function openCourse(code, sectionId = "") {
   if (!profileAllowsCourse(code)) {
     toast("This course is outside your current undergraduate/graduate course range.");
@@ -1733,7 +1782,9 @@ function openCourse(code, sectionId = "") {
   if (!sections.length) return;
   state.modalCourse = { code, sectionId };
   const c = groupByCode(sections)[0];
-  const selected = sections.find((s) => s.classId === sectionId) || sections[0];
+  const selected = sections.find((s) => s.classId === sectionId || String(s.callNumber) === sectionId) || sections[0];
+  const callNumber = String(selected.callNumber || "");
+  const term = state.term;
   const selectedCard = sectionToCard(selected);
   const body = $("#modal-body");
   const prereqHTML = renderPrereqs(selected.prereqs);
@@ -1750,6 +1801,11 @@ function openCourse(code, sectionId = "") {
       <div class="m-folder-head">
         <h2>${esc(c.code)} · ${esc(c.title)}</h2>
         <div class="m-sub"><button class="m-dept-link" type="button" data-department="${esc(c.deptCode)}">${esc(c.dept)} ↗</button>${c.sections[0].subtitle && c.sections[0].subtitle !== c.title ? " · " + esc(c.sections[0].subtitle) : ""} · Section ${esc(sectionLabel(selected))}</div>
+        <div class="course-entry-links">
+          <a href="${esc(coursePermalink(c.code, term, callNumber))}">Course permalink</a>
+          <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
+          ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button><span id="course-email-status" role="status"></span>' : ""}
+        </div>
       </div>
       <section class="m-folder-panel" id="m-panel-overview" role="tabpanel" aria-labelledby="m-tab-overview" data-mpanel="overview">
         <div class="m-grid">
@@ -1785,7 +1841,7 @@ function openCourse(code, sectionId = "") {
           <tbody>
           ${c.sections.map((s) => `
             <tr class="${s.classId === selected.classId ? "selected" : ""}">
-              <td title="${esc(s.classId || "")}">${esc(sectionLabel(s) || "—")}</td>
+              <td title="${esc(s.classId || "")}"><a href="${esc(coursePermalink(c.code, term, s.callNumber || s.classId))}">${esc(sectionLabel(s) || "—")}</a> · <a href="${esc(vergilSectionURL(term, s.callNumber))}" target="_blank" rel="noopener">Vergil ↗</a></td>
               <td>${s.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(s.instructor)}">${esc(s.instructor)}</button>` : "TBA"}</td>
               <td>${esc((s.days || []).map((d) => DAY_MINI[d - 1]).join("/") || "TBA")}</td>
               <td>${s.start != null ? esc(timeRangeLabel(s.start, s.end)) : "TBA"}</td>
@@ -1818,6 +1874,7 @@ function openCourse(code, sectionId = "") {
         </div>` : ""}
     </div>
   `;
+  bindEnrollmentAlert($("#course-email-alert"), $("#course-email-status"), term, callNumber, c.code);
   if (locked) {
     body.querySelector(".course-lock-signin")?.addEventListener("click", () => {
       try {
@@ -7289,21 +7346,24 @@ async function init() {
       const pendingCourse = JSON.parse(sessionStorage.getItem(PENDING_COURSE_KEY) || "null");
       if (pendingCourse?.code) {
         sessionStorage.removeItem(PENDING_COURSE_KEY);
-        setTimeout(() => openCourse(pendingCourse.code, pendingCourse.sectionId || ""), 120);
+        if (!new URLSearchParams(queryStr).has("course")) setTimeout(() => openCourse(pendingCourse.code, pendingCourse.sectionId || ""), 120);
       }
     } catch { /* ignore storage errors */ }
   }
   fitCourseCardTitles();
   document.fonts?.ready.then(fitCourseCardTitles);
   document.fonts?.ready.then(positionSearchCaret);
-  if (pendingSavedTerm) selectTerm(pendingSavedTerm);
+  if (pendingSavedTerm && !new URLSearchParams(queryStr).has("course")) await selectTerm(pendingSavedTerm);
   if (queryStr) {
     const params = new URLSearchParams(queryStr);
     const qTerm = params.get("term");
-    if (qTerm && TERM_DATA[qTerm]) setTerm(qTerm);
+    if (qTerm && SEMESTERS.some((semester) => semester.term === qTerm)) await selectTerm(qTerm);
     const course = params.get("course");
     const section = params.get("section") || "";
-    if (course) setTimeout(() => openCourse(course, section), 120);
+    if (course) {
+      if (params.has("coursePath")) history.replaceState(history.state, "", coursePermalink(course, state.term, section));
+      openCourse(course, section);
+    }
   }
 }
 

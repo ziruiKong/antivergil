@@ -13795,3 +13795,7 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
 .campus-live-self, .campus-live-friend { stroke: #fff; stroke-width: 2; }
 .campus-live-self { fill: #245d8e; }
 .campus-live-friend { fill: #9b3151; }
+
+.course-entry-links { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; font-size: 12px; }
+.course-entry-links button { font: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+.course-entry-links button[aria-pressed="true"] { background: #222; color: #fff; }
