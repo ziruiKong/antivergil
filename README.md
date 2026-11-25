@@ -1,6 +1,12 @@
 # 哥大 GSAS × IEOR × Business 选课助手
 
+正式站点：**https://antivergil.cc/**
+
 一个零依赖的哥大选课网站，专注 GSAS、IEOR 与商学院课程：课程浏览、历史学期资料、课程推荐、学业规划与先修课建模、课表日历、校园地图。
+
+## 部署
+
+本仓库本身就是 GitHub Pages 的发布目录。推送到 `main` 后，`.github/workflows/pages.yml` 会部署整个站点；`CNAME` 将自定义域名固定为 `antivergil.cc`。每小时第 17 分钟由 `refresh-antivergil.yml` 刷新课程与选课数据，并在同一次任务中重新部署。
 
 ## 快速开始
 

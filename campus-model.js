@@ -343,7 +343,7 @@
     const active = LANDMARK_BY_NAME.get(selectedName);
     selection.innerHTML = active
       ? `<b>${active.label}</b><span>${active.description}</span>`
-      : `<b>Columbia University</b><span>Drag to orbit · Shift-drag to pan · scroll to zoom · double-click to reset · hover a landmark to inspect it.</span>`;
+      : `<b>Columbia University</b><span>Drag to orbit · scroll or pinch to zoom · double-click or double-tap to reset · select a landmark to inspect it.</span>`;
   }
 
   function drawCoursePointers(project, centralBuildings) {

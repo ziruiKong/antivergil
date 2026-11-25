@@ -42,3 +42,53 @@ footer { padding-block: min(1rem, 1.5dvh); }
   scrollbar-width: none;
   touch-action: pan-y;
 }
+
+@media (max-width: 650px) {
+  .gallery-track {
+    height: 100%;
+    align-items: stretch;
+  }
+
+  .gallery-track .tile:nth-child(n) {
+    height: 100%;
+  }
+
+  .gallery-track .tile {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .photo-window {
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .tile-caption {
+    flex: 0 0 auto;
+    padding-top: .5rem;
+    font-size: clamp(16px, 4.4vw, 21px);
+  }
+
+  .intro {
+    gap: 12px;
+    padding-block: .85rem;
+  }
+
+  .intro p {
+    max-width: 21ch;
+    font-size: clamp(20px, 5.4vw, 24px);
+  }
+
+  .signin {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  footer {
+    gap: .7rem;
+    padding-bottom: max(.75rem, env(safe-area-inset-bottom));
+  }
+}

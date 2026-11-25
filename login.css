@@ -449,6 +449,38 @@ a { -webkit-tap-highlight-color: transparent; }
   .login-panel { bottom: 52px; }
 }
 
+@media (max-width: 760px) {
+  .login-shell {
+    height: 100dvh;
+  }
+
+  .login-header {
+    padding-top: max(17px, env(safe-area-inset-top));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .login-panel {
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+  }
+
+  .login-status {
+    max-height: 126px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 360px) and (max-height: 640px) {
+  .login-visual {
+    width: min(52vw, 31vh, 190px);
+  }
+
+  .login-marquee-track {
+    font-size: clamp(64px, 19vw, 84px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

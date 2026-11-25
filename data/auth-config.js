@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * 想启用真正的 “Sign in with Google”：
  *   1. 在 Google Cloud Console 创建 OAuth 2.0 Web Client ID。
- *   2. 在 “Authorized JavaScript origins” 里加入 https://ziruikong.xyz
+ *   2. 在 “Authorized JavaScript origins” 里加入 https://antivergil.cc
  *      （本地调试可加入 http://localhost:8000）。
  *   3. 把 Client ID 填到下面的 googleClientId。
  *   4. 用 `node serve.mjs` 通过 http://localhost:8000 打开（Google 不接受 file://）。
