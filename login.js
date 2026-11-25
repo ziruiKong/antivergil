@@ -1,9 +1,16 @@
 const STORAGE_KEY = "cu-auth-user";
 const NEXT_KEY = "antivergil-next";
+const OUTLOOK_TICKET_KEY = "antivergil-outlook-ticket";
 const DEFAULT_NEXT = "/browse/";
 const $ = (selector) => document.querySelector(selector);
 let statusTimer = 0;
 let statusHideTimer = 0;
+let verificationEmailAddress = "";
+let verificationCredential = "";
+let verificationProvider = "google";
+let outlookLoginTicket = "";
+let manualUbcMode = false;
+let resendAvailableAt = 0;
 
 function isAllowedUniversityEmail(value) {
   return /^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/i.test(String(value || "").trim());
@@ -62,11 +69,18 @@ function saveUser(user) {
   } catch (_) {}
 }
 
+function verificationPayload() {
+  return verificationProvider === "outlook"
+    ? { provider: "outlook", ticket: outlookLoginTicket }
+    : { credential: verificationCredential };
+}
+
 function completeSignIn(user) {
   if (!isAllowedUniversityEmail(user.email)) {
     setStatus("Only supported university accounts can continue.", "error");
     return;
   }
+  try { sessionStorage.removeItem(OUTLOOK_TICKET_KEY); } catch (_) {}
   saveUser({ ...user, email: user.email.toLowerCase() });
   const next = safeNextPath();
   const profile = window.AntivergilProfile?.read(user.email);
@@ -113,6 +127,7 @@ if (window.AntivergilScheduleCloud?.enabled) {
       callback: async ({ credential }) => {
         try {
           setStatus("Signing in…", "info");
+          verificationProvider = "google";
           verificationCredential = credential;
           await sendCode(); clearStatus();
         } catch (error) {
@@ -145,29 +160,31 @@ if (window.AntivergilScheduleCloud?.enabled) {
   }).catch(() => setStatus("Google sign-in is temporarily unavailable. Reload to try again."));
 } else {
   $("#google-login").disabled = true;
-  setStatus("Google sign-in is not configured.");
+  $("#outlook-login").disabled = true;
+  setStatus("Cloud sign-in is not configured.");
 }
 
 
-let verificationEmailAddress = "";
-let verificationCredential = "";
-let manualUbcMode = false;
-let resendAvailableAt = 0;
 const emailAuthEndpoint = new URL("/api/email-auth", window.COLUMBIA_AUTH?.scheduleApi || location.origin).href;
 async function emailAuth(body) {
   const response = await fetch(emailAuthEndpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Please try again.");
+  if (!response.ok) {
+    const error = new Error(result.error || "Please try again.");
+    error.status = response.status;
+    error.payload = result;
+    throw error;
+  }
   return result;
 }
 async function sendCode() {
   let result;
   try {
-    result = await emailAuth({ credential: verificationCredential });
+    result = await emailAuth(verificationPayload());
   } catch (error) {
     if (!/Wait 60 seconds/.test(error.message)) throw error;
-    const payload = JSON.parse(atob(verificationCredential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    result = { email: payload.email };
+    result = { email: error.payload?.email || verificationEmailAddress };
+    if (!result.email) throw error;
   }
   if (result.token && result.user) {
     localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
@@ -186,6 +203,7 @@ function showCodeEntry(email) {
   resendAvailableAt = Date.now() + 60000;
   $("#google-login-mount").hidden = true;
   $("#show-ubc-register").hidden = true;
+  $("#outlook-login").hidden = true;
   $("#ubc-email-form").hidden = true;
   $("#code-form").hidden = false;
   codeInput.focus();
@@ -198,7 +216,10 @@ async function requestUbcCode() {
     return;
   }
   manualUbcMode = true;
+  verificationProvider = "email";
   verificationCredential = "";
+  outlookLoginTicket = "";
+  try { sessionStorage.removeItem(OUTLOOK_TICKET_KEY); } catch (_) {}
   verificationEmailAddress = email;
   setStatus("Sending a verification code…", "info");
   try {
@@ -233,7 +254,7 @@ async function verifyEnteredCode() {
   try {
     const payload = manualUbcMode
       ? { provider: "ubc-email", email: verificationEmailAddress, code }
-      : { credential: verificationCredential, code };
+      : { ...verificationPayload(), code };
     const { token, user } = await emailAuth(payload);
     localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: user.sub, token }));
     verifiedCode = true;
@@ -263,16 +284,22 @@ codeInput.addEventListener("input", () => {
 });
 $("#show-ubc-register").addEventListener("click", () => {
   manualUbcMode = true;
+  verificationProvider = "email";
+  outlookLoginTicket = "";
+  try { sessionStorage.removeItem(OUTLOOK_TICKET_KEY); } catch (_) {}
   $("#google-login-mount").hidden = true;
+  $("#outlook-login").hidden = true;
   $("#show-ubc-register").hidden = true;
   $("#ubc-email-form").hidden = false;
   $("#ubc-email").focus();
 });
 $("#back-to-google").addEventListener("click", () => {
   manualUbcMode = false;
+  verificationProvider = "google";
   $("#ubc-email-form").hidden = true;
   $("#show-ubc-register").hidden = false;
   $("#google-login-mount").hidden = false;
+  $("#outlook-login").hidden = false;
   clearStatus();
 });
 $("#ubc-email-form").addEventListener("submit", event => { event.preventDefault(); requestUbcCode(); });
@@ -285,8 +312,14 @@ $("#change-email").addEventListener("click", () => {
     $("#ubc-email").focus();
   } else {
     $("#google-login-mount").hidden = false;
+    $("#outlook-login").hidden = false;
+    $("#show-ubc-register").hidden = false;
   }
+  manualUbcMode = false;
+  verificationProvider = "google";
   verificationCredential = "";
+  outlookLoginTicket = "";
+  try { sessionStorage.removeItem(OUTLOOK_TICKET_KEY); } catch (_) {}
 });
 $("#resend-code").addEventListener("click", async event => {
   event.target.disabled = true;
@@ -310,3 +343,60 @@ setInterval(() => {
   $("#resend-code").disabled = seconds > 0;
   $("#resend-code").textContent = seconds ? "Resend in " + seconds + "s" : "Resend code";
 }, 1000);
+
+function beginOutlookSignIn() {
+  const configuredUrl = window.COLUMBIA_AUTH?.outlookAuthUrl;
+  const base = configuredUrl || window.COLUMBIA_AUTH?.scheduleApi || location.origin;
+  const endpoint = new URL(configuredUrl || "/api/outlook-auth", base);
+  endpoint.searchParams.set("return_to", location.origin);
+  location.assign(endpoint.href);
+}
+
+function consumeOutlookRedirect() {
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const ticket = hash.get("outlook") || "";
+  const error = hash.get("outlook_error") || "";
+  if (!ticket && !error) return false;
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+  if (error) {
+    const messages = {
+      access_denied: "Outlook sign-in was cancelled.",
+      cancelled: "Outlook sign-in was cancelled.",
+      not_allowed: "Use a supported university Outlook account.",
+      unavailable: "Outlook sign-in is temporarily unavailable.",
+    };
+    setStatus(messages[error] || "Outlook sign-in could not be completed. Try again.");
+    return true;
+  }
+  if (!/^[A-Za-z0-9_-]{43}$/.test(ticket)) {
+    setStatus("Outlook sign-in expired. Choose your account again.");
+    return true;
+  }
+  manualUbcMode = false;
+  verificationProvider = "outlook";
+  verificationCredential = "";
+  outlookLoginTicket = ticket;
+  try { sessionStorage.setItem(OUTLOOK_TICKET_KEY, ticket); } catch (_) {}
+  setStatus("Sending a verification code…", "info");
+  sendCode().then(clearStatus).catch(error => setStatus(error.message || "Outlook sign-in failed."));
+  return true;
+}
+
+$("#outlook-login").addEventListener("click", () => {
+  if (!window.AntivergilScheduleCloud?.enabled) {
+    setStatus("Outlook sign-in is not configured.");
+    return;
+  }
+  beginOutlookSignIn();
+});
+
+if (!consumeOutlookRedirect()) {
+  let savedTicket = "";
+  try { savedTicket = sessionStorage.getItem(OUTLOOK_TICKET_KEY) || ""; } catch (_) {}
+  if (/^[A-Za-z0-9_-]{43}$/.test(savedTicket)) {
+    verificationProvider = "outlook";
+    outlookLoginTicket = savedTicket;
+    setStatus("Sending a verification code…", "info");
+    sendCode().then(clearStatus).catch(error => setStatus(error.message || "Outlook sign-in failed."));
+  }
+}

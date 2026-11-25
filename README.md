@@ -124,6 +124,34 @@ node serve.mjs 8000
 所需权限范围为 `https://www.googleapis.com/auth/calendar.events`。访问令牌只保存在当前页面内存中，不会写入
 localStorage；Client ID 属于公开标识，可保存在本地浏览器中。
 
+## Outlook / Microsoft 登录配置
+
+登录页的 **Continue with Outlook** 使用 Microsoft OAuth 2.0 授权码流程，并通过 Microsoft Graph
+读取登录账号的邮箱。邮箱仍必须是 `@columbia.edu` 或 `@student.ubc.ca`，授权成功后继续使用现有
+六位邮件验证码流程。
+
+在 Azure Portal 创建应用注册（**App registrations**）：
+
+1. Supported account types 选择支持组织目录和个人 Microsoft 账号。
+2. 在 **Redirect URI** 中添加 Web 平台地址
+   `https://antivergil-schedule.netlify.app/api/outlook-auth`。
+3. 在 **API permissions** 中添加 Microsoft Graph 的 Delegated 权限
+   `openid`、`profile`、`email`、`User.Read`。
+4. 在 **Certificates & secrets** 创建 client secret。
+
+在 Netlify 的 Production 和 Deploy previews 环境中配置：
+
+```text
+MICROSOFT_CLIENT_ID=<Azure application client id>
+MICROSOFT_CLIENT_SECRET=<Azure client secret>
+MICROSOFT_TENANT_ID=common
+OUTLOOK_REDIRECT_URI=https://antivergil-schedule.netlify.app/api/outlook-auth
+ANTIVERGIL_SITE_URL=https://antivergil.cc
+```
+
+`MICROSOFT_CLIENT_SECRET` 只能保存在 Netlify 服务端。`data/auth-config.js` 中的
+`outlookAuthUrl` 只是公开的启动端点地址。
+
 ## 说明与免责声明
 
 - 课程数据来源于公开的哥大课程目录及其社区镜像，仅供个人选课参考。
