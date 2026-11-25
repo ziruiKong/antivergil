@@ -13680,3 +13680,80 @@ body.auth-authenticated .my-page {
 
 main:has(#view-map:not([hidden])) { padding-bottom: 0; }
 #view-map #campus-model-svg { cursor: default; touch-action: auto; }
+
+.campus-building-tooltip {
+  position:absolute; z-index:9; max-width:min(220px,calc(100% - 10px));
+  padding:6px 9px; border:1px solid #252623; border-radius:6px;
+  background:#faf9f5; color:#252623; font:inherit; font-size:11px;
+  line-height:1.35; pointer-events:none;
+}
+.campus-building-tooltip strong,.campus-building-tooltip span { display:block; }
+.campus-building-tooltip span { margin-top:2px; color:#5b5144; font-size:10px; }
+.campus-building-node:is(:hover,:focus-visible) { stroke:#982c4a; stroke-width:2; outline:none; }
+
+/* Flat course locations in the map rail. */
+.map-course-row {
+  display:grid; grid-template-columns:15px minmax(0,1fr) auto; gap:8px;
+  width:100%; align-items:start; background:transparent; border:0;
+  border-bottom:1px solid #d0cec6; border-radius:0; padding:10px 3px;
+  color:var(--sa-ink); text-align:left; font:inherit;
+}
+button.map-course-row { cursor:pointer; }
+button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { background:#f5e8e9; }
+.map-course-copy { min-width:0; display:grid; gap:3px; }
+.map-course-copy b { color:#982c4a; font-size:11px; }
+.map-course-copy > span { font-size:10px; line-height:1.3; }
+.map-course-copy small { font-size:9px; line-height:1.35; color:#5c554a; }
+.map-course-pin svg { display:block; width:13px; height:16px; fill:#bb3151; }
+.map-course-pin circle { fill:#fff; }
+#calendar-sidebar {
+  background:var(--sa-bg); box-shadow:none; gap:10px;
+}
+#calendar-sidebar .calendar-create-btn {
+  min-height:42px; padding-inline:10px; background:transparent;
+  border:1px solid #b9b7ae; border-radius:4px; box-shadow:none; transform:none;
+}
+#calendar-sidebar .calendar-create-btn:hover { background:#e9e6df; }
+#calendar-sidebar .mini-calendar {
+  border:0; border-radius:0; background:transparent; box-shadow:none;
+  padding-inline:3px;
+}
+#calendar-sidebar .calendar-search {
+  min-height:38px; margin:0; padding-inline:8px;
+  border:0; border-bottom:1px solid #c8c5bc; border-radius:0; background:transparent;
+}
+#calendar-sidebar .calendar-sidebar-tools {
+  margin:0; border:0; padding:0;
+}
+#calendar-sidebar .calendar-sidebar-tools .calendar-text-btn {
+  min-height:32px; border:0; border-radius:0; box-shadow:none;
+}
+#calendar-sidebar .calendar-source-section {
+  margin:0; padding:9px 3px 0; border-top:1px solid #d4d0c7;
+}
+#calendar-sidebar .calendar-create-menu { box-shadow:none; border-radius:4px; }
+#calendar-sidebar .calendar-source-list { gap: 0; }
+#calendar-sidebar .calendar-source-row {
+  min-height: 30px; gap: 9px; padding-inline: 5px; border-radius: 2px;
+}
+#calendar-sidebar .calendar-source-row:hover,
+#calendar-sidebar .calendar-source-row:focus-within { background: #e9e6df; }
+#calendar-sidebar .calendar-source-check {
+  width: 7px; height: 7px; border: 1px solid var(--source-color);
+  border-radius: 50%; background: transparent;
+}
+#calendar-sidebar .calendar-source-check::after { display: none; }
+#calendar-sidebar .calendar-source-row input:checked + .calendar-source-check {
+  background: var(--source-color);
+}
+#calendar-sidebar .calendar-source-row:has(input:checked)::after {
+  content: "✓"; margin-left: auto; color: #514e44;
+}
+#calendar-sidebar .calendar-source-row:has(input:not(:checked)) { color: #615f56; }
+.calendar-google-connect {
+  background: transparent; border: 0; border-top: 1px solid #d4d0c7;
+  width: 100%; min-height: 36px; padding: 7px 5px; text-align: left;
+  color: var(--sa-ink); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.calendar-google-connect:hover, .calendar-google-connect:focus-visible { background: #e9e6df; }
+.calendar-google-connect:disabled { opacity: .66; cursor: wait; }

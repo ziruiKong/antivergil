@@ -141,6 +141,32 @@ function currentProfile() {
     : null;
 }
 
+function restoreProfileSchedule() {
+  const saved = currentProfile()?.schedules?.[state.term];
+  if (!Array.isArray(saved)) {
+    state.schedule = [];
+    return;
+  }
+  const sections = new Map(state.courses.map((section) => [String(section.classId), section]));
+  const seen = new Set();
+  state.schedule = saved.flatMap((item) => {
+    const id = String(item?.classId ?? "");
+    const section = sections.get(id);
+    if (!section || seen.has(id) || normCode(section.code) !== normCode(item.code)) return [];
+    seen.add(id);
+    return [section];
+  });
+}
+
+function persistProfileSchedule() {
+  if (!authUser) return true;
+  try {
+    return Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
+  } catch {
+    return false;
+  }
+}
+
 function profileAllowsCourse(code) {
   const profile = currentProfile();
   return !profile || !window.AntivergilProfile || window.AntivergilProfile.canViewCourse(profile, code);
@@ -897,7 +923,7 @@ function setTerm(term) {
   state.term = term;
   state.courses = data;
   saveSelectedTerm(term);
-  state.schedule = [];
+  restoreProfileSchedule();
   state.calendarSelected = defaultCalendarDateForTerm(term);
   state.calendarMiniMonth = new Date(state.calendarSelected.getFullYear(), state.calendarSelected.getMonth(), 1);
   state.browsePage = 0;
@@ -915,7 +941,9 @@ function setTerm(term) {
     sel.value = term;
     updateHistoryLinks();
   }
-  toast(`Switched to ${termShort(term)}. Schedule cleared.`);
+  refreshMapPins();
+  if (!$("#view-me").hidden) renderMyPage();
+  toast(`Switched to ${termShort(term)}.`);
 }
 
 const termBundleLoading = new Map();
@@ -963,7 +991,7 @@ async function selectTerm(term) {
     state.term = term;
     state.courses = normalized;
     saveSelectedTerm(term);
-    state.schedule = [];
+    restoreProfileSchedule();
     state.calendarSelected = defaultCalendarDateForTerm(term);
     state.calendarMiniMonth = new Date(state.calendarSelected.getFullYear(), state.calendarSelected.getMonth(), 1);
     state.browsePage = 0;
@@ -975,12 +1003,15 @@ async function selectTerm(term) {
     renderCalendar();
     refreshDataFreshness();
     if (!$("#view-analysis").hidden) renderAnalysis();
+    refreshMapPins();
+    if (!$("#view-me").hidden) renderMyPage();
     toast(`Switched to ${termShort(term)}.`);
   } catch (err) {
     toast(`Could not load ${termShort(term)}: ${err.message}`);
     if (!state.courses.length) {
       state.term = "2027-Spring";
       state.courses = COURSES_2027;
+      restoreProfileSchedule();
       saveSelectedTerm(state.term);
       buildFilters();
       renderBrowse();
@@ -1931,11 +1962,12 @@ async function loadTerm() {
     state.term = term;
     TERM_DATA[term] = normalized;
     sectionCache = null;
-    state.schedule = [];
+    restoreProfileSchedule();
     buildFilters();
     renderBrowse();
     renderTermSwitch();
     renderCalendar();
+    refreshMapPins();
     $("#history-meta").textContent = `Loaded ${term}: ${normalized.length} ${FOCUS_LABEL} sections. Open Browse to search them.`;
   } catch (err) {
     $("#history-error").hidden = false;
@@ -4252,7 +4284,7 @@ function addSectionsToSchedule(code, sectionId = "") {
     return;
   }
   state.schedule.push(chosen);
-  toast(`Added to schedule: ${chosen.code}`);
+  toast(persistProfileSchedule() ? `Added to schedule: ${chosen.code}` : "Added for this session. Profile storage is unavailable.");
   renderCalendar();
   refreshMapPins();
 }
@@ -4262,7 +4294,7 @@ function removeFromSchedule(classId) {
   state.schedule = state.schedule.filter((s) => s.classId !== classId);
   renderCalendar();
   refreshMapPins();
-  if (removed) toast(`${removed.code} removed from calendar.`);
+  if (removed) toast(persistProfileSchedule() ? `${removed.code} removed from calendar.` : "Removed for this session. Profile storage is unavailable.");
 }
 
 function conflicts() {
@@ -4319,9 +4351,8 @@ function renderCalendarChrome(start, end) {
   $("#cal-time-format").textContent = state.calendarTimeFormat;
   const googleButton = $("#gcal-open");
   if (googleButton) {
-    googleButton.textContent = state.googleCalendarConnected
-      ? (state.googleCalendarLoading ? "Syncing Google…" : "Google · Synced")
-      : "Connect";
+    googleButton.textContent = state.googleCalendarLoading ? "Syncing Google Calendar…"
+      : state.googleCalendarConnected ? "Manage Google Calendar" : "Connect Google Calendar";
     googleButton.classList.toggle("is-connected", state.googleCalendarConnected);
     googleButton.disabled = state.googleCalendarLoading;
   }
@@ -4360,7 +4391,8 @@ function renderMiniCalendar() {
 }
 
 function renderCalendarSources() {
-  const build = (group) => CALENDAR_SOURCES.filter((source) => source.group === group).map((source) => `
+  const build = (group) => CALENDAR_SOURCES.filter((source) => source.group === group
+    && (source.id !== "google" || state.googleCalendarConnected)).map((source) => `
     <label class="calendar-source-row" style="--source-color:${source.color}">
       <input type="checkbox" data-calendar-source="${source.id}" ${calendarSourceVisible(source.id) ? "checked" : ""} />
       <span class="calendar-source-check" aria-hidden="true"></span>
@@ -4790,9 +4822,10 @@ function importScheduleShareCode(input) {
       added += 1;
     }
   }
+  const saved = !added || persistProfileSchedule();
   renderCalendar();
   refreshMapPins();
-  return { added, duplicates, missing };
+  return { added, duplicates, missing, saved };
 }
 
 async function copyScheduleShareCode(text) {
@@ -4875,6 +4908,7 @@ function openCalendarShareDialog() {
       const notes = [`${result.added} added`];
       if (result.duplicates) notes.push(`${result.duplicates} already present`);
       if (result.missing) notes.push(`${result.missing} unavailable`);
+      if (!result.saved) notes.push("profile storage unavailable");
       closeModal();
       toast(`Courses imported · ${notes.join(" · ")}`);
     } catch (error) {
@@ -5404,6 +5438,8 @@ function refreshMapPins() {
   renderMapList();
 }
 
+let highlightedMapBuilding = "";
+
 function renderMapList() {
   const list = $("#map-list");
   const located = state.schedule
@@ -5417,27 +5453,30 @@ function renderMapList() {
     courseTargets.get(b.name).codes.push(s.code);
   }
   window.updateCampusCourseTargets?.([...courseTargets.values()]);
-  const count = $("#map-course-count");
-  if (count) count.textContent = String(located.length);
   if (!state.schedule.length) {
     list.innerHTML = `<div class="notice info">No courses selected.</div>`;
     return;
   }
-  list.innerHTML = state.schedule.map((s) => {
-    const b = matchBuilding(s.location);
-    return `<div class="cal-row">
-      <div>
-        <div class="cr-main">${esc(s.code)} · ${esc(s.title)}</div>
-        <div class="cr-sub">${esc(cleanLocation(s.location) || "Location TBA")}${b ? " → " + esc(b.name) : ""}</div>
-      </div>
-      ${b ? `<button data-fly="${esc(b.name)}">View on map</button>` : ""}
-    </div>`;
+  const pin = '<svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 19C5 15 1 12 1 8a7 7 0 1 1 14 0c0 4-4 7-7 11Z"/><circle cx="8" cy="8" r="2.3"/></svg>';
+  list.innerHTML = state.schedule.map((section) => {
+    const building = matchBuilding(section.location);
+    const location = cleanLocation(section.location);
+    const room = location.match(/^\s*(\d[\w-]*)\b/)?.[1];
+    const where = building ? building.name + (room ? ` · Room ${room}` : "") : location || "Location TBA";
+    const content = `<span class="map-course-pin">${building ? pin : ""}</span>
+      <span class="map-course-copy"><b>${esc(section.code)}</b><span>${esc(section.title)}</span><small>${esc(where)}</small></span>`;
+    return building
+      ? `<button type="button" class="map-course-row" data-fly="${esc(building.name)}" aria-pressed="${building.name === highlightedMapBuilding}">${content}<span aria-hidden="true">↗</span></button>`
+      : `<div class="map-course-row">${content}</div>`;
   }).join("");
-  list.querySelectorAll("[data-fly]").forEach((btn) =>
-    btn.addEventListener("click", () => {
-      const b = BUILDINGS.find((x) => x.name === btn.dataset.fly);
-      if (b) focusBuilding3D(b);
-    }));
+  const rows = list.querySelectorAll("[data-fly]");
+  for (const row of rows) {
+    row.addEventListener("click", () => {
+      highlightedMapBuilding = row.dataset.fly;
+      for (const other of rows) other.setAttribute("aria-pressed",String(other.dataset.fly === highlightedMapBuilding));
+      focusBuilding3D(row.dataset.fly);
+    });
+  }
 }
 
 /* ============================================================
@@ -5776,6 +5815,9 @@ function localSignIn(email) {
   const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   authUser = { name, email: clean, picture: null, provider: "local" };
   saveAuthUser(authUser);
+  restoreProfileSchedule();
+  renderCalendar();
+  refreshMapPins();
   renderRailBrand();
   renderAccount();
   toast(`Signed in as ${clean}`);
@@ -5843,6 +5885,9 @@ function handleGoogleCredential(response) {
       provider: "google",
     };
     saveAuthUser(authUser);
+    restoreProfileSchedule();
+    renderCalendar();
+    refreshMapPins();
     renderRailBrand();
     renderAccount();
     toast(`Signed in as ${authUser.email}`);
@@ -5899,6 +5944,13 @@ function renderMyPage() {
     </header>
     ${profileSummary}
     <div class="my-grid">
+      <section class="my-panel">
+        <div class="my-panel-head"><span>${esc(termShort(state.term))}</span><h2>Scheduled courses</h2></div>
+        ${state.schedule.length ? `<div class="my-course-list">${state.schedule.map((section) =>
+          `<button type="button" data-my-course="${esc(section.code)}"><b>${esc(section.code)}</b><span>${esc(section.title)}</span></button>`).join("")}</div>`
+          : '<div class="dept-empty my-empty"><b>No scheduled courses.</b></div>'}
+        <p><a href="/calendar/">Open calendar ↗</a></p>
+      </section>
       <section class="my-panel my-plan-panel">
         <div class="my-panel-head"><span>Workspace</span><h2>Plan</h2></div>
         ${plannedCodes.length ? `<div class="my-course-list">${plannedCodes.map((code) =>
@@ -5928,7 +5980,7 @@ function renderMyPage() {
 }
 
 const GOOGLE_CALENDAR_CLIENT_KEY = "cu-google-calendar-client-id";
-const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+const GOOGLE_CALENDAR_SCOPE = window.COLUMBIA_AUTH?.googleCalendarScope || "https://www.googleapis.com/auth/calendar.events";
 let googleCalendarAccessToken = "";
 let googleCalendarTokenExpiresAt = 0;
 let googleCalendarTokenClient = null;
@@ -5937,7 +5989,7 @@ let googleCalendarAuthResolve = null;
 let googleCalendarAuthReject = null;
 
 function googleCalendarClientId() {
-  const configured = window.COLUMBIA_AUTH && window.COLUMBIA_AUTH.googleClientId;
+  const configured = window.COLUMBIA_AUTH?.googleCalendarClientId || window.COLUMBIA_AUTH?.googleClientId;
   if (configured) return String(configured).trim();
   try { return String(localStorage.getItem(GOOGLE_CALENDAR_CLIENT_KEY) || "").trim(); } catch { return ""; }
 }
@@ -5984,7 +6036,7 @@ function renderGoogleCalendarDialog() {
         </div>
       </div>
       ${!connected ? `
-        <label class="google-calendar-client-field">
+        ${!clientId ? `<label class="google-calendar-client-field">
           OAuth Web Client ID
           <input id="google-calendar-client-id" value="${esc(clientId)}" placeholder="1234567890-abc.apps.googleusercontent.com" spellcheck="false" />
         </label>
@@ -5996,7 +6048,7 @@ function renderGoogleCalendarDialog() {
             <li>Authorize JavaScript origin <code>${esc(origin)}</code>.</li>
             <li>Use scope <code>${esc(GOOGLE_CALENDAR_SCOPE)}</code>.</li>
           </ol>
-        </div>
+        </div>` : ""}
         <div class="form-actions">
           <button class="btn ghost" type="button" data-close-calendar-modal>Cancel</button>
           <button class="btn primary" type="button" id="google-calendar-connect">Connect Google Calendar</button>
@@ -6016,13 +6068,13 @@ function renderGoogleCalendarDialog() {
   document.querySelectorAll("[data-close-calendar-modal]").forEach((button) => button.addEventListener("click", closeModal));
   $("#google-calendar-connect")?.addEventListener("click", async () => {
     const input = $("#google-calendar-client-id");
-    const nextClientId = String(input?.value || "").trim();
+    const nextClientId = String(input ? input.value : googleCalendarClientId()).trim();
     if (!nextClientId || !nextClientId.endsWith(".apps.googleusercontent.com")) {
       toast("Paste a valid Google OAuth Web Client ID.");
       input?.focus();
       return;
     }
-    saveGoogleCalendarClientId(nextClientId);
+    if (input) saveGoogleCalendarClientId(nextClientId);
     await connectGoogleCalendar();
   });
   $("#google-calendar-sync")?.addEventListener("click", async () => {
@@ -6065,8 +6117,11 @@ async function connectGoogleCalendar() {
         client_id: clientId,
         scope: GOOGLE_CALENDAR_SCOPE,
         callback: (response) => {
-          if (response.error) {
-            googleCalendarAuthReject?.(new Error(response.error_description || response.error));
+          const oauth = window.google.accounts.oauth2;
+          const granted = response.access_token && (!oauth.hasGrantedAllScopes
+            || oauth.hasGrantedAllScopes(response, GOOGLE_CALENDAR_SCOPE));
+          if (response.error || !granted) {
+            googleCalendarAuthReject?.(new Error(response.error_description || response.error || "Allow access to Google Calendar events to connect."));
             googleCalendarAuthReject = null;
             googleCalendarAuthResolve = null;
             return;
@@ -6178,10 +6233,13 @@ async function syncGoogleCalendar({ interactive = false } = {}) {
   }
   state.googleCalendarLoading = true;
   state.googleCalendarError = "";
-  renderCalendarChrome(...Object.values(calendarPeriodBounds()));
+  const period = calendarPeriodBounds();
+  renderCalendarChrome(period.start, period.end);
   try {
-    const start = calendarAddDays(calendarStartOfWeek(new Date()), -21);
-    const end = calendarAddDays(start, 210);
+    const recent = calendarAddDays(calendarStartOfWeek(new Date()), -21);
+    const start = period.start < recent ? period.start : recent;
+    const regularEnd = calendarAddDays(recent, 210);
+    const end = period.end >= regularEnd ? calendarAddDays(period.end, 1) : regularEnd;
     const params = new URLSearchParams({
       timeMin: start.toISOString(),
       timeMax: end.toISOString(),
@@ -6190,9 +6248,17 @@ async function syncGoogleCalendar({ interactive = false } = {}) {
       showDeleted: "false",
       maxResults: "2500",
     });
-    const data = await googleCalendarRequest(`/calendars/primary/events?${params.toString()}`);
+    const items = [];
+    let pageToken;
+    do {
+      if (pageToken) params.set("pageToken", pageToken);
+      const page = await googleCalendarRequest(`/calendars/primary/events?${params.toString()}`);
+      if (!state.googleCalendarConnected) return;
+      items.push(...(page.items || []));
+      pageToken = page.nextPageToken;
+    } while (pageToken);
     const remoteEvents = [];
-    for (const item of data.items || []) {
+    for (const item of items) {
       if (item.status === "cancelled") continue;
       const mapped = googleEventToCalendarEvent(item);
       const plannerId = item.extendedProperties?.private?.columbiaPlannerEventId;
@@ -6275,6 +6341,7 @@ async function deleteGoogleCalendarEvent(event) {
 
 function signOut() {
   authUser = null;
+  state.schedule = [];
   clearAuthUser();
   try { sessionStorage.removeItem("antivergil-next"); } catch { /* ignore */ }
   if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -6986,6 +7053,7 @@ function init() {
       pendingSavedTerm = savedTerm;
     }
   }
+  if (!pendingSavedTerm) restoreProfileSchedule();
   buildNav();
   renderRailBrand();
   renderTermSwitch();

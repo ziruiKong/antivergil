@@ -123,14 +123,24 @@
 
   function save(profile) {
     const email = normalizeEmail(profile.email);
+    const current = read(email);
     const value = {
       ...profile,
+      schedules: current?.schedules || {},
       version: 1,
       email,
       updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(storageKey(email), JSON.stringify(value));
     return value;
+  }
+
+  function saveSchedule(email, term, sections) {
+    const profile = read(email);
+    if (!profile) return false;
+    const schedules = { ...profile.schedules, [term]: sections.map(({classId, code}) => ({classId, code})) };
+    localStorage.setItem(storageKey(email), JSON.stringify({ ...profile, schedules, updatedAt: new Date().toISOString() }));
+    return true;
   }
 
   function schoolLabel(profile) {
@@ -202,6 +212,7 @@
     normalizeEmail,
     read,
     save,
+    saveSchedule,
     schoolLabel,
     major,
     majorLabel,

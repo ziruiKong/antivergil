@@ -840,7 +840,11 @@
       ] : extrudePrism(project, building, center, walls, className, landmark, brick);
     }
     const nodePoint = project(center[0], center[1], height + 1);
-    const node = `<circle class="campus-building-node ${landmark ? "landmark" : ""}" data-building-node="${escapeXml(building.name || "")}" cx="${nodePoint[0].toFixed(1)}" cy="${nodePoint[1].toFixed(1)}" r="${landmark ? 3 : 2.2}"><title>${escapeXml(building.name || "University building")}</title></circle>`;
+    const name = building.name || "University building";
+    const typeLabels = {university:"Academic building",college:"Academic building",school:"Academic building",dormitory:"Residence hall",apartments:"Residence",roof:"Pavilion"};
+    const tag = LANDMARK_BY_NAME.get(name)?.subtitle
+      || (/library/i.test(name) ? "Library" : typeLabels[building.type] || "Campus building");
+    const node = `<circle class="campus-building-node ${landmark ? "landmark" : ""}" data-building-node="${escapeXml(name)}" data-building-tag="${escapeXml(tag)}" tabindex="0" aria-label="${escapeXml(name+", "+tag)}" cx="${nodePoint[0].toFixed(1)}" cy="${nodePoint[1].toFixed(1)}" r="${landmark ? 3 : 2.2}"/>`;
     return {name: building.name, faces, node};
   }
 
@@ -1211,6 +1215,7 @@
         return { item, building: {
           id: item.id,
           name,
+          type: buildingType,
           levels: item.id === DIANA_CENTER_ID ? 7 : item.id === 738973812 ? 15 : item.tags["building:levels"],
           height: groundHeight(item.id, explicitHeight || levelHeight || footprintById.get(item.id)?.height
             || (buildingType === "university" ? 20 : buildingType === "dormitory" ? 28 : buildingType === "roof" ? 5 : 16)),
@@ -1404,19 +1409,6 @@
       ...trees.map(({faces})=>({faces})),
       ...monuments,
     ]);
-    const labels = MODEL_STATE.labels ? LANDMARKS.map((item, landmarkIndex) => {
-      const entry = centralBuildings.find(({building}) => building.name === item.name);
-      const gate = item.kind === "gate" ? gatePosition(item.name) : null;
-      const coordinates = gate ? [gate.lat,gate.lon] : item.lat ? [item.lat,item.lng] : entry?.center;
-      if (!coordinates) return "";
-      const height = gate ? (item.name === "Broadway Gate" ? 5.4 : 4.75) : entry?.building.height || 5.225;
-      const point = project(...coordinates, height);
-      const markerY = point[1] - (gate ? 9 : 16);
-      return `<g class="campus-model-pin ${item.name === MODEL_STATE.selected ? "active" : ""}" data-campus-landmark="${item.name}">
-        <circle class="pin-dot" cx="${point[0]}" cy="${markerY}" r="7"/>
-        <text class="campus-pin-number" x="${point[0]}" y="${markerY + 2.5}" text-anchor="middle">${String(landmarkIndex + 1).padStart(2, "0")}</text>
-      </g>`;
-    }).join("") : "";
     const roadLabels = MODEL_STATE.labels && MODEL_STATE.roads ? [
       ["Broadway", "Broadway"], ["Amsterdam Avenue", "Amsterdam Ave"], ["College Walk", "College Walk"],
     ].map(([name, label]) => {
@@ -1432,6 +1424,8 @@
       return `<text class="campus-model-watermark" x="${point[0]}" y="${point[1] - 7}" text-anchor="middle">${label}</text>`;
     }).join("") : "";
 
+    const tooltip = host.parentElement?.querySelector(".campus-building-tooltip");
+    if (tooltip) tooltip.hidden = true;
     host.innerHTML = `${defs}
       <rect width="${VIEW.width}" height="${VIEW.height}" fill="url(#campus-paper-grid)" opacity=".55"/>
       <g id="campus-model-camera">
@@ -1440,7 +1434,7 @@
         <g id="campus-model-roads">${roadMarkup}<g fill="none" stroke="#a3947b" stroke-width=".68">${MODEL_STATE.roads ? stairTreads : ""}</g></g>
         <g id="campus-model-buildings">${buildingMarkup}</g>
         <g id="campus-model-transit">${drawSubwayEntrance(project)}</g>
-        <g id="campus-model-labels">${labels}${roadLabels}</g>
+        <g id="campus-model-labels">${roadLabels}</g>
         <g id="campus-model-course-pointers">${drawCoursePointers(project, centralBuildings)}</g>
       </g>`;
     applyCampusCamera();
@@ -1472,7 +1466,45 @@
   }
 
   function bindCampusModelControls() {
-    document.querySelector("#campus-model-viewport")?.addEventListener("click", (event) => {
+    const viewport = document.querySelector("#campus-model-viewport");
+    if (viewport) {
+      const tooltip = document.createElement("div");
+      tooltip.className = "campus-building-tooltip";
+      tooltip.hidden = true;
+      tooltip.setAttribute("aria-hidden","true");
+      const name = document.createElement("strong");
+      const tag = document.createElement("span");
+      tooltip.append(name,tag);
+      viewport.append(tooltip);
+      let activeNode;
+      const show = (event) => {
+        const node = event.target.closest("[data-building-node]");
+        if (!node) return;
+        activeNode = node;
+        name.textContent = node.dataset.buildingNode;
+        tag.textContent = node.dataset.buildingTag;
+        tooltip.hidden = false;
+        const frame = viewport.getBoundingClientRect();
+        const dot = node.getBoundingClientRect();
+        const x = dot.left + dot.width/2 - frame.left;
+        const y = dot.top - frame.top;
+        tooltip.style.left = `${clamp(x-tooltip.offsetWidth/2,5,Math.max(5,frame.width-tooltip.offsetWidth-5))}px`;
+        tooltip.style.top = `${y>tooltip.offsetHeight+10 ? y-tooltip.offsetHeight-8 : y+dot.height+8}px`;
+      };
+      const hide = (event) => {
+        if (event.target !== activeNode) return;
+        tooltip.hidden = true;
+        activeNode = null;
+      };
+      viewport.addEventListener("pointerover",show);
+      viewport.addEventListener("pointerout",hide);
+      viewport.addEventListener("focusin",show);
+      viewport.addEventListener("focusout",hide);
+      viewport.addEventListener("keydown",(event)=>{
+        if(event.key==="Escape") tooltip.hidden=true;
+      });
+    }
+    viewport?.addEventListener("click", (event) => {
       const pin = event.target.closest("[data-campus-landmark]");
       if (pin) focusCampusModel(pin.dataset.campusLandmark);
       const buildingNode = event.target.closest("[data-building-node]");
