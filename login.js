@@ -162,23 +162,60 @@ async function sendCode() {
     result = { email: payload.email };
   }
   verificationEmailAddress = result.email;
+  $("#code-destination").textContent = verificationEmailAddress;
+  lastSubmittedCode = "";
+  codeInput.value = "";
+  codeInput.dispatchEvent(new Event("input"));
   resendAvailableAt = Date.now() + 60000;
   $("#google-login-mount").hidden = true;
   $("#code-form").hidden = false;
 
   $("#verification-code").focus();
 }
-$("#code-form").addEventListener("submit", async event => {
-  event.preventDefault();
-  const button = event.currentTarget.querySelector('[type="submit"]');
-  button.disabled = true;
+
+let verifyingCode = false;
+let verifiedCode = false;
+let lastSubmittedCode = "";
+const codeInput = $("#verification-code");
+const codeForm = $("#code-form");
+const feedback = $("#verification-feedback");
+async function verifyEnteredCode() {
+  const code = codeInput.value;
+  if (!/^\d{6}$/.test(code) || verifyingCode || verifiedCode || code === lastSubmittedCode) return;
+  verifyingCode = true;
+  lastSubmittedCode = code;
+  codeInput.readOnly = true;
+  codeForm.setAttribute("aria-busy", "true");
+  codeForm.classList.remove("verification-error");
+  feedback.textContent = "Verifying…";
   try {
-    const { token, user } = await emailAuth({ credential: verificationCredential, code: $("#verification-code").value });
+    const { token, user } = await emailAuth({ credential: verificationCredential, code });
     localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: user.sub, token }));
-    completeSignIn(user);
-  } catch (error) { setStatus(error.message); button.disabled = false; }
+    verifiedCode = true;
+    codeForm.classList.add("verification-success");
+    feedback.textContent = "";
+    window.setTimeout(() => completeSignIn(user), 350);
+  } catch (error) {
+    codeForm.classList.remove("verification-error");
+    void codeForm.offsetWidth;
+    codeForm.classList.add("verification-error");
+    feedback.textContent = "";
+    codeInput.readOnly = false;
+    codeInput.focus();
+    codeInput.select();
+  } finally {
+    verifyingCode = false;
+    codeForm.removeAttribute("aria-busy");
+  }
+}
+codeForm.addEventListener("submit", event => { event.preventDefault(); verifyEnteredCode(); });
+codeInput.addEventListener("input", () => {
+  codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
+  codeForm.classList.remove("verification-error");
+  feedback.textContent = "";
+  if (codeInput.value !== lastSubmittedCode) lastSubmittedCode = "";
+  verifyEnteredCode();
 });
-$("#verification-code").addEventListener("input", event => { event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6); });
 $("#change-email").addEventListener("click", () => { $("#code-form").hidden = true; $("#google-login-mount").hidden = false; verificationCredential = ""; });
 $("#resend-code").addEventListener("click", async event => {
   event.target.disabled = true;
