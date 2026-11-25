@@ -13667,6 +13667,7 @@ body.auth-authenticated .my-page {
 
 .prof-trend-panel .prof-term-chart {
   width: 100%;
-  max-width: none;
+  max-width: 960px;
   height: auto;
+  margin-inline: auto;
 }
