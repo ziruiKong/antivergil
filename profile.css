@@ -282,8 +282,12 @@ a { -webkit-tap-highlight-color: transparent; }
   max-height: 290px;
   overflow-y: auto;
   padding-right: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.profile-major-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .profile-major-grid .profile-choice {
