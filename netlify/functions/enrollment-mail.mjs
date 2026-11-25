@@ -14,7 +14,7 @@ export async function recordEnrollment(sql, snapshot, catalog) {
     const slug = section.code.trim().toLowerCase().replace(/\s+/g, "-");
     const query = new URLSearchParams({ term, section: watch.call_number });
     const courseURL = `https://antivergil.cc/course/${encodeURIComponent(slug)}/?${query}`;
-    const vergil = `https://vergil.columbia.edu/vergil/course/${academicTerm}/${watch.call_number}`;
+    const vergil = `https://vergil.columbia.edu/vergil/class/${academicTerm}/${watch.call_number}`;
     const subjectLine = kind ? `Antivergil · ${kind} · ${section.code}` : null;
     const body = `${section.code} · ${section.title}\n${term} · Call number ${watch.call_number}\nEnrollment: ${watch.enrolled}/${watch.capacity} → ${section.enrolled}/${section.capacity}\n\nAntivergil: ${courseURL}\nVergil: ${vergil}\n\nManage or turn off this alert on the Antivergil course page.`;
     await sql`WITH changed AS (
