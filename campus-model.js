@@ -35,8 +35,8 @@
       name: "Alma Mater",
       label: "Alma Mater",
       subtitle: "Sculpture · Daniel Chester French",
-      lat: 40.807817,
-      lng: -73.962183,
+      lat: 40.8078056,
+      lng: -73.962156,
       kind: "statue",
       labelOffset: [-96, 14],
       description: "The bronze Alma Mater stands on the centerline of the south steps of Low Library.",
@@ -561,7 +561,7 @@
     for (const [index,back] of surfaces.entries()) {
       const blockers = [];
       for (const [otherIndex,front] of surfaces.entries()) {
-        if (front === back || front.left >= back.right || front.right <= back.left
+        if (front === back || front.occludes === false || front.left >= back.right || front.right <= back.left
           || front.top >= back.bottom || front.bottom <= back.top) continue;
         const polygon = occlusionPolygon(front, back, otherIndex > index);
         if (polygon.length >= 3) blockers.push(`<polygon points="${pointsAttr(polygon)}" fill="#000" />`);
@@ -576,8 +576,9 @@
       masks.push(`<mask id="${id}" maskUnits="userSpaceOnUse" ${bounds}><rect ${bounds} fill="#fff"/>${blockers.join("")}</mask>`);
       back.markup = `<g mask="url(#${id})">${back.markup}</g>`;
     }
-    return `<defs>${masks.join("")}</defs>${models.map(({name,faces,node}) =>
-      name === undefined ? faces.map(({markup})=>markup).join("")
+    return `<defs>${masks.join("")}</defs>${models.map(({name,faces,node,landmark,selected}) =>
+      landmark ? `<g class="campus-model-pin ${selected ? "active" : ""}" data-campus-landmark="${escapeXml(landmark)}">${faces.map(({markup})=>markup).join("")}</g>`
+        : name === undefined ? faces.map(({markup})=>markup).join("")
         : `<g data-building="${escapeXml(name || "Context building")}">${faces.map(({markup}) => markup).join("")}</g>${node}`
     ).join("")}`;
   }
@@ -849,67 +850,118 @@
     return campusOffset((name === "Broadway Gate" ? -166 : 78) + depth, across);
   }
 
-  function drawGate(project, landmark, selectedName) {
-    const broadway = landmark.name === "Broadway Gate";
-    // Gate lines sit just behind the avenue sidewalks, across the College Walk axis.
-    const place = (across, elevation, depth = 0) => {
-      const {lat, lon} = gatePosition(landmark.name, across, depth);
-      return project(lat, lon, elevation);
-    };
-    const shape = (corners, fill) => `<polygon points="${pointsAttr(corners.map(([a,z,d]) => place(a,z,d)))}" fill="${fill}"/>`;
-    const pillar = (across, width, height) => {
-      const a = across - width / 2;
-      const b = across + width / 2;
-      const d = width / 2;
-      const faces = [
-        [[a,0,-d],[b,0,-d],[b,height,-d],[a,height,-d]],
-        [[b,0,-d],[b,0,d],[b,height,d],[b,height,-d]],
-        [[b,0,d],[a,0,d],[a,height,d],[b,height,d]],
-        [[a,0,d],[a,0,-d],[a,height,-d],[a,height,d]],
-      ];
-      const walls = faces.map((face, index) => ({
-        face, fill: index % 2 ? "#ccc1ae" : "#e4dac7",
-        depth: (place(...face[0])[1] + place(...face[1])[1]) / 2,
-      })).sort((p,q) => p.depth - q.depth);
-      return walls.map(({face,fill}) => shape(face, fill)).join("")
-        + shape([[a-.20,height,-d-.20],[b+.20,height,-d-.20],[b+.20,height,d+.20],[a-.20,height,d+.20]], "#eee5d5");
-    };
-    const span = broadway ? 6.4 : 5.6;
-    const wings = broadway ? 11.7 : 10.5;
-    const pickets = [];
-    for (const [start,end,height] of [[-wings,-span,2.1],[-span,span,3.1],[span,wings,2.1]]) {
-      const crown = (x) => height + (height > 3 ? 0.65 * (1 - (x / span) ** 2) : 0);
-      const bars = Math.ceil((end - start) / .46);
-      for (let bar = 0; bar <= bars; bar += 1) {
-        const x = start + (end - start) * bar / bars;
-        pickets.push(`<polyline points="${pointsAttr([place(x,.16),place(x,crown(x))])}"/>`);
+  // Cross-sections are horizontal rings in local east/north coordinates.
+  function monumentMesh(place, rings, palette) {
+    const faces=[];
+    const count=rings[0].length;
+    const points=rings.map((ring)=>ring.map((p)=>place(...p)));
+    const outline=points[0];
+    const winding=outline.reduce((sum,a,index)=>{
+      const b=outline[(index+1)%count];
+      return sum+a[0]*b[1]-b[0]*a[1];
+    },0);
+    const face=(vertices,fill,top)=>surface(vertices,
+      `<polygon points="${pointsAttr(vertices)}" fill="${fill}" stroke="${palette[3]}" stroke-width=".24" stroke-linejoin="round"/>`,top);
+    for(let level=0;level<points.length-1;level+=1) {
+      for(let index=0;index<count;index+=1) {
+        const next=(index+1)%count;
+        const a=points[level][index],b=points[level][next];
+        const c=points[level+1][next],d=points[level+1][index];
+        // Split each panel into triangles so leaned limbs retain exact depth planes.
+        for(const vertices of [[a,b,c],[a,c,d]]) {
+          const [p,q,r]=vertices;
+          const area=(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);
+          if(area*winding<=0 || Math.abs(area)<.0001) continue;
+          faces.push(face(vertices,palette[Math.floor(index*2/count)]));
+        }
       }
-      for (const rail of [.5, 1.05]) pickets.push(`<polyline points="${pointsAttr([place(start,rail),place(end,rail)])}"/>`);
-      pickets.push(`<polyline points="${pointsAttr(Array.from({length:9}, (_,i) => {
-        const x = start + (end - start) * i / 8;
-        return place(x,crown(x)-.23);
-      }))}"/>`);
     }
-    const active = landmark.name === selectedName ? "active" : "";
-    return `<g class="campus-model-pin ${active}" data-campus-landmark="${landmark.name}">
-      <g fill="none" stroke="#3f4039" stroke-width=".8">${pickets.join("")}</g>
-      <g stroke="#6f6353" stroke-width=".65" stroke-linejoin="round">
-        ${[-wings,wings].map((x) => pillar(x,.8,2.65)).join("")}
-        ${[-span,span].map((x) => pillar(x,1.65,broadway ? 5.4 : 4.75)).join("")}
-      </g>
-    </g>`;
+    const cap=points.at(-1);
+    faces.push(face(cap,palette[2],cap[0][2]));
+    return faces;
   }
 
-  function drawAlmaMater(project, landmark, selectedName) {
-    const base = project(landmark.lat, landmark.lng, 0);
-    return `<g class="campus-model-pin ${landmark.name === selectedName ? "active" : ""}" data-campus-landmark="${landmark.name}">
-      <polygon class="campus-gate-piece" points="${base[0] - 9},${base[1]} ${base[0] + 9},${base[1]} ${base[0] + 6},${base[1] - 7} ${base[0] - 6},${base[1] - 7}"/>
-      <path class="campus-gate-detail" d="M${base[0] - 4} ${base[1] - 7}L${base[0] - 3} ${base[1] - 14}L${base[0] + 4} ${base[1] - 14}L${base[0] + 5} ${base[1] - 7}Z"/>
-      <path class="campus-gate-detail" d="M${base[0] - 1} ${base[1] - 14}L${base[0] - 2} ${base[1] - 23}L${base[0] + 3} ${base[1] - 23}L${base[0] + 4} ${base[1] - 14}Z"/>
-      <circle class="campus-gate-piece" cx="${base[0] + 0.5}" cy="${base[1] - 25}" r="2.2"/>
-      <path class="campus-gate-detail" d="M${base[0] - 3} ${base[1] - 21}L${base[0] - 8} ${base[1] - 16}M${base[0] + 3} ${base[1] - 21}L${base[0] + 8} ${base[1] - 17}"/>
-      <rect class="campus-gate-piece" x="${base[0] - 6}" y="${base[1] - 18}" width="5" height="3"/>
-    </g>`;
+  function monumentBox(place,x,y,width,depth,bottom,top,palette) {
+    const ring=(z)=>[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[x+a*width/2,y+b*depth/2,z]);
+    return monumentMesh(place,[ring(bottom),ring(top)],palette);
+  }
+
+  function drawGate(projectLevel, landmark, selectedName) {
+    const broadway=landmark.name==="Broadway Gate";
+    const anchor=gatePosition(landmark.name);
+    const base=campusElevation(anchor.lat,anchor.lon);
+    const place=(depth,across,z)=>{
+      const {lat,lon}=gatePosition(landmark.name,across,depth);
+      return [...projectLevel(lat,lon,base+z),base+z];
+    };
+    const stone=["#c5b9a5","#e0d5c0","#eee5d4","#756958"];
+    const span=broadway?6.4:5.6;
+    const wings=broadway?11.7:10.5;
+    const faces=[];
+    for(const [start,end,height] of [[-wings,-span,2.1],[-span,span,3.1],[span,wings,2.1]]) {
+      const crown=(x)=>height+(height>3?.65*(1-(x/span)**2):0);
+      const rail=(vertices)=>`<polyline points="${pointsAttr(vertices)}"/>`;
+      const bars=Math.ceil((end-start)/.46);
+      const pickets=Array.from({length:bars+1},(_,index)=>{
+        const x=start+(end-start)*index/bars;
+        return rail([place(0,x,.16),place(0,x,crown(x))]);
+      });
+      for(const z of [.5,1.05]) pickets.push(rail([place(0,start,z),place(0,end,z)]));
+      pickets.push(rail(Array.from({length:9},(_,i)=>{
+        const x=start+(end-start)*i/8;
+        return place(0,x,crown(x)-.23);
+      })));
+      const plane=[place(0,start,0),place(0,end,0),place(0,end,height+.66),place(0,start,height+.66)];
+      if(Math.abs(plane[0][0]-plane[1][0])>.001) {
+        faces.push({...surface(plane,`<g fill="none" stroke="#343b36" stroke-width=".8">${pickets.join("")}</g>`),occludes:false});
+      }
+    }
+    for(const [across,width,height] of [[-wings,.8,2.65],[wings,.8,2.65],[-span,1.65,broadway?5.4:4.75],[span,1.65,broadway?5.4:4.75]]) {
+      faces.push(...monumentBox(place,0,across,width+.16,width+.16,0,.38,stone));
+      faces.push(...monumentBox(place,0,across,width,width,.38,height-.29,stone));
+      faces.push(...monumentBox(place,0,across,width+.29,width+.29,height-.29,height,stone));
+    }
+    return {landmark:landmark.name,selected:landmark.name===selectedName,faces};
+  }
+
+  function drawAlmaMater(projectLevel, landmark, selectedName) {
+    const elevation=campusElevation(landmark.lat,landmark.lng);
+    const scale=1.25;
+    const place=(east,north,z)=>{
+      const [lat,lng]=offsetGeo(landmark.lat,landmark.lng,scale*(.875*east+.484*north),scale*(-.484*east+.875*north));
+      return [...projectLevel(lat,lng,elevation+z*scale),elevation+z*scale];
+    };
+    const stone=["#b6ad9e","#d1c8b7","#e4ddce","#827b6e"];
+    const marble=["#555252","#77716d","#8c837d","#484541"];
+    const bronze=["#424b44","#657068","#768074","#353e38"];
+    const lit=["#545c51","#70786a","#8a8c78","#42483e"];
+    const faces=[];
+    const box=(x,y,w,d,b,t,palette)=>faces.push(...monumentBox(place,x,y,w,d,b,t,palette));
+    const form=(sections,palette=bronze)=>{
+      const rings=sections.map(([x,y,z,rx,ry])=>Array.from({length:8},(_,i)=>{
+        const angle=i*Math.PI/4;
+        return [x+rx*Math.cos(angle),y+ry*Math.sin(angle),z];
+      }));
+      faces.push(...monumentMesh(place,rings,palette));
+    };
+    box(0,0,2.65,1.92,0,.20,stone);
+    box(0,0,2.20,1.58,.20,1.20,stone);
+    box(0,0,2.34,1.70,1.20,1.46,marble);
+    box(0,.08,1.32,.94,1.46,1.88,bronze);
+    box(0,.46,1.25,.19,1.86,2.78,bronze);
+    for(const x of [-.66,.66]) box(x,.01,.14,.91,1.82,2.47,lit);
+    // Robe pools at the feet, bends over the knees, then tapers at the waist.
+    form([[0,-.29,1.47,.51,.40],[0,-.36,1.83,.57,.49],[0,-.30,2.11,.56,.48],[0,.02,2.40,.38,.33]]);
+    form([[0,.02,2.32,.34,.29],[0,.06,2.64,.36,.28],[0,.08,2.92,.48,.27],[0,.08,3.06,.28,.21]]);
+    form([[0,.08,3.02,.15,.15],[0,.06,3.24,.16,.16],[0,.04,3.43,.24,.22],[0,.08,3.64,.20,.20],[0,.10,3.73,.11,.12]],lit);
+    form([[-.77,-.09,2.53,.12,.14],[-.59,-.01,2.73,.14,.15],[-.40,.07,2.98,.17,.18]]);
+    form([[-.76,-.09,2.56,.13,.14],[-.91,-.13,2.88,.10,.10],[-1.01,-.14,3.18,.10,.09]],lit);
+    form([[.76,-.04,2.51,.13,.14],[.56,.02,2.77,.16,.16],[.38,.08,2.98,.17,.18]]);
+    form([[.75,-.04,2.57,.12,.13],[.94,-.10,2.79,.10,.10],[1.10,-.14,2.94,.115,.09]],lit);
+    form([[-1.01,-.14,2.90,.047,.047],[-1.01,-.14,4.07,.045,.045]],lit);
+    form([[-1.01,-.14,4.07,.083,.083],[-1.01,-.14,4.18,.047,.047]],lit);
+    box(.08,-.44,.66,.42,2.06,2.13,lit);
+    return {landmark:landmark.name,selected:landmark.name===selectedName,faces};
   }
 
   function renderLandmarkRail(selectedName) {
@@ -1312,6 +1364,9 @@
           <polygon points="${pointsAttr(riser)}" fill="#aa9e8d" stroke="none"/>`;
       }).join("")).join("");
     const trees = campusTrees(project,centralBuildings);
+    const monuments = LANDMARKS.filter((item)=>item.kind==="gate" || item.kind==="statue")
+      .map((item)=>item.kind==="gate" ? drawGate(projectLevel,item,MODEL_STATE.selected)
+        : drawAlmaMater(projectLevel,item,MODEL_STATE.selected));
     const buildingMarkup = renderBuildingSurfaces([
       ...centralBuildings.map(({building,center})=>{
         const base=campusElevation(...center);
@@ -1323,16 +1378,14 @@
       }).filter(Boolean),
       {faces:lowLibraryTerrace(projectLevel)},
       ...trees.map(({faces})=>({faces})),
+      ...monuments,
     ]);
-    const gates = LANDMARKS.filter((item) => item.kind === "gate").map((item) => drawGate(project, item, MODEL_STATE.selected)).join("");
-    const statue = LANDMARKS.find((item) => item.kind === "statue");
-    const alma = statue ? drawAlmaMater(project, statue, MODEL_STATE.selected) : "";
     const labels = MODEL_STATE.labels ? LANDMARKS.map((item, landmarkIndex) => {
       const entry = centralBuildings.find(({building}) => building.name === item.name);
       const gate = item.kind === "gate" ? gatePosition(item.name) : null;
       const coordinates = gate ? [gate.lat,gate.lon] : item.lat ? [item.lat,item.lng] : entry?.center;
       if (!coordinates) return "";
-      const height = gate ? 5.4 : entry?.building.height || 4;
+      const height = gate ? (item.name === "Broadway Gate" ? 5.4 : 4.75) : entry?.building.height || 5.225;
       const point = project(...coordinates, height);
       const markerY = point[1] - (gate ? 9 : 16);
       return `<g class="campus-model-pin ${item.name === MODEL_STATE.selected ? "active" : ""}" data-campus-landmark="${item.name}">
@@ -1361,7 +1414,7 @@
         ${plate}
         <g id="campus-model-ground">${greenMarkup}${brickBorders}${plazaTiles}${trees.map(({trunk})=>trunk).join("")}</g>
         <g id="campus-model-roads">${roadMarkup}<g fill="none" stroke="#a3947b" stroke-width=".68">${MODEL_STATE.roads ? stairTreads : ""}</g></g>
-        <g id="campus-model-buildings">${buildingMarkup}${gates}${alma}</g>
+        <g id="campus-model-buildings">${buildingMarkup}</g>
         <g id="campus-model-labels">${labels}${roadLabels}</g>
         <g id="campus-model-course-pointers">${drawCoursePointers(project, centralBuildings)}</g>
       </g>`;
