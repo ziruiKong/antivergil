@@ -78,9 +78,6 @@ function completeSignIn(user) {
   location.assign(next);
 }
 
-let googleTokenClient = null;
-let googleTokenClientId = "";
-
 function loadGoogleScript() {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -104,74 +101,6 @@ function loadGoogleScript() {
   });
 }
 
-async function handleGoogleTokenResponse(response) {
-  const button = $("#google-login");
-  try {
-    if (response?.error) throw new Error(response.error_description || response.error);
-    if (!response?.access_token) throw new Error("Google did not return an access token");
-    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${response.access_token}` },
-    });
-    if (!profileResponse.ok) throw new Error(`Google profile request failed (${profileResponse.status})`);
-    const payload = await profileResponse.json();
-    if (!isAllowedUniversityEmail(payload.email)) {
-      setStatus("Use a supported university account.", "error");
-      return;
-    }
-    completeSignIn({
-      name: payload.name,
-      email: payload.email,
-      picture: payload.picture,
-      sub: payload.sub,
-      provider: "google",
-    });
-  } catch (_) {
-    setStatus("Google sign-in failed. Try again.", "error");
-  } finally {
-    if (button) button.disabled = false;
-  }
-}
-
-async function startGoogleLogin() {
-  clearStatus();
-  const button = $("#google-login");
-  const clientId = String(window.COLUMBIA_AUTH?.googleClientId || "").trim();
-  if (!clientId || !/^https?:$/.test(location.protocol)) {
-    $("#email-form").hidden = false;
-    setStatus("Google OAuth is not configured in this preview. Continue with your university email.", "info");
-    requestAnimationFrame(() => $("#email-form input")?.focus());
-    return;
-  }
-
-  button.disabled = true;
-  try {
-    await loadGoogleScript();
-    if (!window.google?.accounts?.oauth2) throw new Error("Google OAuth client unavailable");
-    if (!googleTokenClient || googleTokenClientId !== clientId) {
-      googleTokenClientId = clientId;
-      googleTokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: "openid email profile",
-        ux_mode: "popup",
-        callback: handleGoogleTokenResponse,
-        error_callback: (error) => {
-          const message = String(error?.message || "");
-          setStatus(/popup.*closed|closed|cancel/i.test(message)
-            ? "Sign-in window closed. Try again."
-            : "Google sign-in was cancelled. Try again.", "error");
-          button.disabled = false;
-        },
-      });
-    }
-    googleTokenClient.requestAccessToken({ prompt: "select_account" });
-  } catch (_) {
-    button.disabled = false;
-    $("#email-form").hidden = false;
-    setStatus("Google sign-in is unavailable. Use your university email to continue.", "error");
-    requestAnimationFrame(() => $("#email-form input")?.focus());
-  }
-}
-
 $("#login-back").href = "/about/";
 if (window.AntivergilScheduleCloud?.enabled) {
   const button = $("#google-login");
@@ -183,7 +112,8 @@ if (window.AntivergilScheduleCloud?.enabled) {
       callback: async ({ credential }) => {
         try {
           setStatus("Signing in…", "info");
-          completeSignIn(await window.AntivergilScheduleCloud.signIn(credential));
+          verificationCredential = credential;
+          await sendCode(); clearStatus();
         } catch (error) {
           setStatus(error.message || "Cloud sign-in failed. Try again.");
         }
@@ -206,11 +136,13 @@ if (window.AntivergilScheduleCloud?.enabled) {
     new ResizeObserver(renderGoogleButton).observe(container);
   }).catch(() => setStatus("Google sign-in is temporarily unavailable. Reload to try again."));
 } else {
-  $("#google-login").addEventListener("click", startGoogleLogin);
+  $("#google-login").disabled = true;
+  setStatus("Google sign-in is not configured.");
 }
-$("#email-form input").addEventListener("input", clearStatus);
+
 
 let verificationEmailAddress = "";
+let verificationCredential = "";
 let resendAvailableAt = 0;
 const emailAuthEndpoint = new URL("/api/email-auth", window.COLUMBIA_AUTH?.scheduleApi || location.origin).href;
 async function emailAuth(body) {
@@ -220,34 +152,26 @@ async function emailAuth(body) {
   return result;
 }
 async function sendCode() {
-  await emailAuth({ email: verificationEmailAddress });
+  const result = await emailAuth({ credential: verificationCredential });
+  verificationEmailAddress = result.email;
   resendAvailableAt = Date.now() + 60000;
-  $("#email-form").hidden = true;
+  $("#google-login-mount").hidden = true;
   $("#code-form").hidden = false;
   $("#code-destination").textContent = "We sent a six-digit code to " + verificationEmailAddress;
   $("#verification-code").focus();
 }
-$("#email-form").addEventListener("submit", async event => {
-  event.preventDefault();
-  verificationEmailAddress = String(new FormData(event.currentTarget).get("email") || "").trim().toLowerCase();
-  if (!isAllowedUniversityEmail(verificationEmailAddress)) return setStatus("Use your university email.");
-  const button = event.currentTarget.querySelector("button");
-  button.disabled = true;
-  try { await sendCode(); clearStatus(); } catch (error) { setStatus(error.message); }
-  finally { button.disabled = false; }
-});
 $("#code-form").addEventListener("submit", async event => {
   event.preventDefault();
   const button = event.currentTarget.querySelector('[type="submit"]');
   button.disabled = true;
   try {
-    const { token, user } = await emailAuth({ email: verificationEmailAddress, code: $("#verification-code").value });
+    const { token, user } = await emailAuth({ credential: verificationCredential, code: $("#verification-code").value });
     localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: user.sub, token }));
     completeSignIn(user);
   } catch (error) { setStatus(error.message); button.disabled = false; }
 });
 $("#verification-code").addEventListener("input", event => { event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6); });
-$("#change-email").addEventListener("click", () => { $("#code-form").hidden = true; $("#email-form").hidden = false; });
+$("#change-email").addEventListener("click", () => { $("#code-form").hidden = true; $("#google-login-mount").hidden = false; verificationCredential = ""; });
 $("#resend-code").addEventListener("click", async event => {
   event.target.disabled = true;
   try { await sendCode(); } catch (error) { setStatus(error.message); }

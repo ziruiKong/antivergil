@@ -70,26 +70,7 @@ export default async function schedule(request) {
     const alerts = new URL(request.url).searchParams.has("alerts");
     const reviews = new URL(request.url).searchParams.has("reviews");
     if (!social && !alerts && !reviews && request.method === "POST") {
-      const audience = process.env.GOOGLE_WEB_CLIENT_ID;
-      if (!audience) return send({ error: "Google sign-in is not configured." }, 503);
-      const { credential } = await request.json();
-      if (typeof credential !== "string" || credential.length > 7000) return send({ error: "Invalid credential." }, 400);
-      const ticket = await google.verifyIdToken({ idToken: credential, audience }).catch(() => null);
-      const user = ticket?.getPayload();
-      const email = user?.email?.toLowerCase();
-      if (!user?.sub || !user.email_verified || !/^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/.test(email || "")) {
-        return send({ error: "Sign in with a verified university Google account." }, 401);
-      }
-      const [account] = await sql`SELECT subject FROM course_alert_recipients WHERE email = ${email} ORDER BY subject LIMIT 1`;
-      const subject = account?.subject || user.sub;
-      const token = randomBytes(32).toString("base64url");
-      const expires = new Date(Date.now() + sessionLifetime).toISOString();
-      await registerCampusPerson(sql, subject, user.name);
-      await sql`INSERT INTO course_alert_recipients (subject, email) VALUES (${subject}, ${email})
-        ON CONFLICT (subject) DO UPDATE SET email = excluded.email`;
-      await sql`INSERT INTO course_schedule_sessions (token_hash, google_subject, expires_at)
-        VALUES (${hash(token)}, ${subject}, ${expires})`;
-      return send({ token, user: { email, name: user.name, picture: user.picture, sub: subject, provider: "google" } });
+      return send({ error: "Complete Google sign-in and email verification.", verificationRequired: true }, 401);
     }
 
     const token = request.headers.get("authorization")?.match(/^Bearer ([\w-]{43})$/)?.[1];

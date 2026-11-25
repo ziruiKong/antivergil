@@ -51,18 +51,9 @@
             <span>Continue with LionMail</span>
           </button>
 
-          <form class="email-form" id="email-form" novalidate>
-            <label>
-              <span>University email*</span>
-              <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="login-status" placeholder="name@columbia.edu or name@student.ubc.ca" required />
-            </label>
-            <button class="email-submit" type="submit">
-              <span>Continue with Columbia email</span>
-              <span aria-hidden="true">↗</span>
-            </button>
-          </form>
 
-          <form id="code-form" class="email-form" hidden><div class="verification-heading"><span>EMAIL VERIFICATION</span><h2>Check your inbox.</h2><p id="code-destination"></p></div><label for="verification-code">Verification code</label><input id="verification-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required /><button class="email-submit" type="submit">Verify &amp; continue ↗</button><div class="verification-actions"><button type="button" id="change-email">Change email</button><button type="button" id="resend-code">Resend code</button></div></form>
+
+          <form id="code-form" class="email-form" hidden><div class="verification-heading"><span>EMAIL VERIFICATION</span><h2>Check your inbox.</h2><p id="code-destination"></p></div><label for="verification-code">Verification code</label><input id="verification-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required /><button class="email-submit" type="submit">Verify &amp; continue ↗</button><div class="verification-actions"><button type="button" id="change-email">Choose another Google account</button><button type="button" id="resend-code">Resend code</button></div></form>
           <p class="login-status" id="login-status" aria-live="polite" hidden></p>
         </div>
       </div>
