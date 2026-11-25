@@ -13988,6 +13988,8 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
 
 #m-panel-overview, #m-panel-enrollment { scrollbar-width: none; }
 #m-panel-overview::-webkit-scrollbar, #m-panel-enrollment::-webkit-scrollbar { display: none; }
+.ea-registration-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 10px 0 0; padding-top: 9px; border-top: 1px solid #d4d1c8; color: #56554c; font-size: 12px; }
+.ea-registration-status strong { color: #292925; font-weight: 700; }
 .course-file-section { margin-top: 0; padding: 0; border: 0; }
 .course-files-header {
   display: flex;

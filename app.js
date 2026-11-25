@@ -1657,7 +1657,7 @@ function renderEnrollAnalysis(course, an) {
           <div><b>Term</b><span>${esc(termShort(state.term))}</span></div>
         </div>
         ${sparklineSVG(course.series, 600, 100, course.code, true)}
-        <div class="ea-note info">This term has not started yet; these are registration-phase numbers. Once classes begin, week 1 / week 2 and latest comparisons will appear automatically.</div>
+        <p class="ea-registration-status"><strong>Registration phase</strong><span>Week 1 and 2 comparisons appear after classes start.</span></p>
       </div>`;
   }
   if (an.ended) {
