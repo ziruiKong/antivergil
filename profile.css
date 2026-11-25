@@ -238,24 +238,27 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-choice {
   min-height: 68px;
   padding: 13px 15px;
-  border: 1.5px solid var(--line);
-  background: transparent;
+  border: 0;
+  background: #e8e8e2;
   color: var(--ink);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 .profile-choice:hover,
-.profile-choice:focus-visible,
-.profile-choice.is-selected {
-  border-color: var(--ink);
+.profile-choice:focus-visible {
   outline: none;
-  background: var(--ink);
-  color: var(--paper);
+  background: #ddddD7;
+  color: var(--ink);
+}
+
+.profile-choice.is-selected {
+  background: var(--accent);
+  color: #fff;
 }
 
 .profile-choice small {
@@ -272,14 +275,18 @@ a { -webkit-tap-highlight-color: transparent; }
   height: 44px;
   margin-bottom: 10px;
   padding: 0 13px;
-  border: 1.5px solid var(--line);
+  border: 0;
   border-radius: 0;
   outline: 0;
-  background: transparent;
+  background: #e8e8e2;
   color: var(--ink);
   font-size: 14px;
 }
-.profile-major-search:focus { border-color: var(--ink); background: #fff; }
+.profile-major-search:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #fff;
+}
 
 .profile-major-grid {
   display: grid;
@@ -318,9 +325,9 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-interest {
   min-height: 40px;
   padding: 9px 13px;
-  border: 1.5px solid var(--line);
+  border: 0;
   border-radius: 999px;
-  background: transparent;
+  background: #e8e8e2;
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
@@ -329,8 +336,8 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-interest:hover,
 .profile-interest:focus-visible {
-  border-color: var(--ink);
   outline: none;
+  background: #ddddD7;
 }
 
 .profile-interest.is-selected {
@@ -360,7 +367,7 @@ a { -webkit-tap-highlight-color: transparent; }
   justify-content: space-between;
   gap: 20px;
   padding: 11px 15px;
-  border: 1.5px solid var(--ink);
+  border: 0;
   background: var(--ink);
   color: var(--paper);
   font-family: "DM Mono", ui-monospace, monospace;
