@@ -11134,16 +11134,16 @@ body.join-page-open {
 :is(#course-list, #search-results) .course-card > .stamp-shape {
   background: #fff;
   -webkit-mask:
-    radial-gradient(circle at 50% 0, transparent 3px, #000 3.5px) 0 0 / 12px 100% repeat-x,
-    radial-gradient(circle at 50% 100%, transparent 3px, #000 3.5px) 0 0 / 12px 100% repeat-x,
-    radial-gradient(circle at 0 50%, transparent 3px, #000 3.5px) 0 0 / 100% 12px repeat-y,
-    radial-gradient(circle at 100% 50%, transparent 3px, #000 3.5px) 0 0 / 100% 12px repeat-y;
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 0 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round,
+    radial-gradient(circle at 100% 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
   -webkit-mask-composite: source-in;
   mask:
-    radial-gradient(circle at 50% 0, transparent 3px, #000 3.5px) 0 0 / 12px 100% repeat-x,
-    radial-gradient(circle at 50% 100%, transparent 3px, #000 3.5px) 0 0 / 12px 100% repeat-x,
-    radial-gradient(circle at 0 50%, transparent 3px, #000 3.5px) 0 0 / 100% 12px repeat-y,
-    radial-gradient(circle at 100% 50%, transparent 3px, #000 3.5px) 0 0 / 100% 12px repeat-y;
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 0 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round,
+    radial-gradient(circle at 100% 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
   mask-composite: intersect;
   filter: none;
 }
@@ -11620,7 +11620,8 @@ body.join-page-open {
 :is(#course-list, #search-results) .course-card .cc-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 50px 38px;
-  margin: 0 -4px -4px;
+  margin: 0;
+  min-height: 0;
   padding: 0;
 }
 :is(#course-list, #search-results) .course-card .cc-bottom .cc-enroll-inline {
@@ -11654,8 +11655,22 @@ body.join-page-open {
 }
 :is(#course-list, #search-results) .course-card .cc-bottom .card-add-wrap {
   grid-column: 4;
-  width: 38px;
+  min-width: 0;
+  width: auto;
   margin: 0;
+}
+:is(#course-list, #search-results) .course-card .cc-bottom .card-add {
+  width: 100%;
+  min-width: 0;
+  transition: background-color .15s ease, color .15s ease;
+}
+:is(#course-list, #search-results) .course-card .cc-bottom .card-add:is(:hover, :focus-visible),
+:is(#course-list, #search-results) .course-card .cc-bottom .card-add-wrap:has(.card-add-menu.open) .card-add {
+  background: #e8e7e0;
+  color: #242420;
+}
+:is(#course-list, #search-results) .course-card .cc-bottom .card-add:focus-visible {
+  outline-offset: -3px;
 }
 :is(#course-list, #search-results) .course-card .course-data-lock {
   grid-column: 1 / 4;
