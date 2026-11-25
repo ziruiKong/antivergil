@@ -23,7 +23,7 @@
   --accent: #1e6ef3;
   --surface: #fff;
   --surface-hover: #f0f0ea;
-  --profile-max: 1180px;
+  --profile-max: 1060px;
   --profile-gutter: 24px;
   --marker-size: 24px;
   --step-column: 32px;
@@ -153,8 +153,8 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-step {
   position: relative;
   display: grid;
-  grid-template-columns: var(--step-column) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   padding: 0 10px 34px 0;
 }
 
@@ -170,29 +170,15 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-step.is-pending { display: none; }
 
 .profile-step-marker {
-  position: relative;
-  z-index: 1;
-  width: var(--marker-size);
-  height: var(--marker-size);
-  margin-top: 26px;
-  display: grid;
-  place-items: center;
-  border: 1.5px solid var(--ink);
-  border-radius: 50%;
-  background: var(--paper);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 0;
-  font-weight: 500;
+  display: none;
 }
 
 .profile-step.is-active .profile-step-marker {
-  border-color: var(--accent);
-  background: var(--accent);
+  display: none;
 }
 
 .profile-step.is-complete .profile-step-marker {
-  background: var(--ink);
-  color: var(--paper);
+  display: none;
 }
 
 .profile-step-body {
@@ -384,10 +370,7 @@ a { -webkit-tap-highlight-color: transparent; }
     padding: 4px 0 0;
   }
   .profile-step {
-    gap: 10px;
-  }
-  .profile-step-marker {
-    margin-top: 18px;
+    gap: 0;
   }
   .profile-step.is-active .profile-step-body {
     padding: 18px 16px 20px;

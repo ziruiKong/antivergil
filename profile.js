@@ -42,11 +42,9 @@
         <div class="profile-options">
           <button class="profile-choice${state.stage === "undergraduate" ? " is-selected" : ""}" type="button" data-stage="undergraduate">
             Undergraduate
-            <small>Undergraduate and joint courses</small>
           </button>
           <button class="profile-choice${state.stage === "graduate" ? " is-selected" : ""}" type="button" data-stage="graduate">
             Graduate
-            <small>Graduate and joint courses</small>
           </button>
         </div>`;
     }
