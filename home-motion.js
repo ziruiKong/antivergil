@@ -46,26 +46,9 @@ for(const tile of gallery.children){
   const frame=document.createElement('div');
   frame.className='photo-window';
   frame.append(img);
-  const caption=document.createElement('div');
-  caption.className='tile-caption';
-  for(const part of title.split(' ')){
-    const line=document.createElement('div');
-    const word=document.createElement('strong');
-    word.textContent=part;
-    line.append(word);
-    caption.append(line);
-  }
   tile.setAttribute('aria-label',title);
-  tile.replaceChildren(frame,caption);
+  tile.replaceChildren(frame);
 }
-gallery.addEventListener('pointermove',event=>{
-  if(reduced.matches || event.pointerType==='touch')return;
-  const frame=event.target.closest('.photo-window');
-  if(!frame)return;
-  const rect=frame.getBoundingClientRect();
-  frame.style.setProperty('--pan',((event.clientX-rect.left)/rect.width-.5)*9+'%');
-  frame.style.setProperty('--lift',((event.clientY-rect.top)/rect.height-.5)*5+'%');
-});
 for(const link of document.querySelectorAll('nav a')){
   link.addEventListener('pointerenter',()=>scramble({currentTarget:link}));
 }
@@ -76,6 +59,54 @@ track.className='gallery-track';
 track.append(...gallery.children);
 for(const tile of originals){const copy=tile.cloneNode(true);copy.tabIndex=-1;copy.setAttribute("aria-hidden","true");track.append(copy);}
 gallery.append(track);
+
+const hoverLabel=document.createElement('div');
+hoverLabel.className='gallery-hover-label';
+hoverLabel.setAttribute('aria-hidden','true');
+gallery.append(hoverLabel);
+let hoverLabelTitle='';
+let hoverScrambleToken=0;
+function scrambleHoverLabel(text){
+  const original=String(text||'');
+  const token=++hoverScrambleToken;
+  if(reduced.matches){hoverLabel.textContent=original;return;}
+  const start=performance.now();
+  function frame(now){
+    if(token!==hoverScrambleToken)return;
+    const count=Math.floor((now-start)/30);
+    hoverLabel.textContent=Array.from(original,(c,i)=>i<count||c===' '?c:String.fromCharCode(65+Math.floor(Math.random()*26))).join('');
+    if(count<original.length)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function hideHoverLabel(){
+  hoverLabel.classList.remove('is-visible');
+  hoverLabelTitle='';
+}
+gallery.addEventListener('pointermove',event=>{
+  if(event.pointerType==='touch'){hideHoverLabel();return;}
+  const tile=event.target.closest('.tile');
+  if(!tile){hideHoverLabel();return;}
+  const frame=event.target.closest('.photo-window');
+  if(frame){
+    const frameRect=frame.getBoundingClientRect();
+    frame.style.setProperty('--pan',((event.clientX-frameRect.left)/frameRect.width-.5)*9+'%');
+    frame.style.setProperty('--lift',((event.clientY-frameRect.top)/frameRect.height-.5)*5+'%');
+  }
+  const title=tile.getAttribute('aria-label')||'';
+  if(title!==hoverLabelTitle){
+    hoverLabelTitle=title;
+    scrambleHoverLabel(title.toUpperCase());
+  }
+  hoverLabel.classList.add('is-visible');
+  const galleryRect=gallery.getBoundingClientRect();
+  const labelRect=hoverLabel.getBoundingClientRect();
+  const left=Math.max(10,Math.min(galleryRect.width-labelRect.width-10,event.clientX-galleryRect.left+16));
+  const top=Math.max(10,Math.min(galleryRect.height-labelRect.height-10,event.clientY-galleryRect.top+16));
+  hoverLabel.style.left=`${left}px`;
+  hoverLabel.style.top=`${top}px`;
+});
+gallery.addEventListener('pointerleave',hideHoverLabel);
 const motion=track.animate(
   [{transform:'translate3d(0,0,0)'},{transform:'translate3d(-33.3333333333%,0,0)'}],
   {duration:1000,iterations:Infinity,easing:'linear'}
