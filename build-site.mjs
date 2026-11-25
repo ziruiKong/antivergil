@@ -16,6 +16,9 @@ const runtimeFiles = [
   "home-motion.js",
   "login.css",
   "login.js",
+  "profile-store.js",
+  "profile.css",
+  "profile.js",
   "campus-model.js",
 ];
 
@@ -62,7 +65,8 @@ await writeFile(
 await writeRoute("home", "home.html");
 await writeRoute("about", "home.html");
 await writeRoute("login", "login.html");
+await writeRoute("profile", "profile.html");
 await Promise.all(appRoutes.map((route) => writeRoute(route, "index.html")));
 await writeFile(path.join(output, ".nojekyll"), "");
 
-console.log(`Built ${appRoutes.length + 4} routes in ${output}`);
+console.log(`Built ${appRoutes.length + 5} routes in ${output}`);

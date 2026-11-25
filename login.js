@@ -2,6 +2,8 @@ const STORAGE_KEY = "cu-auth-user";
 const NEXT_KEY = "antivergil-next";
 const DEFAULT_NEXT = "/browse/";
 const $ = (selector) => document.querySelector(selector);
+let statusTimer = 0;
+let statusHideTimer = 0;
 
 function isColumbiaEmail(value) {
   return /^[^\s@]+@columbia\.edu$/i.test(String(value || "").trim());
@@ -24,18 +26,33 @@ function safeNextPath() {
 function setStatus(message, type = "error") {
   const status = $("#login-status");
   if (!status) return;
+  window.clearTimeout(statusTimer);
+  window.clearTimeout(statusHideTimer);
   status.textContent = message;
   status.classList.toggle("is-error", type === "error");
   status.classList.toggle("is-info", type === "info");
+  status.classList.remove("is-leaving");
   status.hidden = false;
+  status.style.animation = "none";
+  void status.offsetWidth;
+  status.style.animation = "";
+  statusTimer = window.setTimeout(() => {
+    status.classList.add("is-leaving");
+    statusHideTimer = window.setTimeout(() => {
+      status.hidden = true;
+      status.classList.remove("is-leaving");
+    }, 280);
+  }, 2600);
 }
 
 function clearStatus() {
   const status = $("#login-status");
   if (!status) return;
+  window.clearTimeout(statusTimer);
+  window.clearTimeout(statusHideTimer);
   status.hidden = true;
   status.textContent = "";
-  status.classList.remove("is-error", "is-info");
+  status.classList.remove("is-error", "is-info", "is-leaving");
 }
 
 function saveUser(user) {
@@ -51,6 +68,12 @@ function completeSignIn(user) {
   }
   saveUser({ ...user, email: user.email.toLowerCase() });
   const next = safeNextPath();
+  const profile = window.AntivergilProfile?.read(user.email);
+  if (!profile) {
+    try { sessionStorage.setItem(NEXT_KEY, next); } catch (_) {}
+    location.assign("/profile/");
+    return;
+  }
   try { sessionStorage.removeItem(NEXT_KEY); } catch (_) {}
   location.assign(next);
 }
@@ -142,7 +165,10 @@ async function startGoogleLogin() {
         ux_mode: "popup",
         callback: handleGoogleTokenResponse,
         error_callback: (error) => {
-          setStatus(error?.message || "Google sign-in was cancelled.", "error");
+          const message = String(error?.message || "");
+          setStatus(/popup.*closed|closed|cancel/i.test(message)
+            ? "Sign-in window closed. Try again."
+            : "Google sign-in was cancelled. Try again.", "error");
           button.disabled = false;
         },
       });

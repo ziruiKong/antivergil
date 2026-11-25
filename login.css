@@ -350,20 +350,43 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .login-status {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border: 1.5px solid var(--danger);
-  background: var(--paper);
-  color: var(--danger);
+  position: fixed;
+  left: 50%;
+  bottom: max(104px, calc(env(safe-area-inset-bottom) + 88px));
+  z-index: 20;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #d71f2b;
+  color: #fff;
   font-family: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
   line-height: 1.45;
-  text-align: left;
+  text-align: center;
+  transform: translate(-50%, 14px);
+  animation: login-toast-in 280ms cubic-bezier(.16, 1, .3, 1) both;
 }
 
 .login-status.is-info {
-  border-color: var(--ink);
-  color: var(--ink);
+  background: #d71f2b;
+  color: #fff;
+}
+
+.login-status.is-leaving {
+  animation: login-toast-out 260ms ease-in both;
+}
+
+@keyframes login-toast-in {
+  from { opacity: 0; transform: translate(-50%, 18px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes login-toast-out {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, 10px); }
 }
 
 @keyframes image-reveal {

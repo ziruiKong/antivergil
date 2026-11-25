@@ -131,6 +131,7 @@ const server = http.createServer(async (req, res) => {
   const cleanPath = urlPath.replace(/\/+$/, "") || "/";
   if (cleanPath === "/home" || cleanPath === "/about") urlPath = "/home.html";
   else if (cleanPath === "/login") urlPath = "/login.html";
+  else if (cleanPath === "/profile") urlPath = "/profile.html";
   else if (new Set([
     "/browse",
     "/rankings",

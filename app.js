@@ -135,6 +135,17 @@ const state = {
 let instructorIndexCache = null;
 let instructorIndexPromise = null;
 
+function currentProfile() {
+  return authUser && window.AntivergilProfile
+    ? window.AntivergilProfile.read(authUser.email)
+    : null;
+}
+
+function profileAllowsCourse(code) {
+  const profile = currentProfile();
+  return !profile || !window.AntivergilProfile || window.AntivergilProfile.canViewCourse(profile, code);
+}
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
@@ -436,7 +447,8 @@ function groupByCode(courses) {
 let groupedCache = null;
 function getGrouped() {
   if (groupedCache && groupedCache.src === state.courses) return groupedCache.list;
-  const list = groupByCode(state.courses).map((c) => ({
+  const visibleCourses = state.courses.filter((course) => profileAllowsCourse(course.code));
+  const list = groupByCode(visibleCourses).map((c) => ({
     ...c,
     hay: [c.code, c.title, c.dept, c.deptCode,
       ...c.sections.map((s) => s.instructor || ""),
@@ -491,7 +503,9 @@ function sectionToCard(section) {
 let sectionCache = null;
 function getSections() {
   if (sectionCache && sectionCache.src === state.courses) return sectionCache.list;
-  const list = state.courses.map(sectionToCard).map((c) => ({
+  const list = state.courses
+    .filter((course) => profileAllowsCourse(course.code))
+    .map(sectionToCard).map((c) => ({
     ...c,
     hay: [
       c.code, c.title, c.dept, c.deptCode,
@@ -545,20 +559,6 @@ const PATH_VIEWS = {
   search: "search",
   instructor: "instructor",
   department: "department",
-};
-
-const VIEW_TITLES = {
-  browse: "Browse",
-  rankings: "Ranking",
-  analysis: "Enrollment",
-  planner: "Plan",
-  calendar: "Calendar",
-  map: "Map",
-  history: "History",
-  me: "Account",
-  search: "Search",
-  instructor: "Instructor",
-  department: "Department",
 };
 
 function routeSlug(value) {
@@ -753,7 +753,7 @@ function switchView(id, opts = {}) {
     else button.removeAttribute("aria-current");
   });
   $("#mobile-nav-label").textContent = NAV.find(([view]) => view === navId)?.[1] || "Menu";
-  document.title = `${VIEW_TITLES[id] || "Planner"} · Antivergil`;
+  document.title = "Antivergil";
   if (id !== "browse") setFilterPanelOpen(false);
   document.body.dataset.view = id;
   if (id === "calendar") {
@@ -1044,7 +1044,7 @@ function filterSelectHTML(key, options, current) {
 function buildFilters() {
   const all = getSections();
   const depts = [...new Set(all.map((c) => c.deptCode).filter(Boolean))].sort();
-  const campuses = [...new Set(state.courses.map((c) => c.campus).filter(Boolean))].sort();
+  const campuses = [...new Set(all.map((c) => c.section.campus).filter(Boolean))].sort();
   const f = state.filters;
   if (f.dept !== "all" && !depts.includes(f.dept)) f.dept = "all";
   if (f.campus !== "all" && !campuses.includes(f.campus)) f.campus = "all";
@@ -1055,7 +1055,8 @@ function buildFilters() {
     filterSelectHTML("level", LEVEL_OPTIONS, f.level),
     filterSelectHTML("campus", campusOptions, f.campus),
     filterSelectHTML("method", METHOD_OPTIONS, f.method),
-    filterSelectHTML("sort", SORT_OPTIONS, f.sort),
+    filterSelectHTML("sort", SORT_OPTIONS.map(([value, label]) =>
+      value === "default" && currentProfile() ? [value, "Sort: For you"] : [value, label]), f.sort),
     filterSelectHTML("day", DAY_OPTIONS, f.day),
   ].join("");
   updateFilterToggle();
@@ -1120,6 +1121,13 @@ function sortCourses(list) {
   if (s === "title") return list.sort((a, b) => a.title.localeCompare(b.title));
   if (s === "points") return list.sort((a, b) => (b.minPoints || 0) - (a.minPoints || 0));
   if (s === "culpa") return list.sort((a, b) => (b.culpa || 0) - (a.culpa || 0));
+  const profile = currentProfile();
+  if (profile) {
+    return list.sort((a, b) =>
+      AntivergilProfile.relevance(profile, b) - AntivergilProfile.relevance(profile, a)
+      || a.deptCode.localeCompare(b.deptCode)
+      || a.code.localeCompare(b.code));
+  }
   return list.sort((a, b) => a.deptCode.localeCompare(b.deptCode) || a.code.localeCompare(b.code));
 }
 
@@ -1579,6 +1587,10 @@ function renderCourseRatingPanel(host, code) {
 
 /* ---------- 课程详情 ---------- */
 function openCourse(code, sectionId = "") {
+  if (!profileAllowsCourse(code)) {
+    toast("This course is outside your current undergraduate/graduate course range.");
+    return;
+  }
   const locked = !authUser;
   $(".modal")?.classList.toggle("is-course-locked", locked);
   const sections = state.courses.filter((c) => normCode(c.code) === normCode(code));
@@ -2670,7 +2682,8 @@ function instructorOfferings(profile) {
     dropBase: Number(row[9]) || 0,
     dropComplete: row[10] === 1,
     archive: row[11] || null,
-  })).sort((a, b) => b.term.localeCompare(a.term) || a.code.localeCompare(b.code));
+  })).filter((row) => profileAllowsCourse(row.code))
+    .sort((a, b) => b.term.localeCompare(a.term) || a.code.localeCompare(b.code));
 }
 
 function instructorTeachingRows(offerings) {
@@ -2800,7 +2813,7 @@ function aggregateDepartment(index, departmentCode) {
       courses.set(code, current);
     }
   }
-  const courseRows = [...courses.values()].map((row) => ({
+  const courseRows = [...courses.values()].filter((row) => profileAllowsCourse(row.code)).map((row) => ({
     ...row,
     drop: row.dropBase ? row.dropWeighted / row.dropBase : null,
     instructors: row.totals.size,
@@ -3711,15 +3724,16 @@ function addToPlan(code) {
 /* 先修课依赖图 */
 function resolveCourse(code) {
   const k = normCode(code);
-  const exact = state.courses.find((c) => normCode(c.code) === k);
+  const visibleCourses = state.courses.filter((c) => profileAllowsCourse(c.code));
+  const exact = visibleCourses.find((c) => normCode(c.code) === k);
   if (exact) return exact;
   const compact = k.replace(/\s+/g, "");
-  const compactHit = state.courses.find((c) => normCode(c.code).replace(/\s+/g, "") === compact);
+  const compactHit = visibleCourses.find((c) => normCode(c.code).replace(/\s+/g, "") === compact);
   if (compactHit) return compactHit;
   const m = compact.match(/^([A-Z]{2,4})(\d{3,4})$/);
   if (m) {
     const letters = m[1], num = m[2];
-    return state.courses.find((c) => {
+    return visibleCourses.find((c) => {
       const cn = normCode(c.code);
       return cn.replace(/\s+/g, "").endsWith(num) && cn.split(/\s+/)[0].includes(letters);
     }) || null;
@@ -4225,7 +4239,11 @@ function calendarEventMarkup(event, conflicts) {
 }
 
 function addSectionsToSchedule(code, sectionId = "") {
-  const sections = state.courses.filter((c) => normCode(c.code) === normCode(code));
+  const sections = state.courses.filter((c) => profileAllowsCourse(c.code) && normCode(c.code) === normCode(code));
+  if (!sections.length) {
+    toast("This course is outside your current undergraduate/graduate course range.");
+    return;
+  }
   const pick = sections.filter((s) => s.start != null && s.days && s.days.length);
   const chosen = sections.find((s) => s.classId === sectionId) || pick[0] || sections[0];
   if (!chosen) return;
@@ -4759,7 +4777,7 @@ function importScheduleShareCode(input) {
   for (const item of payload.c) {
     const code = Array.isArray(item) ? item[0] : item?.c;
     const classId = Array.isArray(item) ? item[1] : item?.id;
-    const candidates = state.courses.filter((course) => normCode(course.code) === normCode(code));
+    const candidates = state.courses.filter((course) => profileAllowsCourse(course.code) && normCode(course.code) === normCode(code));
     const section = candidates.find((course) => course.classId === classId)
       || candidates.find((course) => course.start != null && (course.days || []).length)
       || candidates[0];
@@ -5636,6 +5654,13 @@ if (authUser && !isColumbiaEmail(authUser.email || "")) {
   clearAuthUser();
 }
 
+if (authUser && window.AntivergilProfile && !window.AntivergilProfile.read(authUser.email)) {
+  try {
+    sessionStorage.setItem("antivergil-next", `${location.pathname}${location.search}`);
+  } catch { /* ignore storage errors */ }
+  location.replace("/profile/");
+}
+
 function initialsOf(user) {
   const src = String((user && (user.name || user.email)) || "U").replace(/@.*/, "").trim();
   const parts = src.split(/[\s._-]+/).filter(Boolean);
@@ -5701,11 +5726,13 @@ function renderAccount() {
       </div>
       <div class="account-actions">
         <button class="primary" type="button" id="account-done">Done</button>
+        <button type="button" id="account-profile">Edit profile</button>
         <button type="button" id="account-signout">Sign out</button>
       </div>
       <div class="account-status">${authUser.provider === "google" ? "Signed in with LionMail." : "Preview sign-in (LionMail OAuth not configured)."}</div>
     `;
     $("#account-signout")?.addEventListener("click", signOut);
+    $("#account-profile")?.addEventListener("click", () => location.assign("/profile/?edit=1"));
     $("#account-done")?.addEventListener("click", closeAccount);
     return;
   }
@@ -5843,6 +5870,18 @@ function renderMyPage() {
   const avatar = authUser.picture
     ? `<img src="${esc(authUser.picture)}" alt="" referrerpolicy="no-referrer" />`
     : `<span>${esc(initialsOf(authUser))}</span>`;
+  const profile = currentProfile();
+  const profileSummary = profile
+    ? `<section class="my-profile-summary">
+        <div>
+          <span>Planner profile</span>
+          <h2>${esc(profile.stage === "undergraduate" ? "Undergraduate" : "Graduate")} · ${esc(window.AntivergilProfile.majorLabel(profile))}</h2>
+          <p>${esc(window.AntivergilProfile.schoolLabel(profile))}</p>
+          <div class="my-profile-tags">${window.AntivergilProfile.interestLabels(profile).map((label) => `<span>${esc(label)}</span>`).join("")}</div>
+        </div>
+        <a href="/profile/?edit=1">Edit profile ↗</a>
+      </section>`
+    : "";
   host.innerHTML = `
     <header class="my-hero">
       <div class="my-identity">
@@ -5858,6 +5897,7 @@ function renderMyPage() {
         <div><b>${ratings.length}</b><span>course ratings</span></div>
       </div>
     </header>
+    ${profileSummary}
     <div class="my-grid">
       <section class="my-panel my-plan-panel">
         <div class="my-panel-head"><h2>Plan</h2></div>
