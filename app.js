@@ -5645,11 +5645,11 @@ function clearAuthUser() {
 let authUser = loadAuthUser();
 let googleScriptPromise = null;
 
-function isColumbiaEmail(value) {
-  return /^[^\s@]+@columbia\.edu$/i.test(String(value || "").trim());
+function isAllowedUniversityEmail(value) {
+  return /^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/i.test(String(value || "").trim());
 }
 
-if (authUser && !isColumbiaEmail(authUser.email || "")) {
+if (authUser && !isAllowedUniversityEmail(authUser.email || "")) {
   authUser = null;
   clearAuthUser();
 }
@@ -5729,7 +5729,7 @@ function renderAccount() {
         <button type="button" id="account-profile">Edit profile</button>
         <button type="button" id="account-signout">Sign out</button>
       </div>
-      <div class="account-status">${authUser.provider === "google" ? "Signed in with LionMail." : "Preview sign-in (LionMail OAuth not configured)."}</div>
+      <div class="account-status">${authUser.provider === "google" ? "Signed in with Google." : "Preview sign-in (Google OAuth not configured)."}</div>
     `;
     $("#account-signout")?.addEventListener("click", signOut);
     $("#account-profile")?.addEventListener("click", () => location.assign("/profile/?edit=1"));
@@ -5754,7 +5754,7 @@ function renderAccount() {
   body.innerHTML = `
     <div class="account-logo">CU</div>
     <h2 id="account-title">Sign in</h2>
-    <p>Continue with your Columbia LionMail account to personalise the planner.</p>
+    <p>Continue with a supported university account to personalise the planner.</p>
     <div class="account-google" id="google-button">${configured ? "" : googleFallback}</div>
     <div class="account-hint">${fileHint}</div>
   `;
@@ -5763,14 +5763,14 @@ function renderAccount() {
 }
 
 function previewSignIn() {
-  const email = window.prompt("Enter your @columbia.edu email for preview sign-in:");
+  const email = window.prompt("Enter your university email for preview sign-in:");
   if (email) localSignIn(email);
 }
 
 function localSignIn(email) {
   const clean = String(email || "").trim().toLowerCase();
-  if (!isColumbiaEmail(clean)) {
-    toast("Use a Columbia email ending in @columbia.edu.");
+  if (!isAllowedUniversityEmail(clean)) {
+    toast("Use an email ending in @columbia.edu or @student.ubc.ca.");
     return false;
   }
   const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -5808,7 +5808,6 @@ async function setupGoogleSignIn(container) {
       callback: handleGoogleCredential,
       auto_select: false,
       cancel_on_tap_outside: true,
-      hd: "columbia.edu",
     });
     window.google.accounts.id.renderButton(container, {
       type: "standard",
@@ -5829,11 +5828,11 @@ function handleGoogleCredential(response) {
     let b64 = String(response.credential || "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     b64 += "=".repeat((4 - (b64.length % 4)) % 4);
     const payload = JSON.parse(atob(b64));
-    if (!isColumbiaEmail(payload.email)) {
+    if (!isAllowedUniversityEmail(payload.email)) {
       authUser = null;
       clearAuthUser();
       renderRailBrand();
-      toast("Use your @columbia.edu Google account.");
+      toast("Use a supported university Google account.");
       return;
     }
     authUser = {

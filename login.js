@@ -5,8 +5,8 @@ const $ = (selector) => document.querySelector(selector);
 let statusTimer = 0;
 let statusHideTimer = 0;
 
-function isColumbiaEmail(value) {
-  return /^[^\s@]+@columbia\.edu$/i.test(String(value || "").trim());
+function isAllowedUniversityEmail(value) {
+  return /^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/i.test(String(value || "").trim());
 }
 
 function safeNextPath() {
@@ -62,8 +62,8 @@ function saveUser(user) {
 }
 
 function completeSignIn(user) {
-  if (!isColumbiaEmail(user.email)) {
-    setStatus("Only Columbia University accounts can continue.", "error");
+  if (!isAllowedUniversityEmail(user.email)) {
+    setStatus("Only supported university accounts can continue.", "error");
     return;
   }
   saveUser({ ...user, email: user.email.toLowerCase() });
@@ -80,8 +80,8 @@ function completeSignIn(user) {
 
 function localSignIn(email) {
   const clean = String(email || "").trim().toLowerCase();
-  if (!isColumbiaEmail(clean)) {
-    setStatus("Use a Columbia email ending in @columbia.edu.", "error");
+  if (!isAllowedUniversityEmail(clean)) {
+    setStatus("Use an email ending in @columbia.edu or @student.ubc.ca.", "error");
     return;
   }
   const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -124,8 +124,8 @@ async function handleGoogleTokenResponse(response) {
     });
     if (!profileResponse.ok) throw new Error(`Google profile request failed (${profileResponse.status})`);
     const payload = await profileResponse.json();
-    if (!isColumbiaEmail(payload.email)) {
-      setStatus("Use your Columbia LionMail account.", "error");
+    if (!isAllowedUniversityEmail(payload.email)) {
+      setStatus("Use a supported university account.", "error");
       return;
     }
     completeSignIn({
@@ -148,7 +148,7 @@ async function startGoogleLogin() {
   const clientId = String(window.COLUMBIA_AUTH?.googleClientId || "").trim();
   if (!clientId || !/^https?:$/.test(location.protocol)) {
     $("#email-form").hidden = false;
-    setStatus("Google OAuth is not configured in this preview. Continue with your @columbia.edu email.", "info");
+    setStatus("Google OAuth is not configured in this preview. Continue with your university email.", "info");
     requestAnimationFrame(() => $("#email-form input")?.focus());
     return;
   }
@@ -177,7 +177,7 @@ async function startGoogleLogin() {
   } catch (_) {
     button.disabled = false;
     $("#email-form").hidden = false;
-    setStatus("Google sign-in is unavailable. Use your @columbia.edu email to continue.", "error");
+    setStatus("Google sign-in is unavailable. Use your university email to continue.", "error");
     requestAnimationFrame(() => $("#email-form input")?.focus());
   }
 }

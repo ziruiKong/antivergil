@@ -8,7 +8,7 @@
  *   3. 把 Client ID 填到下面的 googleClientId。
  *   4. 用 `node serve.mjs` 通过 http://localhost:8000 打开（Google 不接受 file://）。
  *
- * 留空时，界面上会提供「本地预览登录」：只接受 @columbia.edu 地址，
+ * 留空时，界面上会提供「本地预览登录」：接受 @columbia.edu 与 @student.ubc.ca 地址，
  * 数据存在浏览器 localStorage，不上传，方便离线使用。
  * 真正的 Google 登录仍需填写下方 Client ID。
  */
