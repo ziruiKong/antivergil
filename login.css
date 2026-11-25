@@ -268,6 +268,49 @@ a { -webkit-tap-highlight-color: transparent; }
 .google-login:active { transform: translateY(1px); }
 .google-login:disabled { opacity: .58; cursor: wait; }
 
+.ubc-register-link,
+.ubc-back-link {
+  display: block;
+  width: 100%;
+  padding: 12px 0 2px;
+  border: 0;
+  background: transparent;
+  color: #62625d;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ubc-register-link:hover,
+.ubc-back-link:hover { color: var(--ink); }
+.ubc-email-form { margin-top: 10px; }
+.ubc-form-actions {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+}
+.ubc-form-actions .email-submit,
+.ubc-form-actions #back-to-google {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.25;
+  cursor: pointer;
+}
+.ubc-form-actions .email-submit { background: var(--ink); color: var(--paper); }
+.ubc-form-actions .email-submit:hover { background: #333; }
+.ubc-form-actions #back-to-google { border-left: 1px solid var(--ink); background: transparent; color: var(--ink); }
+.ubc-form-actions #back-to-google:hover { background: rgba(18, 18, 18, .06); }
+
 .google-login:focus-visible,
 .email-submit:focus-visible,
 .login-brand:focus-visible {

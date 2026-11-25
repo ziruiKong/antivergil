@@ -131,7 +131,14 @@ if (window.AntivergilScheduleCloud?.enabled) {
         type: "standard", theme: "filled_black", shape: "rectangular", size: "large",
         text: "continue_with", logo_alignment: "left", width,
       });
+      localizeGoogleLabel();
     };
+    const localizeGoogleLabel = () => {
+      mount.querySelectorAll(".nsm7Bb-HzV7m-LgbsSe-BPrWId").forEach(label => {
+        if (/continue with google/i.test(label.textContent || "")) label.textContent = "Continue with LionMail";
+      });
+    };
+    new MutationObserver(localizeGoogleLabel).observe(mount, { childList: true, characterData: true, subtree: true });
     button.hidden = true;
     renderGoogleButton();
     new ResizeObserver(renderGoogleButton).observe(container);
@@ -144,6 +151,7 @@ if (window.AntivergilScheduleCloud?.enabled) {
 
 let verificationEmailAddress = "";
 let verificationCredential = "";
+let manualUbcMode = false;
 let resendAvailableAt = 0;
 const emailAuthEndpoint = new URL("/api/email-auth", window.COLUMBIA_AUTH?.scheduleApi || location.origin).href;
 async function emailAuth(body) {
@@ -166,16 +174,45 @@ async function sendCode() {
     completeSignIn(result.user);
     return;
   }
-  verificationEmailAddress = result.email;
-  $("#code-destination").textContent = verificationEmailAddress;
+  showCodeEntry(result.email);
+}
+
+function showCodeEntry(email) {
+  verificationEmailAddress = email;
+  $("#code-destination").textContent = email;
   lastSubmittedCode = "";
   codeInput.value = "";
   codeInput.dispatchEvent(new Event("input"));
   resendAvailableAt = Date.now() + 60000;
   $("#google-login-mount").hidden = true;
+  $("#show-ubc-register").hidden = true;
+  $("#ubc-email-form").hidden = true;
   $("#code-form").hidden = false;
+  codeInput.focus();
+}
 
-  $("#verification-code").focus();
+async function requestUbcCode() {
+  const email = $("#ubc-email").value.trim().toLowerCase();
+  if (!/^[^\s@]+@student\.ubc\.ca$/i.test(email)) {
+    setStatus("Use your UBC student email ending in @student.ubc.ca.");
+    return;
+  }
+  manualUbcMode = true;
+  verificationCredential = "";
+  verificationEmailAddress = email;
+  setStatus("Sending a verification code…", "info");
+  try {
+    const result = await emailAuth({ provider: "ubc-email", email });
+    clearStatus();
+    if (result.token && result.user) {
+      localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
+      completeSignIn(result.user);
+      return;
+    }
+    showCodeEntry(result.email || email);
+  } catch (error) {
+    setStatus(error.message || "Could not send a code. Try again.");
+  }
 }
 
 let verifyingCode = false;
@@ -194,7 +231,10 @@ async function verifyEnteredCode() {
   codeForm.classList.remove("verification-error");
   feedback.textContent = "Verifying…";
   try {
-    const { token, user } = await emailAuth({ credential: verificationCredential, code });
+    const payload = manualUbcMode
+      ? { provider: "ubc-email", email: verificationEmailAddress, code }
+      : { credential: verificationCredential, code };
+    const { token, user } = await emailAuth(payload);
     localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: user.sub, token }));
     verifiedCode = true;
     codeForm.classList.add("verification-success");
@@ -221,10 +261,48 @@ codeInput.addEventListener("input", () => {
   if (codeInput.value !== lastSubmittedCode) lastSubmittedCode = "";
   verifyEnteredCode();
 });
-$("#change-email").addEventListener("click", () => { $("#code-form").hidden = true; $("#google-login-mount").hidden = false; verificationCredential = ""; });
+$("#show-ubc-register").addEventListener("click", () => {
+  manualUbcMode = true;
+  $("#google-login-mount").hidden = true;
+  $("#show-ubc-register").hidden = true;
+  $("#ubc-email-form").hidden = false;
+  $("#ubc-email").focus();
+});
+$("#back-to-google").addEventListener("click", () => {
+  manualUbcMode = false;
+  $("#ubc-email-form").hidden = true;
+  $("#show-ubc-register").hidden = false;
+  $("#google-login-mount").hidden = false;
+  clearStatus();
+});
+$("#ubc-email-form").addEventListener("submit", event => { event.preventDefault(); requestUbcCode(); });
+$("#change-email").addEventListener("click", () => {
+  $("#code-form").hidden = true;
+  codeInput.value = "";
+  codeInput.readOnly = false;
+  if (manualUbcMode) {
+    $("#ubc-email-form").hidden = false;
+    $("#ubc-email").focus();
+  } else {
+    $("#google-login-mount").hidden = false;
+  }
+  verificationCredential = "";
+});
 $("#resend-code").addEventListener("click", async event => {
   event.target.disabled = true;
-  try { await sendCode(); } catch (error) { setStatus(error.message); }
+  try {
+    if (manualUbcMode) {
+      const result = await emailAuth({ provider: "ubc-email", email: verificationEmailAddress });
+      if (result.token && result.user) {
+        localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
+        completeSignIn(result.user);
+      } else {
+        resendAvailableAt = Date.now() + 60000;
+      }
+    } else {
+      await sendCode();
+    }
+  } catch (error) { setStatus(error.message); }
   finally { event.target.disabled = false; }
 });
 setInterval(() => {
