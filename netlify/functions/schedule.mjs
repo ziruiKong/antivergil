@@ -55,6 +55,9 @@ export default async function schedule(request) {
     headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
     headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
   }
+  if (new URL(request.url).searchParams.has("alerts")) {
+    headers["X-Antivergil-Mail-Delivery"] = process.env.RESEND_API_KEY && process.env.COURSE_ALERT_FROM ? "configured" : "pending";
+  }
   const send = (data, status = 200) => Response.json(data, { status, headers });
   if (origin && !allowedOrigin) return send({ error: "Origin not allowed." }, 403);
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
