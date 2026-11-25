@@ -165,6 +165,10 @@ a { -webkit-tap-highlight-color: transparent; }
   background: var(--accent);
 }
 
+.profile-step.is-complete:not(.is-active) .profile-actions {
+  display: none;
+}
+
 .profile-step:last-child::before { display: none; }
 .profile-step.is-pending { display: none; }
 
