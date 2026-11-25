@@ -38,7 +38,8 @@ export default async function emailAuth(request) {
       const rows = await sql`INSERT INTO email_login_codes (email, code_hash, expires_at) VALUES (${email}, ${hash}, now() + interval '10 minutes') ON CONFLICT (email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, sent_at = now(), attempts = 0 WHERE email_login_codes.sent_at < now() - interval '60 seconds' RETURNING email`;
       if (!rows.length) return send({ error: 'Wait 60 seconds before requesting another code.' }, 429);
       const transport = nodemailer.createTransport({ host: 'smtp.qiye.aliyun.com', port: 465, secure: true, auth: { user: config.user, pass: config.password }, connectionTimeout: 8000, socketTimeout: 15000 });
-      try { await transport.sendMail({ from: config.from, to: email, ...verificationEmail(value) }); }
+      const accountName = String(googleUser.name || email.split('@')[0]).split(/\s+/)[0];
+      try { await transport.sendMail({ from: config.from, to: email, ...verificationEmail(value, accountName) }); }
       catch (error) { await sql`DELETE FROM email_login_codes WHERE email = ${email} AND code_hash = ${hash}`; throw error; }
       return send({ sent: true, email });
     }
