@@ -1,0 +1,11 @@
+{
+  "name": "antivergil",
+  "private": true,
+  "scripts": {
+    "build": "node build-site.mjs"
+  },
+  "dependencies": {
+    "@netlify/database": "2.0.4",
+    "google-auth-library": "11.3.4"
+  }
+}

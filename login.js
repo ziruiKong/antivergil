@@ -183,7 +183,31 @@ async function startGoogleLogin() {
 }
 
 $("#login-back").href = "/about/";
-$("#google-login").addEventListener("click", startGoogleLogin);
+if (window.AntivergilScheduleCloud?.enabled) {
+  const button = $("#google-login");
+  const mount = $("#google-login-mount");
+  button.disabled = true;
+  loadGoogleScript().then(() => {
+    window.google.accounts.id.initialize({
+      client_id: window.COLUMBIA_AUTH.googleClientId,
+      callback: async ({ credential }) => {
+        try {
+          setStatus("Signing in…", "info");
+          completeSignIn(await window.AntivergilScheduleCloud.signIn(credential));
+        } catch (error) {
+          setStatus(error.message || "Cloud sign-in failed. Try again.");
+        }
+      },
+    });
+    window.google.accounts.id.renderButton(mount, {
+      type: "standard", theme: "outline", size: "large", text: "continue_with",
+      width: Math.max(200, Math.min(330, mount.clientWidth || 300)),
+    });
+    button.hidden = true;
+  }).catch(() => setStatus("Google sign-in is temporarily unavailable. Reload to try again."));
+} else {
+  $("#google-login").addEventListener("click", startGoogleLogin);
+}
 $("#email-form input").addEventListener("input", clearStatus);
 $("#email-form").addEventListener("submit", (event) => {
   event.preventDefault();

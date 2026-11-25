@@ -160,8 +160,14 @@ function restoreProfileSchedule() {
 
 function persistProfileSchedule() {
   if (!authUser) return true;
+  const cloud = window.AntivergilScheduleCloud;
   try {
-    return Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
+    const previous = currentProfile()?.schedules?.[state.term] || [];
+    const saved = Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
+    if (saved && cloud?.enabled) {
+      cloud.update(authUser, state.term, previous, state.schedule).catch((error) => toast(error.message));
+    }
+    return saved;
   } catch {
     return false;
   }
@@ -6340,6 +6346,9 @@ async function deleteGoogleCalendarEvent(event) {
 }
 
 function signOut() {
+  if (window.AntivergilScheduleCloud?.enabled) {
+    window.AntivergilScheduleCloud.signOut(authUser).catch(() => {});
+  }
   authUser = null;
   state.schedule = [];
   clearAuthUser();
@@ -7038,7 +7047,16 @@ function startIntro() {
   splash.addEventListener("click", finishIntro, { once: true });
 }
 
-function init() {
+async function init() {
+  const profile = currentProfile();
+  if (profile && window.AntivergilScheduleCloud?.enabled) {
+    try {
+      const schedules = await window.AntivergilScheduleCloud.sync(authUser, profile.schedules || {});
+      window.AntivergilProfile.cacheSchedules(authUser.email, schedules);
+    } catch (error) {
+      toast(error.message);
+    }
+  }
   loadCustomTerms();
   document.body.classList.remove("sidebar-collapsed");
   let pendingSavedTerm = null;

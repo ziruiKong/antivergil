@@ -17,6 +17,7 @@ const runtimeFiles = [
   "login.css",
   "login.js",
   "profile-store.js",
+  "schedule-cloud.js",
   "profile.css",
   "profile.js",
   "campus-model.js",

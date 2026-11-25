@@ -143,6 +143,11 @@
     return true;
   }
 
+  function cacheSchedules(email, schedules) {
+    const profile = read(email);
+    if (profile) localStorage.setItem(storageKey(email), JSON.stringify({ ...profile, schedules }));
+  }
+
   function schoolLabel(profile) {
     return SCHOOL_OPTIONS[profile?.stage]?.find((item) => item.id === profile.school)?.label
       || "Columbia University";
@@ -213,6 +218,7 @@
     read,
     save,
     saveSchedule,
+    cacheSchedules,
     schoolLabel,
     major,
     majorLabel,

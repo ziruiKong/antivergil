@@ -1,3 +1,5 @@
 work/
 _site/
+node_modules/
+.netlify/
 *.tmp
