@@ -21,6 +21,8 @@
   --line: rgba(18, 18, 18, .3);
   --soft-line: rgba(18, 18, 18, .14);
   --accent: #1e6ef3;
+  --surface: #fff;
+  --surface-hover: #f0f0ea;
   --profile-max: 940px;
   --profile-gutter: 24px;
   --marker-size: 24px;
@@ -166,7 +168,7 @@ a { -webkit-tap-highlight-color: transparent; }
   display: grid;
   grid-template-columns: var(--step-column) minmax(0, 1fr);
   gap: 14px;
-  padding-bottom: 16px;
+  padding: 0 10px 34px 0;
 }
 
 .profile-step::before {
@@ -192,7 +194,7 @@ a { -webkit-tap-highlight-color: transparent; }
   z-index: 1;
   width: var(--marker-size);
   height: var(--marker-size);
-  margin-top: 4px;
+  margin-top: 26px;
   display: grid;
   place-items: center;
   border: 1.5px solid var(--ink);
@@ -214,14 +216,25 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-step-body {
+  position: relative;
+  z-index: 1;
   min-width: 0;
-  padding: 0 0 6px;
+  margin-right: 8px;
+  padding: 24px 26px 26px;
+  border: 1.5px solid var(--ink);
+  background: var(--surface);
+  box-shadow:
+    6px 6px 0 0 var(--paper),
+    8px 8px 0 1px var(--ink);
 }
 
 .profile-step.is-active .profile-step-body {
-  padding: 2px 0 20px;
-  border: 0;
-  background: transparent;
+  padding: 24px 26px 26px;
+  border-color: var(--ink);
+  background: var(--surface);
+  box-shadow:
+    6px 6px 0 0 var(--paper),
+    8px 8px 0 1px var(--accent);
   animation: profile-step-in 360ms cubic-bezier(.16, 1, .3, 1) both;
 }
 
@@ -231,11 +244,11 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-step h2 {
-  margin: 0 0 18px;
-  font-size: clamp(23px, 3vw, 31px);
-  font-weight: 650;
-  letter-spacing: -.04em;
-  line-height: 1.05;
+  margin: 0 0 22px;
+  font-size: clamp(25px, 3.2vw, 36px);
+  font-weight: 600;
+  letter-spacing: -.05em;
+  line-height: 1.08;
 }
 
 .profile-step h2:focus { outline: none; }
@@ -243,7 +256,7 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  gap: 10px;
 }
 
 .profile-workload-options {
@@ -255,27 +268,30 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-choice {
-  min-height: 68px;
-  padding: 13px 15px;
-  border: 0;
-  background: #e8e8e2;
+  min-height: 64px;
+  padding: 14px 15px;
+  border: 1.5px solid var(--ink);
+  background: var(--surface);
   color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 500;
   line-height: 1.25;
   text-align: left;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .profile-choice:hover,
 .profile-choice:focus-visible {
   outline: none;
-  background: #ddddD7;
+  background: var(--surface-hover);
   color: var(--ink);
 }
 
+.profile-choice:active { transform: translateY(1px); }
+
 .profile-choice.is-selected {
+  border-color: var(--ink);
   background: var(--accent);
   color: #fff;
 }
@@ -291,27 +307,27 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-major-search {
   width: 100%;
-  height: 44px;
-  margin-bottom: 10px;
+  height: 48px;
+  margin-bottom: 12px;
   padding: 0 13px;
-  border: 0;
+  border: 1.5px solid var(--ink);
   border-radius: 0;
   outline: 0;
-  background: #e8e8e2;
+  background: var(--surface);
   color: var(--ink);
   font-size: 14px;
 }
 .profile-major-search:focus {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .profile-major-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  max-height: 290px;
+  gap: 10px;
+  max-height: 340px;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: none;
@@ -323,9 +339,9 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-major-grid .profile-choice {
-  min-height: 44px;
+  min-height: 46px;
   padding: 10px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .profile-major-empty {
@@ -338,25 +354,26 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-interest-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .profile-interest {
-  min-height: 40px;
-  padding: 9px 13px;
-  border: 0;
-  border-radius: 999px;
-  background: #e8e8e2;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--surface);
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .profile-interest:hover,
 .profile-interest:focus-visible {
   outline: none;
-  background: #ddddD7;
+  background: var(--surface-hover);
 }
 
 .profile-interest.is-selected {
@@ -364,6 +381,8 @@ a { -webkit-tap-highlight-color: transparent; }
   background: var(--accent);
   color: #fff;
 }
+
+.profile-interest:active { transform: translateY(1px); }
 
 @media (max-width: 680px) {
   :root {
@@ -389,12 +408,27 @@ a { -webkit-tap-highlight-color: transparent; }
     gap: 10px;
   }
   .profile-step-marker {
-    margin-top: 2px;
+    margin-top: 18px;
   }
   .profile-step.is-active .profile-step-body {
-    padding: 2px 0 18px;
+    padding: 18px 16px 20px;
   }
-  .profile-step h2 { font-size: 24px; }
+  .profile-step-body {
+    margin-right: 7px;
+    padding: 18px 16px 20px;
+    box-shadow:
+      5px 5px 0 0 var(--paper),
+      7px 7px 0 1px var(--ink);
+  }
+  .profile-step.is-active .profile-step-body {
+    box-shadow:
+      5px 5px 0 0 var(--paper),
+      7px 7px 0 1px var(--accent);
+  }
+  .profile-step h2 {
+    margin-bottom: 18px;
+    font-size: 26px;
+  }
   .profile-options,
   .profile-major-grid { grid-template-columns: 1fr; }
   .profile-major-grid { max-height: 350px; }
