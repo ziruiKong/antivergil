@@ -70,6 +70,10 @@ footer { padding-block: min(1rem, 1.5dvh); }
     font-size: clamp(16px, 4.4vw, 21px);
   }
 
+  .tile-caption strong {
+    transform: none;
+  }
+
   .intro {
     gap: 12px;
     padding-block: .85rem;
