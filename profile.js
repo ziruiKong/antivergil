@@ -18,13 +18,15 @@
     school: existing?.school || "",
     major: existing?.major || "",
     interests: Array.isArray(existing?.interests) ? [...existing.interests] : [],
-    step: existing ? 4 : 0,
+    workload: existing?.workload || "",
+    step: existing ? 5 : 0,
     majorQuery: "",
   };
 
   const stageLabel = (value) => value === "undergraduate" ? "Undergraduate" : value === "graduate" ? "Graduate" : "Not selected";
   const schoolLabel = (value) => store.SCHOOL_OPTIONS[state.stage]?.find((item) => item.id === value)?.label || "Not selected";
   const majorLabel = (value) => store.MAJOR_OPTIONS.find((item) => item.id === value)?.label || "Not selected";
+  const workloadLabel = (value) => store.WORKLOAD_OPTIONS.find((item) => item.id === value)?.label || "Not selected";
   const interestLabels = () => store.INTEREST_OPTIONS.filter((item) => state.interests.includes(item.id)).map((item) => item.label);
   const esc = (value) => String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -67,7 +69,7 @@
         <h2 tabindex="-1">What do you study?</h2>
         <input class="profile-major-search" id="profile-major-search" type="search" value="${esc(state.majorQuery)}" placeholder="Find your major or field" autocomplete="off">
         <div class="profile-major-grid" id="profile-major-grid">
-          ${majors.filter((item) => item.label.toLowerCase().includes(state.majorQuery.toLowerCase())).map((major) => choiceMarkup(major, state.major === major.id, "major")).join("") || `<p class="profile-step-hint">No matching field. Choose “Other / Interdisciplinary”.</p>`}
+          ${majors.filter((item) => item.label.toLowerCase().includes(state.majorQuery.toLowerCase())).map((major) => choiceMarkup(major, state.major === major.id, "major")).join("") || `<p class="profile-major-empty">No matching field. Choose “Other / Interdisciplinary”.</p>`}
         </div>`;
     }
     if (index === 3) {
@@ -82,13 +84,24 @@
           <button class="profile-primary" type="button" data-interests-continue ${state.interests.length ? "" : "disabled"}>Continue <span>↗</span></button>
         </div>`;
     }
+    if (index === 4) {
+      return `
+        <h2 tabindex="-1">What course rhythm fits you?</h2>
+        <div class="profile-options profile-workload-options">
+          ${store.WORKLOAD_OPTIONS.map((option) => `
+            <button class="profile-choice${state.workload === option.id ? " is-selected" : ""}" type="button" data-workload="${esc(option.id)}" aria-pressed="${state.workload === option.id}">
+              ${esc(option.label)}
+              <small>${esc(option.description)}</small>
+            </button>`).join("")}
+        </div>`;
+    }
     return `
-      <h2 tabindex="-1">Your planner is calibrated.</h2>
       <div class="profile-review">
         <div><span>Level</span><b>${esc(stageLabel(state.stage))}</b></div>
         <div><span>School</span><b>${esc(schoolLabel(state.school))}</b></div>
         <div><span>Field</span><b>${esc(majorLabel(state.major))}</b></div>
         <div><span>Interests</span><b>${esc(interestLabels().join(" · "))}</b></div>
+        <div><span>Course rhythm</span><b>${esc(workloadLabel(state.workload))}</b></div>
       </div>
       <div class="profile-actions review-actions">
         <button class="profile-primary" type="button" data-profile-finish>Enter Antivergil <span>↗</span></button>
@@ -100,19 +113,20 @@
     if (index === 1) return Boolean(state.school);
     if (index === 2) return Boolean(state.major);
     if (index === 3) return state.interests.length > 0;
-    return Boolean(state.stage && state.school && state.major && state.interests.length);
+    if (index === 4) return Boolean(state.workload);
+    return Boolean(state.stage && state.school && state.major && state.interests.length && state.workload);
   }
 
   function render() {
-    const total = 4;
-    const position = Math.min(total, state.step + (state.step < 4 ? 0 : 1));
+    const total = 5;
+    const position = Math.min(total, state.step + (state.step < 5 ? 0 : 1));
     progressFill.style.width = `${Math.min(100, (position / total) * 100)}%`;
     progressRoot?.classList.toggle("has-progress", position > 0);
-    stepsHost.innerHTML = [0, 1, 2, 3, 4].map((index) => {
+    stepsHost.innerHTML = [0, 1, 2, 3, 4, 5].map((index) => {
       const complete = isComplete(index);
       const active = state.step === index;
       const hidden = index > state.step && !complete;
-      if (index === 4 && (state.step < 4 || !(isComplete(0) && isComplete(1) && isComplete(2) && isComplete(3)))) {
+      if (index === 5 && (state.step < 5 || !(isComplete(0) && isComplete(1) && isComplete(2) && isComplete(3) && isComplete(4)))) {
         return "";
       }
       return `<li class="profile-step${active ? " is-active" : ""}${complete && !active ? " is-complete" : ""}${hidden ? " is-pending" : ""}" data-step="${index}">
@@ -164,14 +178,21 @@
       advance(4);
       return;
     }
+    const workload = event.target.closest("[data-workload]");
+    if (workload) {
+      state.workload = workload.dataset.workload;
+      advance(5);
+      return;
+    }
     if (event.target.closest("[data-profile-finish]")) {
-      if (!isComplete(0) || !isComplete(1) || !isComplete(2) || !isComplete(3)) return;
+      if (!isComplete(0) || !isComplete(1) || !isComplete(2) || !isComplete(3) || !isComplete(4)) return;
       store.save({
         email: user.email,
         stage: state.stage,
         school: state.school,
         major: state.major,
         interests: state.interests,
+        workload: state.workload,
         completedAt: new Date().toISOString(),
       });
       let next = "/browse/";

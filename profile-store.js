@@ -63,6 +63,24 @@
     { id: "culture", label: "Languages & Culture", deptCodes: ["EALC", "EAAS", "CHIN", "JAPN", "KORE", "ENGL"], keywords: ["language", "culture", "literature", "history"] },
   ];
 
+  const WORKLOAD_OPTIONS = [
+    {
+      id: "exploratory",
+      label: "Exploratory",
+      description: "Lighter reading and problem sets, with more room to explore.",
+    },
+    {
+      id: "balanced",
+      label: "Balanced",
+      description: "A steady mix of reading, projects, and structured coursework.",
+    },
+    {
+      id: "rigorous",
+      label: "Rigorous",
+      description: "Dense, technical, or high-commitment courses.",
+    },
+  ];
+
   const SCHOOL_DEPTS = {
     engineering: ["COMS", "IEOR", "ELEN", "BMEN", "MECE", "CHEN", "CIVI", "STAT"],
     business: ["BUSI", "FINC", "DROM", "ACCT", "BUEC", "MKTG"],
@@ -95,7 +113,8 @@
         && value.school
         && value.major
         && Array.isArray(value.interests)
-        && value.interests.length > 0;
+        && value.interests.length > 0
+        && WORKLOAD_OPTIONS.some((item) => item.id === value.workload);
       return complete ? value : null;
     } catch {
       return null;
@@ -163,6 +182,13 @@
         if (haystack.includes(keyword)) score += 5;
       }
     }
+    const level = courseLevel(course.code) || 0;
+    const credits = Number(course.minPoints ?? course.points ?? course.section?.points ?? 3);
+    const demand = (level >= 5000 ? 2 : level >= 4000 ? 1 : 0)
+      + (credits >= 4 ? 2 : credits >= 3 ? 1 : 0);
+    if (profile.workload === "exploratory") score += Math.max(0, 4 - demand) * 4;
+    else if (profile.workload === "balanced") score += demand === 2 ? 6 : demand === 1 ? 8 : 5;
+    else if (profile.workload === "rigorous") score += demand * 5;
     return score;
   }
 
@@ -171,6 +197,7 @@
     SCHOOL_OPTIONS,
     MAJOR_OPTIONS,
     INTEREST_OPTIONS,
+    WORKLOAD_OPTIONS,
     SCHOOL_DEPTS,
     normalizeEmail,
     read,

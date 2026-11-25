@@ -5876,7 +5876,7 @@ function renderMyPage() {
         <div>
           <span>Planner profile</span>
           <h2>${esc(profile.stage === "undergraduate" ? "Undergraduate" : "Graduate")} · ${esc(window.AntivergilProfile.majorLabel(profile))}</h2>
-          <p>${esc(window.AntivergilProfile.schoolLabel(profile))}</p>
+          <p>${esc(window.AntivergilProfile.schoolLabel(profile))} · ${esc(window.AntivergilProfile.WORKLOAD_OPTIONS.find((item) => item.id === profile.workload)?.label || "Balanced")}</p>
           <div class="my-profile-tags">${window.AntivergilProfile.interestLabels(profile).map((label) => `<span>${esc(label)}</span>`).join("")}</div>
         </div>
         <a href="/profile/?edit=1">Edit profile ↗</a>

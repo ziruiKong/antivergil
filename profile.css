@@ -21,8 +21,6 @@
   --line: rgba(18, 18, 18, .3);
   --soft-line: rgba(18, 18, 18, .14);
   --accent: #1e6ef3;
-  --accent-ink: #154dae;
-  --wash: #f6f6ef;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable",
     "Segoe UI", "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
 }
@@ -229,6 +227,14 @@ a { -webkit-tap-highlight-color: transparent; }
   gap: 9px;
 }
 
+.profile-workload-options {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.profile-workload-options .profile-choice {
+  min-height: 74px;
+}
+
 .profile-choice {
   min-height: 68px;
   padding: 13px 15px;
@@ -294,6 +300,13 @@ a { -webkit-tap-highlight-color: transparent; }
   min-height: 44px;
   padding: 10px 12px;
   font-size: 12.5px;
+}
+
+.profile-major-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .profile-interest-grid {
