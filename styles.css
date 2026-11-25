@@ -13670,3 +13670,26 @@ body.auth-authenticated .my-page {
   height: auto;
   margin-inline: auto;
 }
+
+/* Keep the interactive map inside the visible page area. */
+#view-map .campus-model-shell {
+  height: max(220px, calc(100vh - var(--campus-map-top, 145px) - 24px));
+  height: max(220px, calc(100dvh - var(--campus-map-top, 145px) - max(24px, env(safe-area-inset-bottom))));
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+#view-map .campus-model-main { min-height: 0; }
+#view-map .campus-model-rail { min-height: 0; overflow: auto; }
+@media (max-width: 900px) {
+  #view-map .campus-model-shell {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  #view-map .campus-model-rail {
+    max-height: 38dvh;
+    padding: 8px 12px;
+  }
+}
+
+main:has(#view-map:not([hidden])) { padding-bottom: 0; }
+#view-map #campus-model-svg { cursor: default; touch-action: auto; }

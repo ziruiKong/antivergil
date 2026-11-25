@@ -156,16 +156,14 @@
   const CAMPUS_RECT = [[-164,-157],[76,-157],[77,303],[-164,303]];
   const CAMPUS_STREET_RECT = [[-198,-181],[106,-181],[107,332],[-198,332]];
   const MODEL_STATE = {
-    rotation: -38,
-    pitch: 46,
+    rotation: 69,
+    pitch: 35,
     labels: true,
     roads: true,
     selected: "",
-    zoom: 1.37,
-    panX: 0,
-    panY: 0,
-    dragging: false,
-    dragStart: null,
+    zoom: 2,
+    panX: 1.97,
+    panY: 130.51,
     built: false,
   };
 
@@ -964,22 +962,6 @@
     return {landmark:landmark.name,selected:landmark.name===selectedName,faces};
   }
 
-  function renderLandmarkRail(selectedName) {
-    const root = document.querySelector("#campus-landmarks");
-    if (!root) return;
-    root.innerHTML = LANDMARKS.map((item, index) => `
-      <button type="button" class="campus-landmark-btn ${item.name === selectedName ? "active" : ""}" data-campus-landmark="${item.name}">
-        <span class="campus-landmark-index">${String(index + 1).padStart(2, "0")}</span>
-        <span><b>${item.label}</b><small>${item.subtitle}</small></span>
-      </button>`).join("");
-    const selection = document.querySelector("#campus-model-selection");
-    if (!selection) return;
-    const active = LANDMARK_BY_NAME.get(selectedName);
-    selection.innerHTML = active
-      ? `<b>${active.label}</b><span>${active.description}</span>`
-      : `<b>Columbia University</b><span>Drag to orbit · scroll or pinch to zoom · double-click or double-tap to reset · select a landmark to inspect it.</span>`;
-  }
-
   function drawCoursePointers(project, centralBuildings) {
     const targets = window.CAMPUS_MODEL_COURSE_TARGETS || [];
     return targets.map((target, index) => {
@@ -1422,7 +1404,6 @@
     if (loading) loading.hidden = true;
     const fallback = document.querySelector("#map-fallback");
     if (fallback) fallback.hidden = true;
-    renderLandmarkRail(MODEL_STATE.selected);
     const angleLabel = document.querySelector("#campus-model-angle");
     if (angleLabel) angleLabel.textContent = `AZ ${Math.round(MODEL_STATE.rotation)}° · EL ${Math.round(MODEL_STATE.pitch)}°`;
   }
@@ -1443,36 +1424,12 @@
     const building = alias && [HAMILTON_HALL, ...(window.CAMPUS_3D?.buildings || [])].find((item) => item.name && item.name.toLowerCase().includes(alias));
     const selected = landmark?.name || building?.name || "";
     MODEL_STATE.selected = selected;
-    MODEL_STATE.zoom = selected ? 1.6 : 1.37;
-    MODEL_STATE.panX = 0;
-    MODEL_STATE.panY = 0;
     renderCampusModel(selected);
     if (window.updateMapLinks) updateMapLinks(name || "Columbia University");
   }
 
   function bindCampusModelControls() {
-    const showLandmarkNote = (node) => {
-      if (node?.dataset.campusLandmark) {
-        const item = LANDMARK_BY_NAME.get(node.dataset.campusLandmark);
-        const selection = document.querySelector("#campus-model-selection");
-        if (item && selection) selection.innerHTML = `<b>${item.label}</b><span>${item.description}</span>`;
-      }
-    };
-    document.querySelector("#campus-landmarks")?.addEventListener("pointerover", (event) => {
-      showLandmarkNote(event.target.closest("[data-campus-landmark]"));
-    });
-    document.querySelector("#campus-model-viewport")?.addEventListener("pointerover", (event) => {
-      showLandmarkNote(event.target.closest("[data-campus-landmark]"));
-    });
-    document.querySelector("#campus-landmarks")?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-campus-landmark]");
-      if (button) focusCampusModel(button.dataset.campusLandmark);
-    });
     document.querySelector("#campus-model-viewport")?.addEventListener("click", (event) => {
-      if (MODEL_STATE.suppressClick) {
-        MODEL_STATE.suppressClick = false;
-        return;
-      }
       const pin = event.target.closest("[data-campus-landmark]");
       if (pin) focusCampusModel(pin.dataset.campusLandmark);
       const buildingNode = event.target.closest("[data-building-node]");
@@ -1488,90 +1445,26 @@
         renderCampusModel();
       });
     });
-    document.querySelectorAll("[data-model-rotate]").forEach((button) => {
-      button.addEventListener("click", () => {
-        MODEL_STATE.rotation += Number(button.dataset.modelRotate);
-        renderCampusModel();
-      });
-    });
     document.querySelector("[data-model-reset]")?.addEventListener("click", () => {
-      MODEL_STATE.rotation = -38;
-      MODEL_STATE.pitch = 46;
-      MODEL_STATE.zoom = 1.37;
-      MODEL_STATE.panX = 0;
-      MODEL_STATE.panY = 0;
       MODEL_STATE.selected = "";
       renderCampusModel();
     });
     const svg = document.querySelector("#campus-model-svg");
-    let orbitFrame = 0;
-    const scheduleOrbitRender = () => {
-      if (orbitFrame) return;
-      orbitFrame = requestAnimationFrame(() => {
-        orbitFrame = 0;
-        renderCampusModel();
-      });
-    };
-    svg?.addEventListener("wheel", (event) => {
-      if (!event.target.closest("#campus-model-svg")) return;
-      event.preventDefault();
-      MODEL_STATE.zoom = clamp(MODEL_STATE.zoom * (event.deltaY < 0 ? 1.08 : 0.92), 0.65, 2.8);
-      applyCampusCamera();
-    }, { passive: false });
-    svg?.addEventListener("pointerdown", (event) => {
-      if (event.target.closest("[data-campus-landmark]")) return;
-      if (event.button !== 0 && event.button !== 2) return;
-      if (event.button === 2) event.preventDefault();
-      MODEL_STATE.dragging = true;
-      MODEL_STATE.dragMode = event.button === 2 || event.shiftKey ? "pan" : "orbit";
-      MODEL_STATE.dragStart = {
-        x: event.clientX,
-        y: event.clientY,
-        panX: MODEL_STATE.panX,
-        panY: MODEL_STATE.panY,
-        rotation: MODEL_STATE.rotation,
-        pitch: MODEL_STATE.pitch,
-        moved: false,
+    const shell = svg?.closest?.(".campus-model-shell");
+    if (shell && typeof ResizeObserver !== "undefined") {
+      const updateHeight = () => {
+        if (!shell.getClientRects().length) return;
+        const top = Math.round(shell.getBoundingClientRect().top + window.scrollY);
+        shell.style.setProperty("--campus-map-top", `${top}px`);
       };
-      svg.classList.add("dragging");
-      svg.setPointerCapture?.(event.pointerId);
-    });
-    svg?.addEventListener("pointermove", (event) => {
-      if (!MODEL_STATE.dragging || !MODEL_STATE.dragStart) return;
-      const dx = event.clientX - MODEL_STATE.dragStart.x;
-      const dy = event.clientY - MODEL_STATE.dragStart.y;
-      if (Math.hypot(dx, dy) > 3) MODEL_STATE.dragStart.moved = true;
-      if (MODEL_STATE.dragMode === "pan") {
-        MODEL_STATE.panX = MODEL_STATE.dragStart.panX + dx;
-        MODEL_STATE.panY = MODEL_STATE.dragStart.panY + dy;
-        applyCampusCamera();
-      } else {
-        MODEL_STATE.rotation = MODEL_STATE.dragStart.rotation + dx * 0.34;
-        MODEL_STATE.pitch = clamp(MODEL_STATE.dragStart.pitch - dy * 0.24, 35, 75);
-        scheduleOrbitRender();
-      }
-    });
-    const releasePointer = () => {
-      if (MODEL_STATE.dragStart?.moved) {
-        MODEL_STATE.suppressClick = true;
-        setTimeout(() => { MODEL_STATE.suppressClick = false; }, 120);
-      }
-      MODEL_STATE.dragging = false;
-      MODEL_STATE.dragStart = null;
-      MODEL_STATE.dragMode = "";
-      svg?.classList.remove("dragging");
-    };
-    svg?.addEventListener("pointerup", releasePointer);
-    svg?.addEventListener("pointercancel", releasePointer);
-    svg?.addEventListener("contextmenu", (event) => event.preventDefault());
-    svg?.addEventListener("dblclick", () => {
-      MODEL_STATE.rotation = -38;
-      MODEL_STATE.pitch = 46;
-      MODEL_STATE.zoom = 1.37;
-      MODEL_STATE.panX = 0;
-      MODEL_STATE.panY = 0;
-      renderCampusModel();
-    });
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(shell);
+      const header = document.querySelector(".topbar");
+      if (header) observer.observe(header);
+      window.addEventListener("resize",updateHeight);
+      updateHeight();
+    }
+
   }
 
   window.renderCampusModel = renderCampusModel;
