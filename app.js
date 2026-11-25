@@ -130,6 +130,7 @@ const state = {
   googleCalendarError: "",
   googleCalendarSyncedAt: null,
   modalCourse: null,
+  courseReturnPath: null,
 };
 
 let instructorIndexCache = null;
@@ -825,6 +826,7 @@ function restoreViewEntry(entry) {
 }
 
 function handleBrowserPopState(event) {
+  if (state.modalCourse) closeModal({ restoreCoursePath: false });
   const entry = event.state?.appViewEntry || currentViewEntry();
   restoreViewEntry(entry);
   let index = viewStack.findIndex((item) => sameViewEntry(item, entry));
@@ -1733,7 +1735,7 @@ function vergilSectionURL(term, callNumber) {
   const [year, semester] = term.split("-");
   const index = { Spring: 1, Summer: 2, Fall: 3 }[semester];
   return index && /^\d{4,6}$/.test(String(callNumber))
-    ? `https://vergil.columbia.edu/vergil/course/${year}${index}/${callNumber}`
+    ? `https://vergil.columbia.edu/vergil/class/${year}${index}/${callNumber}`
     : "https://vergil.columbia.edu/vergil/";
 }
 
@@ -1785,6 +1787,10 @@ function openCourse(code, sectionId = "") {
   const selected = sections.find((s) => s.classId === sectionId || String(s.callNumber) === sectionId) || sections[0];
   const callNumber = String(selected.callNumber || "");
   const term = state.term;
+  const currentPath = location.pathname + location.search;
+  const coursePath = coursePermalink(c.code, term, callNumber || selected.classId);
+  state.courseReturnPath ||= location.pathname.startsWith("/course/") ? "/browse/" : currentPath;
+  if (currentPath !== coursePath) history.replaceState(history.state, "", coursePath);
   const selectedCard = sectionToCard(selected);
   const body = $("#modal-body");
   const prereqHTML = renderPrereqs(selected.prereqs);
@@ -1794,51 +1800,65 @@ function openCourse(code, sectionId = "") {
   const comp = comparisonFor(c.code);
   body.innerHTML = `
     <div class="m-folder${locked ? " course-detail-locked" : ""}">
+      <div class="m-folder-tabs" role="tablist" aria-label="Course details">
+        <button class="m-folder-tab active" type="button" role="tab" id="m-tab-overview" aria-controls="m-panel-overview" aria-selected="true" data-mtab="overview">Overview</button>
+        <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" tabindex="-1" data-mtab="materials">Sections &amp; materials</button>
+        <button class="m-folder-tab" type="button" role="tab" id="m-tab-reviews" aria-controls="m-panel-reviews" aria-selected="false" tabindex="-1" data-mtab="reviews">Reviews</button>
+      </div>
       <div class="m-folder-head">
         <div class="course-code-label">${esc(c.code)} · Section ${esc(sectionLabel(selected))}</div>
         <h2>${esc(c.title)}</h2>
         <div class="m-sub"><button class="m-dept-link" type="button" data-department="${esc(c.deptCode)}">${esc(c.dept)} ↗</button></div>
-        <div class="course-entry-links">
-          <a href="${esc(coursePermalink(c.code, term, callNumber))}">Permalink</a>
-          <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
-          ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button>' : ""}
-        </div>
-        <p id="course-email-status" role="status"></p>
-      </div>
-      <div class="m-folder-tabs" role="tablist" aria-label="Course details">
-        <button class="m-folder-tab active" type="button" role="tab" id="m-tab-overview" aria-controls="m-panel-overview" aria-selected="true" data-mtab="overview">Overview</button>
-        <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" data-mtab="materials">Course materials</button>
       </div>
       <section class="m-folder-panel" id="m-panel-overview" role="tabpanel" aria-labelledby="m-tab-overview" data-mpanel="overview">
-        <div class="m-grid">
-          <div><b>Term</b>${esc(termLabel(state.term))}</div>
-          <div><b>Credits</b>${selected.points != null ? selected.points : "—"}</div>
-          <div><b>Type</b>${esc([...new Set(c.sections.map((s) => s.type).filter(Boolean))].join(" / ") || "—")}</div>
-          <div><b>Instructor</b>${selected.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(selected.instructor)}">${esc(selected.instructor)}</button>` : "TBA"}</div>
+        <div class="course-overview">
+          <div class="course-overview-main">
+            <div class="course-seat-summary">
+              <div><b>Enrolled</b><strong>${selected.enrolled ?? "—"}</strong></div>
+              <div><b>Capacity</b><strong>${selected.capacity ?? "—"}</strong></div>
+              <div><b>Open seats</b><strong>${Number.isFinite(selected.enrolled) && selected.capacity > 0 ? Math.max(0, selected.capacity - selected.enrolled) : "—"}</strong></div>
+            </div>
+            <details class="m-desc-details">
+              <summary>
+                <span>Description</span>
+                <span class="m-desc-toggle" aria-hidden="true">
+                  <span class="m-desc-expand">Expand</span>
+                  <span class="m-desc-collapse">Collapse</span>
+                </span>
+              </summary>
+              <div class="m-desc">${esc(description)}</div>
+            </details>
+            ${an ? renderEnrollAnalysis(selectedCard, an) : ""}
+            ${renderComparison(comp)}
+          </div>
+          <aside class="course-overview-side" aria-label="Section details">
+            <h3>Section at a glance</h3>
+            <div class="course-facts">
+              <div><b>Term</b>${esc(termLabel(state.term))}</div>
+              <div><b>Credits</b>${selected.points != null ? selected.points : "—"}</div>
+              <div><b>Type</b>${esc([...new Set(c.sections.map((s) => s.type).filter(Boolean))].join(" / ") || "—")}</div>
+              <div><b>Instructor</b>${selected.instructor ? `<button class="instructor-link" type="button" data-instructor="${esc(selected.instructor)}">${esc(selected.instructor)}</button>` : "TBA"}</div>
+            </div>
+            <div class="course-entry-links">
+              <a href="${esc(vergilSectionURL(term, callNumber))}" target="_blank" rel="noopener">Open in Vergil ↗</a>
+              ${!locked && /^\d{4,6}$/.test(callNumber) ? '<button type="button" id="course-email-alert" disabled>Follow by email</button>' : ""}
+            </div>
+            <p id="course-email-status" role="status"></p>
+          </aside>
         </div>
-        ${an ? renderEnrollAnalysis(selectedCard, an) : ""}
-        <details class="m-desc-details">
-          <summary>
-            <span>Description</span>
-            <span class="m-desc-toggle" aria-hidden="true">
-              <span class="m-desc-expand">Expand</span>
-              <span class="m-desc-collapse">Collapse</span>
-            </span>
-          </summary>
-          <div class="m-desc">${esc(description)}</div>
-        </details>
+      </section>
+      <section class="m-folder-panel" id="m-panel-reviews" role="tabpanel" aria-labelledby="m-tab-reviews" data-mpanel="reviews" hidden>
         <div class="culpa-review-host" id="culpa-review-host">
           <div class="culpa-review-loading">Loading CULPA reviews…</div>
         </div>
         <div id="course-rating-host"></div>
-        ${renderComparison(comp)}
       </section>
       <section class="m-folder-panel" id="m-panel-materials" role="tabpanel" aria-labelledby="m-tab-materials" data-mpanel="materials" hidden>
         <div class="m-grid">
           <div class="m-prereq-cell"><b>Prerequisites</b>${prereqHTML || "None"}</div>
         </div>
         <h3 class="section-title m-folder-section-title">Section details</h3>
-        <table class="sections-table">
+        <div class="course-sections-scroll"><table class="sections-table">
           <thead><tr><th>Section</th><th>Instructor</th><th>Days</th><th>Time</th><th>Location</th><th>Enrolled</th></tr></thead>
           <tbody>
           ${c.sections.map((s) => `
@@ -1855,7 +1875,7 @@ function openCourse(code, sectionId = "") {
               <td>${s.enrolled != null ? s.enrolled : "—"}${s.capacity != null ? "/" + s.capacity : ""}</td>
             </tr>`).join("")}
           </tbody>
-        </table>
+        </table></div>
         ${c.sections[0].method ? `<div class="m-grid"><div><b>Mode</b>${esc(c.sections[0].method)}</div></div>` : ""}
       </section>
       <div class="modal-actions">
@@ -2036,7 +2056,11 @@ function renderPrereqs(prereqs) {
   return groups.join(" and ");
 }
 
-function closeModal() {
+function closeModal({ restoreCoursePath = true } = {}) {
+  if (restoreCoursePath && state.courseReturnPath && location.pathname.startsWith("/course/")) {
+    history.replaceState(history.state, "", state.courseReturnPath);
+  }
+  state.courseReturnPath = null;
   $("#modal").hidden = true;
   $(".modal")?.classList.remove("is-course-locked");
   document.body.style.overflow = "";
@@ -7363,7 +7387,6 @@ async function init() {
     const course = params.get("course");
     const section = params.get("section") || "";
     if (course) {
-      if (params.has("coursePath")) history.replaceState(history.state, "", coursePermalink(course, state.term, section));
       openCourse(course, section);
     }
   }
