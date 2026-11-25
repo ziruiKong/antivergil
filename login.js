@@ -36,6 +36,7 @@ function setStatus(message, type = "error") {
   status.style.animation = "none";
   void status.offsetWidth;
   status.style.animation = "";
+  if (type === "error" || type === "info") return;
   statusTimer = window.setTimeout(() => {
     status.classList.add("is-leaving");
     statusHideTimer = window.setTimeout(() => {
@@ -152,7 +153,14 @@ async function emailAuth(body) {
   return result;
 }
 async function sendCode() {
-  const result = await emailAuth({ credential: verificationCredential });
+  let result;
+  try {
+    result = await emailAuth({ credential: verificationCredential });
+  } catch (error) {
+    if (!/Wait 60 seconds/.test(error.message)) throw error;
+    const payload = JSON.parse(atob(verificationCredential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    result = { email: payload.email };
+  }
   verificationEmailAddress = result.email;
   resendAvailableAt = Date.now() + 60000;
   $("#google-login-mount").hidden = true;
