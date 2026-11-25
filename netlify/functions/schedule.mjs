@@ -4,7 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 
 import { campusSocial, registerCampusPerson } from "./lib/campus-social.mjs";
 
-import { courseAlerts } from "./lib/course-alerts.mjs";
+import { courseAlerts, isMailDeliveryConfigured } from "./lib/course-alerts.mjs";
 
 import { courseComments } from "./lib/course-comments.mjs";
 
@@ -58,7 +58,7 @@ export default async function schedule(request) {
     headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
   }
   if (new URL(request.url).searchParams.has("alerts")) {
-    headers["X-Antivergil-Mail-Delivery"] = process.env.RESEND_API_KEY && process.env.COURSE_ALERT_FROM ? "configured" : "pending";
+    headers["X-Antivergil-Mail-Delivery"] = isMailDeliveryConfigured() ? "configured" : "pending";
   }
   const send = (data, status = 200) => Response.json(data, { status, headers });
   if (origin && !allowedOrigin) return send({ error: "Origin not allowed." }, 403);
@@ -80,14 +80,16 @@ export default async function schedule(request) {
       if (!user?.sub || !user.email_verified || !/^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/.test(email || "")) {
         return send({ error: "Sign in with a verified university Google account." }, 401);
       }
+      const [account] = await sql`SELECT subject FROM course_alert_recipients WHERE email = ${email} ORDER BY subject LIMIT 1`;
+      const subject = account?.subject || user.sub;
       const token = randomBytes(32).toString("base64url");
       const expires = new Date(Date.now() + sessionLifetime).toISOString();
-      await registerCampusPerson(sql, user.sub, user.name);
-      await sql`INSERT INTO course_alert_recipients (subject, email) VALUES (${user.sub}, ${email})
+      await registerCampusPerson(sql, subject, user.name);
+      await sql`INSERT INTO course_alert_recipients (subject, email) VALUES (${subject}, ${email})
         ON CONFLICT (subject) DO UPDATE SET email = excluded.email`;
       await sql`INSERT INTO course_schedule_sessions (token_hash, google_subject, expires_at)
-        VALUES (${hash(token)}, ${user.sub}, ${expires})`;
-      return send({ token, user: { email, name: user.name, picture: user.picture, sub: user.sub, provider: "google" } });
+        VALUES (${hash(token)}, ${subject}, ${expires})`;
+      return send({ token, user: { email, name: user.name, picture: user.picture, sub: subject, provider: "google" } });
     }
 
     const token = request.headers.get("authorization")?.match(/^Bearer ([\w-]{43})$/)?.[1];

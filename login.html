@@ -51,7 +51,7 @@
             <span>Continue with LionMail</span>
           </button>
 
-          <form class="email-form" id="email-form" novalidate hidden>
+          <form class="email-form" id="email-form" novalidate>
             <label>
               <span>University email*</span>
               <input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="login-status" placeholder="name@columbia.edu or name@student.ubc.ca" required />
@@ -62,6 +62,7 @@
             </button>
           </form>
 
+          <form id="code-form" class="email-form" hidden><div class="verification-heading"><span>EMAIL VERIFICATION</span><h2>Check your inbox.</h2><p id="code-destination"></p></div><label for="verification-code">Verification code</label><input id="verification-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required /><button class="email-submit" type="submit">Verify &amp; continue ↗</button><div class="verification-actions"><button type="button" id="change-email">Change email</button><button type="button" id="resend-code">Resend code</button></div></form>
           <p class="login-status" id="login-status" aria-live="polite" hidden></p>
         </div>
       </div>
@@ -71,6 +72,6 @@
   <script src="data/auth-config.js?v=20261125-schedule-cloud"></script>
   <script src="profile-store.js?v=20261125-profile-3"></script>
   <script src="schedule-cloud.js?v=2"></script>
-  <script src="login.js?v=20261125-google-button"></script>
+  <script src="login.js?v=20261125-google-button-fit"></script>
 </body>
 </html>

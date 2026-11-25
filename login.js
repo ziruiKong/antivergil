@@ -78,16 +78,6 @@ function completeSignIn(user) {
   location.assign(next);
 }
 
-function localSignIn(email) {
-  const clean = String(email || "").trim().toLowerCase();
-  if (!isAllowedUniversityEmail(clean)) {
-    setStatus("Use an email ending in @columbia.edu or @student.ubc.ca.", "error");
-    return;
-  }
-  const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-  completeSignIn({ name, email: clean, picture: null, provider: "local" });
-}
-
 let googleTokenClient = null;
 let googleTokenClientId = "";
 
@@ -199,17 +189,72 @@ if (window.AntivergilScheduleCloud?.enabled) {
         }
       },
     });
-    window.google.accounts.id.renderButton(mount, {
-      type: "standard", theme: "filled_black", shape: "rectangular", size: "large", text: "continue_with", logo_alignment: "left",
-      width: Math.max(200, Math.min(330, mount.clientWidth || 300)),
-    });
+    const container = mount.parentElement;
+    let renderedWidth = 0;
+    const renderGoogleButton = () => {
+      const width = Math.min(330, container.clientWidth);
+      if (!width || width === renderedWidth) return;
+      renderedWidth = width;
+      mount.replaceChildren();
+      window.google.accounts.id.renderButton(mount, {
+        type: "standard", theme: "filled_black", shape: "rectangular", size: "large",
+        text: "continue_with", logo_alignment: "left", width,
+      });
+    };
     button.hidden = true;
+    renderGoogleButton();
+    new ResizeObserver(renderGoogleButton).observe(container);
   }).catch(() => setStatus("Google sign-in is temporarily unavailable. Reload to try again."));
 } else {
   $("#google-login").addEventListener("click", startGoogleLogin);
 }
 $("#email-form input").addEventListener("input", clearStatus);
-$("#email-form").addEventListener("submit", (event) => {
+
+let verificationEmailAddress = "";
+let resendAvailableAt = 0;
+const emailAuthEndpoint = new URL("/api/email-auth", window.COLUMBIA_AUTH?.scheduleApi || location.origin).href;
+async function emailAuth(body) {
+  const response = await fetch(emailAuthEndpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Please try again.");
+  return result;
+}
+async function sendCode() {
+  await emailAuth({ email: verificationEmailAddress });
+  resendAvailableAt = Date.now() + 60000;
+  $("#email-form").hidden = true;
+  $("#code-form").hidden = false;
+  $("#code-destination").textContent = "We sent a six-digit code to " + verificationEmailAddress;
+  $("#verification-code").focus();
+}
+$("#email-form").addEventListener("submit", async event => {
   event.preventDefault();
-  localSignIn(new FormData(event.currentTarget).get("email"));
+  verificationEmailAddress = String(new FormData(event.currentTarget).get("email") || "").trim().toLowerCase();
+  if (!isAllowedUniversityEmail(verificationEmailAddress)) return setStatus("Use your university email.");
+  const button = event.currentTarget.querySelector("button");
+  button.disabled = true;
+  try { await sendCode(); clearStatus(); } catch (error) { setStatus(error.message); }
+  finally { button.disabled = false; }
 });
+$("#code-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector('[type="submit"]');
+  button.disabled = true;
+  try {
+    const { token, user } = await emailAuth({ email: verificationEmailAddress, code: $("#verification-code").value });
+    localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: user.sub, token }));
+    completeSignIn(user);
+  } catch (error) { setStatus(error.message); button.disabled = false; }
+});
+$("#verification-code").addEventListener("input", event => { event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6); });
+$("#change-email").addEventListener("click", () => { $("#code-form").hidden = true; $("#email-form").hidden = false; });
+$("#resend-code").addEventListener("click", async event => {
+  event.target.disabled = true;
+  try { await sendCode(); } catch (error) { setStatus(error.message); }
+  finally { event.target.disabled = false; }
+});
+setInterval(() => {
+  const seconds = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+  $("#resend-code").disabled = seconds > 0;
+  $("#resend-code").textContent = seconds ? "Resend in " + seconds + "s" : "Resend code";
+}, 1000);

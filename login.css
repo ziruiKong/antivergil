@@ -504,3 +504,14 @@ a { -webkit-tap-highlight-color: transparent; }
     transition: none !important;
   }
 }
+
+/* Email verification */
+.email-form[hidden]{display:none!important}
+.verification-heading span{font:11px monospace;letter-spacing:2px;color:#777}
+.verification-heading h2{font-size:32px;letter-spacing:-1px;margin:12px 0}
+.verification-heading p{font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+#verification-code{width:100%;box-sizing:border-box;text-align:center;font:600 30px monospace;letter-spacing:12px;padding:18px 8px;background:transparent;border:0;border-top:1px solid #222;border-bottom:1px solid #222;border-radius:0}
+.verification-actions{display:flex;justify-content:space-between;gap:20px}
+.verification-actions button{border:0;background:none;font:12px monospace;text-decoration:underline;cursor:pointer;padding:10px 0}
+.verification-actions button:disabled{opacity:.45;cursor:default}
+#code-form{max-width:400px;margin:auto}

@@ -1,5 +1,6 @@
 import { getDatabase } from "@netlify/database";
-import { alertKind, alertTerm, loadAlertCatalog } from "./lib/course-alerts.mjs";
+import nodemailer from "nodemailer";
+import { alertKind, alertTerm, aliyunMailConfig, loadAlertCatalog } from "./lib/course-alerts.mjs";
 
 export async function recordEnrollment(sql, snapshot, catalog) {
   const { term, lastSuccessfulSyncAt: stamp } = snapshot;
@@ -29,9 +30,8 @@ export async function recordEnrollment(sql, snapshot, catalog) {
 }
 
 export default async function enrollmentMail() {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.COURSE_ALERT_FROM;
-  if (!key || !from) return new Response("Mail delivery is not configured.", { status: 503 });
+  const mailConfig = aliyunMailConfig();
+  if (!mailConfig) return new Response("Alibaba Mail delivery is not configured.", { status: 503 });
   const { sql } = getDatabase();
   const response = await fetch("https://antivergil.cc/data/sync-status.json", { signal: AbortSignal.timeout(4000) });
   if (!response.ok) throw new Error("Enrollment status unavailable");
@@ -41,17 +41,33 @@ export default async function enrollmentMail() {
   }
   await sql`DELETE FROM course_alert_deliveries WHERE queued_at < now() - interval '24 hours'`;
   const pending = await sql`SELECT d.id, d.subject_line, d.body, r.email FROM course_alert_deliveries d
-    JOIN course_alert_recipients r USING (subject) WHERE d.sent_at IS NULL ORDER BY d.id LIMIT 12`;
-  for (const entry of pending) {
-    const sent = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `enrollment/${entry.id}` },
-      body: JSON.stringify({ from, to: [entry.email], subject: entry.subject_line, text: entry.body }),
-      signal: AbortSignal.timeout(2500),
-    });
-    if (sent.status === 429 || sent.status >= 500) break;
-    if (!sent.ok) throw new Error(`Email provider returned ${sent.status}`);
-    await sql`UPDATE course_alert_deliveries SET sent_at = now() WHERE id = ${entry.id}`;
+    JOIN course_alert_recipients r USING (subject) WHERE d.sent_at IS NULL ORDER BY d.id LIMIT 8`;
+  const transporter = nodemailer.createTransport({
+    host: "smtp.qiye.aliyun.com",
+    port: 465,
+    secure: true,
+    auth: { user: mailConfig.user, pass: mailConfig.password },
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 8,
+    connectionTimeout: 6000,
+    greetingTimeout: 6000,
+    socketTimeout: 15000,
+  });
+  try {
+    for (const entry of pending) {
+      await transporter.sendMail({
+        from: mailConfig.from,
+        to: entry.email,
+        subject: entry.subject_line,
+        text: entry.body,
+        messageId: `<antivergil-course-alert-${entry.id}@antivergil.cc>`,
+        headers: { "X-Antivergil-Delivery-Id": String(entry.id) },
+      });
+      await sql`UPDATE course_alert_deliveries SET sent_at = now() WHERE id = ${entry.id}`;
+    }
+  } finally {
+    transporter.close();
   }
   return new Response(null, { status: 204 });
 }

@@ -1,6 +1,19 @@
 export const alertTerm = /^\d{4}-(Spring|Summer|Fall)$/;
 export const callPattern = /^\d{4,6}$/;
 
+export function aliyunMailConfig() {
+  const user = String(process.env.ALIYUN_SMTP_USER || "").trim();
+  const password = String(process.env.ALIYUN_SMTP_PASSWORD || "");
+  const from = String(process.env.COURSE_ALERT_FROM || user).trim();
+  const fromAddress = (from.match(/<([^<>]+)>/)?.[1] || from).trim().toLowerCase();
+  if (!user || !password || fromAddress !== user.toLowerCase()) return null;
+  return { user, password, from };
+}
+
+export function isMailDeliveryConfigured() {
+  return Boolean(aliyunMailConfig());
+}
+
 export async function loadAlertCatalog(term, fetcher = fetch) {
   if (!alertTerm.test(term)) throw new Error("Invalid term");
   const response = await fetcher(`https://antivergil.cc/data/courses-${term}.js`, { signal: AbortSignal.timeout(5000) });
@@ -21,7 +34,7 @@ export function alertKind(before, after) {
 }
 
 export async function courseAlerts(request, send, sql, subject) {
-  const ready = Boolean(process.env.RESEND_API_KEY && process.env.COURSE_ALERT_FROM);
+  const ready = isMailDeliveryConfigured();
   if (request.method === "GET") {
     const watches = await sql`SELECT term, call_number AS "callNumber" FROM course_alert_watches WHERE subject = ${subject}`;
     return send({ watches, ready });
