@@ -16,5 +16,5 @@ window.COLUMBIA_AUTH = {
   googleClientId: "179310231207-f2r0305ppefi7pr3fi1rf3s5crotgl4b.apps.googleusercontent.com",
   googleCalendarScope: "https://www.googleapis.com/auth/calendar.events",
   // Set to the deployed Netlify Function URL when serving the site from GitHub Pages.
-  scheduleApi: "",
+  scheduleApi: "https://antivergil-schedule.netlify.app/api/schedule",
 };
