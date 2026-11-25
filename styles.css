@@ -13815,16 +13815,17 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
   gap: 4px;
   margin: 0;
   padding: 0 38px 0 0;
+  border-bottom: 0;
   background: transparent;
   border-radius: 0;
 }
 .m-folder .m-folder-tabs::after { display: none; }
 .m-folder .m-folder-tab {
   z-index: 1;
-  margin: 0 0 -1px;
+  margin: 0;
   padding: 9px 12px;
   border: 1px solid #aaa79d;
-  border-bottom-color: #34342f;
+  border-bottom: 0;
   border-radius: 7px 7px 0 0;
   background: #ddd9cd;
   color: #484740;
@@ -13832,9 +13833,10 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
 }
 .m-folder .m-folder-tab:hover { background: #eeece4; color: #222; }
 .m-folder .m-folder-tab.active {
+  top: 0;
+  margin-bottom: -1px;
   background: #f8f7f2;
   border-color: #34342f;
-  border-bottom-color: #f8f7f2;
   color: #191917;
   font-weight: 800;
 }
@@ -13984,8 +13986,8 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
   .m-folder .m-folder-tab { font-size: 11px; }
 }
 
-#m-panel-enrollment { scrollbar-width: none; }
-#m-panel-enrollment::-webkit-scrollbar { display: none; }
+#m-panel-overview, #m-panel-enrollment { scrollbar-width: none; }
+#m-panel-overview::-webkit-scrollbar, #m-panel-enrollment::-webkit-scrollbar { display: none; }
 .course-file-section { margin-top: 0; padding: 0; border: 0; }
 .course-files-header {
   display: flex;

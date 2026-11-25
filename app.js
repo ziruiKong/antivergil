@@ -1880,8 +1880,8 @@ function openCourse(code, sectionId = "") {
   const selectedCard = sectionToCard(selected);
   const body = $("#modal-body");
   const prereqHTML = renderPrereqs(selected.prereqs);
-  const description = (c.sections.find((s) => s.desc)?.desc || "No description available.")
-    .replace(/^Description\.\s*/i, "");
+  const description = (c.sections.find((s) => s.desc?.trim())?.desc || "")
+    .trim().replace(/^Description\.\s*/i, "") || "No description available.";
   const an = enrollAnalysis(selectedCard);
   const enrollmentHistory = an ? renderEnrollAnalysis(selectedCard, an) : "";
   const termComparison = renderComparison(comparisonFor(c.code));
@@ -1898,7 +1898,7 @@ function openCourse(code, sectionId = "") {
         <h2>${esc(c.title)}</h2>
         <div class="m-sub"><button class="m-dept-link" type="button" data-department="${esc(c.deptCode)}">${esc(c.dept)} ↗</button></div>
       </div>
-      <section class="m-folder-panel" id="m-panel-overview" role="tabpanel" aria-labelledby="m-tab-overview" data-mpanel="overview">
+      <section class="m-folder-panel" id="m-panel-overview" role="tabpanel" aria-labelledby="m-tab-overview" data-mpanel="overview" tabindex="0">
         <div class="course-overview">
           <div class="course-overview-main">
             <div class="course-seat-summary">
@@ -1906,11 +1906,10 @@ function openCourse(code, sectionId = "") {
               <div><b>Capacity</b><strong>${selected.capacity ?? "—"}</strong></div>
               <div><b>Open seats</b><strong>${Number.isFinite(selected.enrolled) && selected.capacity > 0 ? Math.max(0, selected.capacity - selected.enrolled) : "—"}</strong></div>
             </div>
-            ${description !== "No description available." ? `
-              <details class="m-desc-details course-disclosure" open>
-                <summary>Description</summary>
-                <div class="m-desc">${esc(description)}</div>
-              </details>` : ""}
+            <details class="m-desc-details course-disclosure" open>
+              <summary>Description</summary>
+              <div class="m-desc">${esc(description)}</div>
+            </details>
           </div>
           <aside class="course-overview-side" aria-label="Section details">
             <div class="course-facts">
