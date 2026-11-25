@@ -24,30 +24,15 @@ export default async function emailAuth(request) {
     if (raw.length > 9000) return send({ error: 'Request too large.' }, 413);
     const body = JSON.parse(raw);
     let email, subject, name, picture, provider;
-    let outlookTicketHash = '';
-    const { sql } = getDatabase();
 
     if (body.provider === 'ubc-email') {
       email = String(body.email || '').trim().toLowerCase();
       if (!/^[^\s@]+@student\.ubc\.ca$/.test(email)) return send({ error: 'Use your UBC student email ending in @student.ubc.ca.' }, 400);
+      const { sql } = getDatabase();
       const [existing] = await sql`SELECT subject FROM course_alert_recipients WHERE email = ${email} ORDER BY subject LIMIT 1`;
       subject = existing?.subject || `ubc:${email}`;
       name = email.split('@')[0];
       provider = 'email';
-    } else if (body.provider === 'outlook') {
-      const ticket = String(body.ticket || '');
-      if (!/^[A-Za-z0-9_-]{43}$/.test(ticket)) return send({ error: 'Outlook sign-in expired. Choose your account again.' }, 401);
-      outlookTicketHash = digest(ticket);
-      const [outlook] = await sql`SELECT email, oauth_subject, display_name, picture
-        FROM outlook_login_tickets
-        WHERE token_hash = ${outlookTicketHash} AND stage = 'login' AND expires_at > now()`;
-      if (!outlook) return send({ error: 'Outlook sign-in expired. Choose your account again.' }, 401);
-      email = String(outlook.email || '').toLowerCase();
-      if (!/^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/.test(email)) return send({ error: 'Use your university Outlook account.' }, 400);
-      subject = `outlook:${outlook.oauth_subject}`;
-      name = outlook.display_name || email.split('@')[0];
-      picture = outlook.picture;
-      provider = 'outlook';
     } else {
       const { credential } = body;
       if (typeof credential !== 'string' || credential.length > 7000) return send({ error: 'Choose your Google account first.' }, 401);
@@ -62,6 +47,7 @@ export default async function emailAuth(request) {
       provider = 'google';
     }
 
+    const { sql } = getDatabase();
     const [grant] = await sql`SELECT google_subject FROM email_verification_grants
       WHERE google_subject = ${subject} AND email = ${email} AND verified_until > now()`;
     const code = body.code;
@@ -72,7 +58,7 @@ export default async function emailAuth(request) {
       const value = String(randomInt(100000, 1000000));
       const hash = digest(email + ':' + value);
       const rows = await sql`INSERT INTO email_login_codes (email, code_hash, expires_at) VALUES (${email}, ${hash}, now() + interval '10 minutes') ON CONFLICT (email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, sent_at = now(), attempts = 0 WHERE email_login_codes.sent_at < now() - interval '60 seconds' RETURNING email`;
-      if (!rows.length) return send({ error: 'Wait 60 seconds before requesting another code.', email }, 429);
+      if (!rows.length) return send({ error: 'Wait 60 seconds before requesting another code.' }, 429);
       const transport = nodemailer.createTransport({ host: 'smtp.qiye.aliyun.com', port: 465, secure: true, auth: { user: config.user, pass: config.password }, connectionTimeout: 8000, socketTimeout: 15000 });
       const accountName = String(name || email.split('@')[0]).split(/\s+/)[0];
       try { await transport.sendMail({ from: config.from, to: email, ...verificationEmail(value, accountName) }); }
@@ -98,7 +84,6 @@ export default async function emailAuth(request) {
     await sql`INSERT INTO course_alert_recipients (subject, email) VALUES (${accountSubject}, ${email}) ON CONFLICT (subject) DO UPDATE SET email = excluded.email`;
     const token = randomBytes(32).toString('base64url');
     await sql`INSERT INTO course_schedule_sessions (token_hash, google_subject, expires_at) VALUES (${digest(token)}, ${accountSubject}, now() + interval '30 days')`;
-    if (outlookTicketHash) await sql`DELETE FROM outlook_login_tickets WHERE token_hash = ${outlookTicketHash}`;
     return send({ token, user: { email, name, sub: accountSubject, picture, provider } });
   } catch (error) {
     console.error('Email authentication failed', error.code || error.name);

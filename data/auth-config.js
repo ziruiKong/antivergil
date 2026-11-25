@@ -17,5 +17,4 @@ window.COLUMBIA_AUTH = {
   googleCalendarScope: "https://www.googleapis.com/auth/calendar.events",
   // Set to the deployed Netlify Function URL when serving the site from GitHub Pages.
   scheduleApi: "https://antivergil-schedule.netlify.app/api/schedule",
-  outlookAuthUrl: "https://antivergil-schedule.netlify.app/api/outlook-auth",
 };

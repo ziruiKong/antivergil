@@ -241,8 +241,6 @@ a { -webkit-tap-highlight-color: transparent; }
   transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.outlook-login { margin-top: 9px; }
-
 .google-icon {
   position: absolute;
   top: 50%;
@@ -259,11 +257,6 @@ a { -webkit-tap-highlight-color: transparent; }
 .google-icon svg {
   width: 16px;
   height: 16px;
-}
-
-.outlook-icon svg {
-  width: 15px;
-  height: 15px;
 }
 
 .google-login:hover {
