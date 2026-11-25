@@ -129,7 +129,7 @@ const server = http.createServer(async (req, res) => {
   let urlPath = decodeURIComponent(req.url.split("?")[0]);
   if (urlPath === "/") urlPath = "/index.html";
   const cleanPath = urlPath.replace(/\/+$/, "") || "/";
-  if (cleanPath === "/home") urlPath = "/home.html";
+  if (cleanPath === "/home" || cleanPath === "/about") urlPath = "/home.html";
   else if (cleanPath === "/login") urlPath = "/login.html";
   else if (new Set([
     "/browse",

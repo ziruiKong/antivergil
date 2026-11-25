@@ -156,7 +156,7 @@ async function startGoogleLogin() {
   }
 }
 
-$("#login-back").href = "/home/";
+$("#login-back").href = "/about/";
 $("#google-login").addEventListener("click", startGoogleLogin);
 $("#email-form input").addEventListener("input", clearStatus);
 $("#email-form").addEventListener("submit", (event) => {

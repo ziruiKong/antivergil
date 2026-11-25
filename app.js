@@ -6236,6 +6236,7 @@ async function deleteGoogleCalendarEvent(event) {
 function signOut() {
   authUser = null;
   clearAuthUser();
+  try { sessionStorage.removeItem("antivergil-next"); } catch { /* ignore */ }
   if (window.google && window.google.accounts && window.google.accounts.id) {
     try { window.google.accounts.id.disableAutoSelect(); } catch { /* ignore */ }
   }
@@ -6243,7 +6244,7 @@ function signOut() {
   buildNav();
   renderAccount();
   toast("Signed out.");
-  switchView("browse");
+  location.assign("/about/");
 }
 
 /* ---------- Search suggestions ---------- */

@@ -60,8 +60,9 @@ await writeFile(
   withRootBase(await readFile(path.join(root, "index.html"), "utf8")),
 );
 await writeRoute("home", "home.html");
+await writeRoute("about", "home.html");
 await writeRoute("login", "login.html");
 await Promise.all(appRoutes.map((route) => writeRoute(route, "index.html")));
 await writeFile(path.join(output, ".nojekyll"), "");
 
-console.log(`Built ${appRoutes.length + 3} routes in ${output}`);
+console.log(`Built ${appRoutes.length + 4} routes in ${output}`);
