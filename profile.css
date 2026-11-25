@@ -15,7 +15,7 @@
 }
 
 :root {
-  --paper: #eeeee6;
+  --paper: #f3f3f0;
   --ink: #121212;
   --muted: #62625b;
   --line: rgba(18, 18, 18, .3);
@@ -347,11 +347,6 @@ a { -webkit-tap-highlight-color: transparent; }
   margin-top: 20px;
 }
 
-.profile-actions.review-actions {
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
 .profile-count {
   color: var(--muted);
   font-family: "DM Mono", ui-monospace, monospace;
@@ -376,34 +371,6 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-primary:hover { background: var(--accent); color: var(--ink); }
 .profile-primary:disabled { opacity: .35; cursor: not-allowed; }
-
-.profile-review {
-  display: grid;
-  gap: 0;
-  border-top: 1px solid var(--line);
-}
-
-.profile-review > div {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 18px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--soft-line);
-}
-
-.profile-review dt,
-.profile-review span:first-child {
-  color: var(--muted);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.profile-review b {
-  font-size: 13px;
-  font-weight: 600;
-}
 
 @media (max-width: 680px) {
   .profile-header { padding: max(17px, env(safe-area-inset-top)) 16px 0; }

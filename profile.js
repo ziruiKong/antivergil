@@ -19,15 +19,10 @@
     major: existing?.major || "",
     interests: Array.isArray(existing?.interests) ? [...existing.interests] : [],
     workload: existing?.workload || "",
-    step: existing ? 5 : 0,
+    step: existing ? 4 : 0,
     majorQuery: "",
   };
 
-  const stageLabel = (value) => value === "undergraduate" ? "Undergraduate" : value === "graduate" ? "Graduate" : "Not selected";
-  const schoolLabel = (value) => store.SCHOOL_OPTIONS[state.stage]?.find((item) => item.id === value)?.label || "Not selected";
-  const majorLabel = (value) => store.MAJOR_OPTIONS.find((item) => item.id === value)?.label || "Not selected";
-  const workloadLabel = (value) => store.WORKLOAD_OPTIONS.find((item) => item.id === value)?.label || "Not selected";
-  const interestLabels = () => store.INTEREST_OPTIONS.filter((item) => state.interests.includes(item.id)).map((item) => item.label);
   const esc = (value) => String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
@@ -95,17 +90,7 @@
             </button>`).join("")}
         </div>`;
     }
-    return `
-      <div class="profile-review">
-        <div><span>Level</span><b>${esc(stageLabel(state.stage))}</b></div>
-        <div><span>School</span><b>${esc(schoolLabel(state.school))}</b></div>
-        <div><span>Field</span><b>${esc(majorLabel(state.major))}</b></div>
-        <div><span>Interests</span><b>${esc(interestLabels().join(" · "))}</b></div>
-        <div><span>Course rhythm</span><b>${esc(workloadLabel(state.workload))}</b></div>
-      </div>
-      <div class="profile-actions review-actions">
-        <button class="profile-primary" type="button" data-profile-finish>Enter Antivergil <span>↗</span></button>
-      </div>`;
+    return "";
   }
 
   function isComplete(index) {
@@ -114,21 +99,19 @@
     if (index === 2) return Boolean(state.major);
     if (index === 3) return state.interests.length > 0;
     if (index === 4) return Boolean(state.workload);
-    return Boolean(state.stage && state.school && state.major && state.interests.length && state.workload);
+    return false;
   }
 
   function render() {
     const total = 5;
-    const position = Math.min(total, state.step + (state.step < 5 ? 0 : 1));
+    const allComplete = isComplete(0) && isComplete(1) && isComplete(2) && isComplete(3) && isComplete(4);
+    const position = allComplete ? total : Math.min(total, state.step);
     progressFill.style.width = `${Math.min(100, (position / total) * 100)}%`;
     progressRoot?.classList.toggle("has-progress", position > 0);
-    stepsHost.innerHTML = [0, 1, 2, 3, 4, 5].map((index) => {
+    stepsHost.innerHTML = [0, 1, 2, 3, 4].map((index) => {
       const complete = isComplete(index);
       const active = state.step === index;
       const hidden = index > state.step && !complete;
-      if (index === 5 && (state.step < 5 || !(isComplete(0) && isComplete(1) && isComplete(2) && isComplete(3) && isComplete(4)))) {
-        return "";
-      }
       return `<li class="profile-step${active ? " is-active" : ""}${complete && !active ? " is-complete" : ""}${hidden ? " is-pending" : ""}" data-step="${index}">
         <span class="profile-step-marker" aria-hidden="true"></span>
         <div class="profile-step-body">
@@ -142,6 +125,23 @@
   function advance(index) {
     state.step = index;
     render();
+  }
+
+  function finishProfile() {
+    if (!isComplete(0) || !isComplete(1) || !isComplete(2) || !isComplete(3) || !isComplete(4)) return;
+    store.save({
+      email: user.email,
+      stage: state.stage,
+      school: state.school,
+      major: state.major,
+      interests: state.interests,
+      workload: state.workload,
+      completedAt: new Date().toISOString(),
+    });
+    let next = "/browse/";
+    try { next = sessionStorage.getItem("antivergil-next") || next; sessionStorage.removeItem("antivergil-next"); } catch {}
+    if (/^\/profile\/?/.test(next)) next = "/browse/";
+    location.assign(next);
   }
 
   stepsHost.addEventListener("click", (event) => {
@@ -181,24 +181,8 @@
     const workload = event.target.closest("[data-workload]");
     if (workload) {
       state.workload = workload.dataset.workload;
-      advance(5);
+      finishProfile();
       return;
-    }
-    if (event.target.closest("[data-profile-finish]")) {
-      if (!isComplete(0) || !isComplete(1) || !isComplete(2) || !isComplete(3) || !isComplete(4)) return;
-      store.save({
-        email: user.email,
-        stage: state.stage,
-        school: state.school,
-        major: state.major,
-        interests: state.interests,
-        workload: state.workload,
-        completedAt: new Date().toISOString(),
-      });
-      let next = "/browse/";
-      try { next = sessionStorage.getItem("antivergil-next") || next; sessionStorage.removeItem("antivergil-next"); } catch {}
-      if (/^\/profile\/?/.test(next)) next = "/browse/";
-      location.assign(next);
     }
   });
 
