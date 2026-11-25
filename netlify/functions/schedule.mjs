@@ -10,14 +10,33 @@ function hash(token) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+const calendarTerm = "_calendar";
+
+function validEvents(events) {
+  const ids = new Set();
+  if (!Array.isArray(events) || events.length > 500 || JSON.stringify(events).length > 260000) return false;
+  return events.every((event) => {
+    if (!event || !/^[\w-]{1,128}$/.test(event.id || "") || ids.has(event.id)
+      || typeof event.title !== "string" || !event.title.trim() || event.title.length > 1024
+      || !["study", "tasks", "personal"].includes(event.source)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(event.date || "")
+      || typeof event.allDay !== "boolean"
+      || (!event.allDay && (!Number.isInteger(event.start) || !Number.isInteger(event.end)
+        || event.start < 0 || event.start >= event.end || event.end > 1440))) return false;
+    ids.add(event.id);
+    return true;
+  });
+}
+
 function validSections(sections) {
   if (!Array.isArray(sections) || sections.length > 100) return false;
   const ids = new Set();
   return sections.every((section) => {
     if (typeof section?.classId !== "string" || !/^[\w.-]{1,64}$/.test(section.classId)
-      || typeof section.code !== "string" || !section.code.trim() || section.code.length > 64
-      || ids.has(section.classId)) return false;
-    ids.add(section.classId);
+      || typeof section.code !== "string" || !section.code.trim() || section.code.length > 64) return false;
+    const key = section.classId + ":" + section.code.trim().toUpperCase().replace(/\s+/g, " ");
+    if (ids.has(key)) return false;
+    ids.add(key);
     return true;
   });
 }
@@ -70,17 +89,23 @@ export default async function schedule(request) {
     if (request.method === "GET") {
       const schedules = await sql`SELECT term, sections, revision FROM course_schedules
         WHERE google_subject = ${id}`;
-      return send({ schedules });
+      return send({
+        schedules: schedules.filter((row) => row.term !== calendarTerm),
+        calendar: schedules.find((row) => row.term === calendarTerm) || null,
+      });
     }
     if (request.method !== "PUT") return send({ error: "Method not allowed." }, 405);
 
-    if (Number(request.headers.get("content-length")) > 20000) return send({ error: "Schedule is too large." }, 413);
+    if (Number(request.headers.get("content-length")) > 300000) return send({ error: "Schedule is too large." }, 413);
     const { term, sections, revision } = await request.json();
-    if (typeof term !== "string" || !termPattern.test(term) || !validSections(sections)
+    const validData = term === calendarTerm
+      ? validEvents(sections)
+      : typeof term === "string" && termPattern.test(term) && validSections(sections);
+    if (!validData
       || !Number.isInteger(revision) || revision < 0 || revision >= 2147483647) {
       return send({ error: "Invalid course schedule." }, 400);
     }
-    const data = JSON.stringify(sections.map(({ classId, code }) => ({ classId, code })));
+    const data = JSON.stringify(term === calendarTerm ? sections : sections.map(({ classId, code }) => ({ classId, code })));
     const rows = revision === 0
       ? await sql`INSERT INTO course_schedules (google_subject, term, sections)
           VALUES (${id}, ${term}, ${data}::jsonb)
