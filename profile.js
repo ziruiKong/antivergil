@@ -73,10 +73,6 @@
         <div class="profile-interest-grid">
           ${store.INTEREST_OPTIONS.map((interest) => `
             <button class="profile-interest${state.interests.includes(interest.id) ? " is-selected" : ""}" type="button" data-interest="${esc(interest.id)}" aria-pressed="${state.interests.includes(interest.id)}">${esc(interest.label)}</button>`).join("")}
-        </div>
-        <div class="profile-actions">
-          <span class="profile-count">${state.interests.length} selected</span>
-          <button class="profile-primary" type="button" data-interests-continue ${state.interests.length ? "" : "disabled"}>Continue <span>↗</span></button>
         </div>`;
     }
     if (index === 4) {
@@ -168,14 +164,14 @@
     const interest = event.target.closest("[data-interest]");
     if (interest) {
       const id = interest.dataset.interest;
-      state.interests = state.interests.includes(id)
+      const isSelected = state.interests.includes(id);
+      if (!isSelected && state.interests.length >= 5) return;
+      state.interests = isSelected
         ? state.interests.filter((value) => value !== id)
         : [...state.interests, id];
+      if (!isSelected && state.step < 4) state.step = 4;
+      if (!state.interests.length) state.step = 3;
       render();
-      return;
-    }
-    if (event.target.closest("[data-interests-continue]") && state.interests.length) {
-      advance(4);
       return;
     }
     const workload = event.target.closest("[data-workload]");
@@ -196,5 +192,20 @@
     input?.setSelectionRange(cursor, cursor);
   });
 
+  const firstIncomplete = [0, 1, 2, 3, 4].find((index) => !isComplete(index));
+  if (firstIncomplete != null) state.step = Math.min(state.step, firstIncomplete);
+  let stickyFrame = 0;
+  const updateStickyState = () => {
+    stickyFrame = 0;
+    if (!progressRoot) return;
+    progressRoot.classList.toggle("is-stuck", progressRoot.getBoundingClientRect().top <= 0.5);
+  };
+  const queueStickyState = () => {
+    if (stickyFrame) return;
+    stickyFrame = requestAnimationFrame(updateStickyState);
+  };
+  window.addEventListener("scroll", queueStickyState, { passive: true });
+  window.addEventListener("resize", queueStickyState);
   render();
+  updateStickyState();
 })();

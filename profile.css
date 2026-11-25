@@ -21,6 +21,10 @@
   --line: rgba(18, 18, 18, .3);
   --soft-line: rgba(18, 18, 18, .14);
   --accent: #1e6ef3;
+  --profile-max: 940px;
+  --profile-gutter: 24px;
+  --marker-size: 24px;
+  --step-column: 32px;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable",
     "Segoe UI", "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
 }
@@ -91,21 +95,24 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-page {
-  width: min(940px, calc(100% - 48px));
+  width: min(var(--profile-max), calc(100% - (var(--profile-gutter) * 2)));
   margin: 20px auto 0;
 }
 
 .profile-progress {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: auto;
-  margin: 14px 24px 0 max(24px, calc((100% - 940px) / 2));
-  padding: 0 0 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+  height: 10px;
+  margin: 14px 0 0;
+  padding: 4px 0 0;
+  background: var(--paper);
 }
 
 .profile-progress > i {
   position: relative;
+  display: block;
   width: 100%;
   height: 6px;
   overflow: hidden;
@@ -116,14 +123,25 @@ a { -webkit-tap-highlight-color: transparent; }
   content: "";
   position: absolute;
   top: 100%;
-  left: 11px;
-  width: 2px;
+  left: max(
+    calc(var(--profile-gutter) + (var(--marker-size) / 2)),
+    calc(((100% - var(--profile-max)) / 2) + (var(--marker-size) / 2))
+  );
+  width: 1px;
   height: 28px;
   background: var(--soft-line);
+  transform: translateX(-50%);
+  transform-origin: top;
+  transition: opacity 160ms ease, transform 220ms ease;
 }
 
 .profile-progress.has-progress::after {
   background: var(--accent);
+}
+
+.profile-progress.is-stuck::after {
+  opacity: 0;
+  transform: translate(-50%, -4px);
 }
 
 .profile-progress > i > b {
@@ -146,7 +164,7 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-step {
   position: relative;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: var(--step-column) minmax(0, 1fr);
   gap: 14px;
   padding-bottom: 16px;
 }
@@ -156,17 +174,14 @@ a { -webkit-tap-highlight-color: transparent; }
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 11px;
+  left: calc(var(--marker-size) / 2);
   width: 1px;
   background: var(--line);
+  transform: translateX(-50%);
 }
 
 .profile-step.is-complete:not(.is-active)::before {
   background: var(--accent);
-}
-
-.profile-step.is-complete:not(.is-active) .profile-actions {
-  display: none;
 }
 
 .profile-step:last-child::before { display: none; }
@@ -175,8 +190,8 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-step-marker {
   position: relative;
   z-index: 1;
-  width: 24px;
-  height: 24px;
+  width: var(--marker-size);
+  height: var(--marker-size);
   margin-top: 4px;
   display: grid;
   place-items: center;
@@ -350,40 +365,12 @@ a { -webkit-tap-highlight-color: transparent; }
   color: #fff;
 }
 
-.profile-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 20px;
-}
-
-.profile-count {
-  color: var(--muted);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 10px;
-}
-
-.profile-primary {
-  min-height: 46px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 11px 15px;
-  border: 0;
-  background: var(--ink);
-  color: var(--paper);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.profile-primary:hover { background: var(--accent); color: var(--ink); }
-.profile-primary:disabled { opacity: .35; cursor: not-allowed; }
-
 @media (max-width: 680px) {
+  :root {
+    --profile-gutter: 16px;
+    --marker-size: 22px;
+    --step-column: 28px;
+  }
   .profile-header { padding: max(17px, env(safe-area-inset-top)) 16px 0; }
   .profile-nav { gap: 12px; }
   .profile-nav-link { font-size: 12px; }
@@ -393,24 +380,15 @@ a { -webkit-tap-highlight-color: transparent; }
     margin: 16px 16px 0;
   }
   .profile-progress {
-    width: auto;
-    margin: 10px auto 0;
-    margin-right: 16px;
-    margin-left: 16px;
-    padding-left: 10px;
+    width: 100%;
+    margin: 10px 0 0;
+    padding: 4px 0 0;
   }
-  .profile-progress::after { left: 9px; }
   .profile-progress::after { height: 24px; }
   .profile-step {
-    grid-template-columns: 28px minmax(0, 1fr);
     gap: 10px;
   }
-  .profile-step::before {
-    left: 9px;
-  }
   .profile-step-marker {
-    width: 22px;
-    height: 22px;
     margin-top: 2px;
   }
   .profile-step.is-active .profile-step-body {
