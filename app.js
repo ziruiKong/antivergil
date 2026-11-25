@@ -5872,26 +5872,27 @@ function renderMyPage() {
     : `<span>${esc(initialsOf(authUser))}</span>`;
   const profile = currentProfile();
   const profileSummary = profile
-    ? `<section class="my-profile-summary">
-        <div>
-          <span>Planner profile</span>
-          <h2>${esc(profile.stage === "undergraduate" ? "Undergraduate" : "Graduate")} · ${esc(window.AntivergilProfile.majorLabel(profile))}</h2>
-          <p>${esc(window.AntivergilProfile.schoolLabel(profile))} · ${esc(window.AntivergilProfile.WORKLOAD_OPTIONS.find((item) => item.id === profile.workload)?.label || "Balanced")}</p>
+    ? `<section class="my-profile-summary" aria-labelledby="my-profile-title">
+        <div class="my-profile-copy">
+          <span class="my-section-kicker">Planner profile</span>
+          <h2 id="my-profile-title">${esc(profile.stage === "undergraduate" ? "Undergraduate" : "Graduate")} · ${esc(window.AntivergilProfile.majorLabel(profile))}</h2>
+          <p><span>${esc(window.AntivergilProfile.schoolLabel(profile))}</span><i>·</i><span>${esc(window.AntivergilProfile.WORKLOAD_OPTIONS.find((item) => item.id === profile.workload)?.label || "Balanced")}</span></p>
           <div class="my-profile-tags">${window.AntivergilProfile.interestLabels(profile).map((label) => `<span>${esc(label)}</span>`).join("")}</div>
         </div>
-        <a href="/profile/?edit=1">Edit profile ↗</a>
+        <a class="my-edit-profile" href="/profile/?edit=1"><span>Edit profile</span><span aria-hidden="true">↗</span></a>
       </section>`
     : "";
   host.innerHTML = `
     <header class="my-hero">
       <div class="my-identity">
         <div class="my-avatar">${avatar}</div>
-        <div>
+        <div class="my-identity-copy">
+          <span class="my-section-kicker">Student account</span>
           <h1>${esc(authUser.name || "Columbia student")}</h1>
           <p>${esc(authUser.email || "")}</p>
         </div>
       </div>
-      <div class="my-stats">
+      <div class="my-stats" aria-label="Planner activity">
         <div><b>${calendarCourses}</b><span>scheduled courses</span></div>
         <div><b>${plannedCodes.length}</b><span>planned courses</span></div>
         <div><b>${ratings.length}</b><span>course ratings</span></div>
@@ -5900,16 +5901,16 @@ function renderMyPage() {
     ${profileSummary}
     <div class="my-grid">
       <section class="my-panel my-plan-panel">
-        <div class="my-panel-head"><h2>Plan</h2></div>
+        <div class="my-panel-head"><span>Workspace</span><h2>Plan</h2></div>
         ${plannedCodes.length ? `<div class="my-course-list">${plannedCodes.map((code) =>
           `<button type="button" data-my-course="${esc(code)}"><b>${esc(code)}</b><span>${esc(titleForCode(code))}</span></button>`).join("")}</div>`
-          : `<div class="dept-empty">No courses yet.</div>`}
+          : `<div class="dept-empty my-empty"><b>No courses yet.</b><span>Add a course from Browse or your semester plan.</span></div>`}
       </section>
       <section class="my-panel">
-        <div class="my-panel-head"><h2>Ratings</h2></div>
+        <div class="my-panel-head"><span>Feedback</span><h2>Ratings</h2></div>
         ${ratings.length ? `<div class="my-rating-list">${ratings.map((item) =>
           `<button type="button" data-my-course="${esc(item.code)}"><b>${esc(item.code)}</b><span>${"★".repeat(item.value)}${"☆".repeat(5 - item.value)}</span></button>`).join("")}</div>`
-          : `<div class="dept-empty">No ratings yet.</div>`}
+          : `<div class="dept-empty my-empty"><b>No ratings yet.</b><span>Rate a course to tune future recommendations.</span></div>`}
       </section>
     </div>
     <div class="my-footer-actions">
