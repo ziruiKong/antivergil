@@ -1690,40 +1690,6 @@ function renderEnrollAnalysis(course, an) {
     </div>`;
 }
 
-function renderCourseRatingPanel(host, code) {
-  if (!host) return;
-  const key = normCode(code);
-  const current = Number(readCourseRatings()[key]?.value) || 0;
-  host.innerHTML = `
-    <section class="course-rating-card" aria-label="Your course rating">
-      <div class="course-rating-copy">
-        <span>Your rating</span>
-        <b>${current ? `You rated this course ${current} out of 5` : "How was this course?"}</b>
-        <small>Saved locally on this device. Tap a star to update your rating.</small>
-      </div>
-      <div class="course-rating-controls">
-        <div class="course-rating-stars" role="radiogroup" aria-label="Course rating out of five">
-          ${[1, 2, 3, 4, 5].map((value) => `
-            <button type="button" data-course-rating="${value}" role="radio" aria-checked="${current === value}" aria-label="${value} star${value === 1 ? "" : "s"}" class="${value <= current ? "active" : ""}">★</button>`).join("")}
-        </div>
-        <button class="course-rating-clear" type="button" data-course-rating-clear ${current ? "" : "hidden"}>Clear</button>
-      </div>
-    </section>`;
-  host.querySelectorAll("[data-course-rating]").forEach((button) => {
-    button.addEventListener("click", () => {
-      setCourseRating(key, Number(button.dataset.courseRating));
-      renderCourseRatingPanel(host, code);
-      toast(`Saved your ${button.dataset.courseRating}-star rating for ${code}.`);
-    });
-  });
-  host.querySelector("[data-course-rating-clear]")?.addEventListener("click", () => {
-    setCourseRating(key, null);
-    renderCourseRatingPanel(host, code);
-    toast(`Cleared your rating for ${code}.`);
-  });
-}
-
-/* ---------- 课程详情 ---------- */
 function coursePermalink(code, term, section = "") {
   const slug = normCode(code).toLowerCase().replace(/\s+/g, "-");
   const params = new URLSearchParams({ term });
@@ -1787,6 +1753,14 @@ function bindCourseCommunity(host, course, section, files) {
   const user = authUser;
   const code = normCode(course);
   const signIn = () => {
+    if (files) {
+      const next = encodeURIComponent(coursePermalink(code, state.term, section));
+      host.innerHTML = `<div class="course-files-access">
+        <div><strong>Sign in to access course files</strong><p>Download materials or share a PDF with other students.</p></div>
+        <a class="btn primary" href="/login/?next=${next}">Sign in</a>
+      </div>`;
+      return;
+    }
     host.innerHTML = `<a class="btn ghost" href="/login/?next=${encodeURIComponent(coursePermalink(code, state.term, section))}">Sign in to ${files ? "access files" : "join the discussion"}</a>`;
   };
   if (!cloud?.enabled || !user) { signIn(); return; }
@@ -1798,6 +1772,7 @@ function bindCourseCommunity(host, course, section, files) {
   const submit = form.querySelector("[type=submit]");
   let own = null;
   function failure(error) {
+    if (files && error.status === 401) { signIn(); return; }
     status.textContent = error.status === 401 ? "Reconnect Google to use this section." : error.message;
     if (error.status === 401) {
       const link = document.createElement("a");
@@ -1809,17 +1784,31 @@ function bindCourseCommunity(host, course, section, files) {
   async function load() {
     const result = await call("GET");
     if (files) {
-      list.innerHTML = result.files.map((file) => `<li><button type="button" data-download="${esc(file.id)}">${esc(file.name)}</button>${file.own ? `<button type="button" data-remove="${esc(file.id)}">Remove</button>` : ""}</li>`).join("") || "<li>No files yet.</li>";
+      list.innerHTML = result.files.map((file) => `<li><button type="button" data-download="${esc(file.id)}">${esc(file.name)}</button>${file.own ? `<button type="button" data-remove="${esc(file.id)}">Remove</button>` : ""}</li>`).join("") || '<li class="course-files-empty">No files shared yet</li>';
+      form.hidden = false;
     } else {
       own = result.own;
       const comments = own ? [{ ...own, author: "You" }, ...result.comments] : result.comments;
-      list.innerHTML = comments.map((comment) => `<li><strong>${esc(comment.author)}</strong><p>${esc(comment.body)}</p></li>`).join("") || "<li>No comments yet.</li>";
+      list.innerHTML = comments.map((comment, index) => {
+        const stars = Number.isInteger(comment.rating) && comment.rating >= 1 && comment.rating <= 5
+          ? `<span class="course-review-score" aria-label="${comment.rating} out of 5 stars">${"★".repeat(comment.rating)}${"☆".repeat(5 - comment.rating)}</span>`
+          : "";
+        return `<li><div class="course-review-byline"><strong>${own && index === 0 ? "You · anonymous" : "Anonymous student"}</strong>${stars}</div><p>${esc(comment.body)}</p></li>`;
+      }).join("") || "<li>No reviews yet.</li>";
+      for (const option of form.querySelectorAll('[name="rating"]')) {
+        option.checked = Number(option.value) === (own ? own.rating ?? 0 : Number(readCourseRatings()[code]?.value) || 0);
+      }
       if (document.activeElement !== field) field.value = own?.body || "";
-      submit.textContent = own ? "Update comment" : "Post comment";
+      submit.textContent = own ? "Update review" : "Post review";
       form.querySelector("[data-remove]").hidden = !own;
     }
-    submit.disabled = false;
+    submit.disabled = files && !field.files.length;
   }
+  const fileName = files ? form.querySelector("[data-file-name]") : null;
+  if (files) field.addEventListener("change", () => {
+    fileName.textContent = field.files[0]?.name || "No file selected";
+    submit.disabled = !field.files.length;
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     submit.disabled = true;
@@ -1835,11 +1824,14 @@ function bindCourseCommunity(host, course, section, files) {
         });
         await call("PUT", { name: file.name, content: data });
         form.reset();
+        fileName.textContent = "No file selected";
       } else {
-        await call("PUT", { body: field.value });
+        const rating = Number(form.elements.rating.value) || null;
+        await call("PUT", { body: field.value, rating });
+        setCourseRating(code, rating);
       }
       await load();
-      status.textContent = files ? "PDF uploaded." : "Comment saved.";
+      status.textContent = files ? "PDF uploaded." : "Review saved.";
     } catch (error) { failure(error); submit.disabled = false; }
   });
   host.addEventListener("click", async (event) => {
@@ -1849,8 +1841,9 @@ function bindCourseCommunity(host, course, section, files) {
     try {
       if (action.hasAttribute("data-remove")) {
         await call("DELETE", undefined, action.dataset.remove || undefined);
+        if (!files) { setCourseRating(code, null); field.value = ""; }
         await load();
-        status.textContent = files ? "File removed." : "Comment removed.";
+        status.textContent = files ? "File removed." : "Review removed.";
       } else {
         const file = await call("GET", undefined, action.dataset.download);
         const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(file.content), (char) => char.charCodeAt(0))], { type: "application/pdf" }));
@@ -1897,7 +1890,7 @@ function openCourse(code, sectionId = "") {
       <div class="m-folder-tabs" role="tablist" aria-label="Course details">
         <button class="m-folder-tab active" type="button" role="tab" id="m-tab-overview" aria-controls="m-panel-overview" aria-selected="true" data-mtab="overview">Overview</button>
         <button class="m-folder-tab" type="button" role="tab" id="m-tab-materials" aria-controls="m-panel-materials" aria-selected="false" tabindex="-1" data-mtab="materials">Materials</button>
-        ${enrollmentHistory || termComparison ? '<button class="m-folder-tab" type="button" role="tab" id="m-tab-enrollment" aria-controls="m-panel-enrollment" aria-selected="false" tabindex="-1" data-mtab="enrollment">Enrollment history</button>' : ""}
+        ${enrollmentHistory || termComparison ? '<button class="m-folder-tab" type="button" role="tab" id="m-tab-enrollment" aria-controls="m-panel-enrollment" aria-selected="false" tabindex="-1" data-mtab="enrollment">History</button>' : ""}
         <button class="m-folder-tab" type="button" role="tab" id="m-tab-reviews" aria-controls="m-panel-reviews" aria-selected="false" tabindex="-1" data-mtab="reviews">Reviews</button>
       </div>
       <div class="m-folder-head">
@@ -1961,21 +1954,26 @@ function openCourse(code, sectionId = "") {
         </section>
       </section>
       ${enrollmentHistory || termComparison ? `
-        <section class="m-folder-panel" id="m-panel-enrollment" role="tabpanel" aria-labelledby="m-tab-enrollment" data-mpanel="enrollment" hidden>
+        <section class="m-folder-panel" id="m-panel-enrollment" role="tabpanel" aria-labelledby="m-tab-enrollment" data-mpanel="enrollment" tabindex="0" hidden>
           ${enrollmentHistory}
           ${termComparison}
         </section>` : ""}
       <section class="m-folder-panel" id="m-panel-reviews" role="tabpanel" aria-labelledby="m-tab-reviews" data-mpanel="reviews" hidden>
         <div class="course-review-layout">
           <section aria-labelledby="course-discussion-title">
-            <h3 id="course-discussion-title">Course discussion</h3>
+            <h3 id="course-discussion-title">Course reviews</h3>
             <div id="course-discussion">
-              <form><label for="course-comment">Your comment</label>
+              <form><fieldset class="course-review-rating"><legend>Rating <small>(optional)</small></legend>
+                  <div>${[1, 2, 3, 4, 5].map((star) => `<label><input type="radio" name="rating" value="${star}" aria-label="${star} of 5 stars"><span aria-hidden="true">★</span></label>`).join("")}
+                    <label class="course-rating-none"><input type="radio" name="rating" value="0" aria-label="No rating"><span>None</span></label>
+                  </div>
+                </fieldset>
+                <label for="course-comment">Your comment</label>
                 <textarea id="course-comment" name="entry" maxlength="1000" rows="3" required placeholder="What should other students know?"></textarea>
-                <small>Visible to signed-in students under your name.</small>
+                <small>Published anonymously to signed-in students.</small>
                 <div class="community-actions">
                   <button class="btn primary" type="submit" disabled>Post comment</button>
-                  <button class="btn ghost" type="button" data-remove hidden>Remove comment</button>
+                  <button class="btn ghost" type="button" data-remove hidden>Remove review</button>
                 </div>
               </form>
               <p role="status"></p>
@@ -1983,20 +1981,24 @@ function openCourse(code, sectionId = "") {
             </div>
           </section>
           <aside aria-label="Ratings and external reviews">
-            <div id="course-rating-host"></div>
             <div class="culpa-review-host" id="culpa-review-host"></div>
           </aside>
         </div>
       </section>
       <section class="m-folder-panel" id="m-panel-materials" role="tabpanel" aria-labelledby="m-tab-materials" data-mpanel="materials" hidden>
         <section class="course-file-section" aria-labelledby="course-file-title">
-          <h3 id="course-file-title">Shared files</h3>
+          <header class="course-files-header">
+            <h3 id="course-file-title">Shared files</h3>
+            <span>PDF · 1 MB max</span>
+          </header>
           <div id="course-files">
-            <form><label for="course-file">PDF files · up to 1 MB each</label>
-              <div class="community-actions">
-                <input id="course-file" name="entry" type="file" accept=".pdf,application/pdf" required>
-                <button class="btn primary" type="submit" disabled>Upload PDF</button>
-              </div>
+            <form class="course-files-upload" hidden>
+              <label class="course-file-picker">
+                <span>Choose PDF</span>
+                <input id="course-file" name="entry" type="file" accept=".pdf,application/pdf" aria-label="Choose PDF" required>
+              </label>
+              <span data-file-name aria-live="polite">No file selected</span>
+              <button class="btn primary" type="submit" disabled>Upload</button>
             </form>
             <p role="status"></p>
             <ul data-community-list></ul>
@@ -2077,7 +2079,6 @@ function openCourse(code, sectionId = "") {
     a.addEventListener("click", () => openCourse(a.dataset.code)));
   body.querySelectorAll(".loc-link").forEach((btn) =>
     btn.addEventListener("click", () => showLocation(btn.dataset.loc)));
-  renderCourseRatingPanel($("#course-rating-host"), c.code);
   bindSparklines(body);
   body.querySelector("[data-addcal]")?.addEventListener("click", () => {
     addSectionsToSchedule(c.code, selected.classId);
