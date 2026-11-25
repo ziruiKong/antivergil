@@ -37,7 +37,7 @@
   <title>Antivergil</title>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="styles.css?v=20261125-calendar-flat" />
+  <link rel="stylesheet" href="styles.css?v=20261125-schedule-status" />
 </head>
 <body>
   <svg class="ink-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -224,6 +224,7 @@
     <section class="view calendar-view" id="view-calendar" hidden>
       <div class="calendar-app" id="calendar-app">
         <aside class="calendar-sidebar" id="calendar-sidebar" aria-label="Calendar controls">
+          <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
           <div class="calendar-create-wrap">
             <button class="calendar-create-btn" id="calendar-create" type="button" aria-expanded="false">
               <span class="calendar-create-plus">+</span>
@@ -328,6 +329,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
             <input id="map-search" type="search" placeholder="Find a building" autocomplete="off" />
           </label>
+          <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
           <div id="map-list" class="cal-list campus-model-course-list"></div>
           <div class="campus-model-links">
             <a id="map-open-earth" href="https://earth.google.com/web/@40.8077,-73.9621,20a,800d,35y,0h,0t,0r" target="_blank" rel="noopener">Google Earth ↗</a>
@@ -399,7 +401,7 @@
   <script src="data/maps-config.js"></script>
   <script src="data/auth-config.js?v=20261125-schedule-cloud"></script>
   <script src="profile-store.js?v=20261125-schedule-cloud"></script>
-  <script src="schedule-cloud.js?v=1"></script>
-  <script src="app.js?v=20261125-schedule-cloud"></script>
+  <script src="schedule-cloud.js?v=2"></script>
+  <script src="app.js?v=20261125-schedule-refresh"></script>
 </body>
 </html>

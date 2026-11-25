@@ -158,6 +158,72 @@ function restoreProfileSchedule() {
   });
 }
 
+let cloudScheduleStatus = "pending";
+let cloudScheduleRevision = 0;
+let cloudScheduleRefresh = null;
+let cloudScheduleLastChecked = 0;
+
+function showCloudScheduleStatus(status) {
+  cloudScheduleStatus = status;
+  if (!window.AntivergilScheduleCloud?.enabled) return;
+  const messages = {
+    pending: "Syncing course schedule…",
+    saved: "Course schedule synced",
+    signIn: "Sign in to sync courses",
+    failed: "Course schedule sync failed",
+  };
+  document.querySelectorAll("[data-cloud-schedule-status]").forEach((host) => {
+    host.hidden = !authUser;
+    host.dataset.state = status;
+    host.textContent = messages[status];
+    if (status === "signIn") {
+      const link = document.createElement("a");
+      link.href = `/login/?next=${encodeURIComponent(location.pathname + location.search)}`;
+      link.textContent = "Reconnect";
+      host.append(link);
+    } else if (status === "failed") {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => refreshCloudSchedule({ force: true }));
+      host.append(retry);
+    }
+  });
+}
+
+function applyCloudSchedules(user, schedules, revision, repaint) {
+  if (authUser?.sub !== user.sub || cloudScheduleRevision !== revision) return;
+  const before = currentProfile()?.schedules?.[state.term] || [];
+  window.AntivergilProfile.cacheSchedules(user.email, schedules);
+  if (repaint && JSON.stringify(before) !== JSON.stringify(schedules[state.term] || [])) {
+    restoreProfileSchedule();
+    renderCalendar();
+    refreshMapPins();
+    if (!$("#view-me").hidden) renderMyPage();
+  }
+  showCloudScheduleStatus("saved");
+}
+
+function refreshCloudSchedule({ force = false, repaint = true } = {}) {
+  const cloud = window.AntivergilScheduleCloud;
+  const profile = currentProfile();
+  if (!cloud?.enabled || !profile || (!force && document.hidden)) return;
+  if (cloudScheduleRefresh) return cloudScheduleRefresh;
+  if (!force && (cloudScheduleStatus === "signIn" || Date.now() - cloudScheduleLastChecked < 15000)) return;
+  const user = authUser;
+  const revision = cloudScheduleRevision;
+  cloudScheduleLastChecked = Date.now();
+  cloudScheduleRefresh = cloud.sync(user, profile.schedules || {}).then(
+    (schedules) => applyCloudSchedules(user, schedules, revision, repaint),
+    (error) => {
+      if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
+        showCloudScheduleStatus(error.status === 401 ? "signIn" : "failed");
+      }
+    },
+  ).finally(() => { cloudScheduleRefresh = null; });
+  return cloudScheduleRefresh;
+}
+
 function persistProfileSchedule() {
   if (!authUser) return true;
   const cloud = window.AntivergilScheduleCloud;
@@ -165,7 +231,17 @@ function persistProfileSchedule() {
     const previous = currentProfile()?.schedules?.[state.term] || [];
     const saved = Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
     if (saved && cloud?.enabled) {
-      cloud.update(authUser, state.term, previous, state.schedule).catch((error) => toast(error.message));
+      const user = authUser;
+      const revision = ++cloudScheduleRevision;
+      showCloudScheduleStatus("pending");
+      cloud.update(user, state.term, previous, state.schedule).then(
+        (schedules) => applyCloudSchedules(user, schedules, revision, true),
+        (error) => {
+          if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
+            showCloudScheduleStatus(error.status === 401 ? "signIn" : "failed");
+          }
+        },
+      );
     }
     return saved;
   } catch {
@@ -836,6 +912,10 @@ function switchView(id, opts = {}) {
     if (googleCalendarTokenValid() && Date.now() - (state.googleCalendarSyncedAt || 0) > 60_000) {
       syncGoogleCalendar();
     }
+  }
+  if (["calendar", "map", "me"].includes(id)) {
+    showCloudScheduleStatus(cloudScheduleStatus);
+    refreshCloudSchedule();
   }
   window.scrollTo({ top: 0 });
 }
@@ -5952,6 +6032,7 @@ function renderMyPage() {
     <div class="my-grid">
       <section class="my-panel">
         <div class="my-panel-head"><span>${esc(termShort(state.term))}</span><h2>Scheduled courses</h2></div>
+        <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
         ${state.schedule.length ? `<div class="my-course-list">${state.schedule.map((section) =>
           `<button type="button" data-my-course="${esc(section.code)}"><b>${esc(section.code)}</b><span>${esc(section.title)}</span></button>`).join("")}</div>`
           : '<div class="dept-empty my-empty"><b>No scheduled courses.</b></div>'}
@@ -7048,14 +7129,14 @@ function startIntro() {
 }
 
 async function init() {
-  const profile = currentProfile();
-  if (profile && window.AntivergilScheduleCloud?.enabled) {
-    try {
-      const schedules = await window.AntivergilScheduleCloud.sync(authUser, profile.schedules || {});
-      window.AntivergilProfile.cacheSchedules(authUser.email, schedules);
-    } catch (error) {
-      toast(error.message);
-    }
+  if (window.AntivergilScheduleCloud?.enabled) {
+    await refreshCloudSchedule({ force: true, repaint: false });
+    const refreshVisibleSchedule = () => {
+      if (["calendar", "map", "me"].includes(document.body.dataset.view)) refreshCloudSchedule();
+    };
+    window.addEventListener("focus", refreshVisibleSchedule);
+    document.addEventListener("visibilitychange", refreshVisibleSchedule);
+    window.setInterval(refreshVisibleSchedule, 30000);
   }
   loadCustomTerms();
   document.body.classList.remove("sidebar-collapsed");

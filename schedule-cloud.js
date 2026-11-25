@@ -30,7 +30,11 @@
 
   function session(user) {
     const value = read(sessionKey, null);
-    if (value?.sub !== user?.sub || !value?.token) throw new Error("Sign in again to sync your schedule.");
+    if (!user?.sub || value?.sub !== user.sub || !value?.token) {
+      const error = new Error("Sign in again to sync your schedule.");
+      error.status = 401;
+      throw error;
+    }
     return value.token;
   }
 

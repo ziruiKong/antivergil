@@ -13757,3 +13757,24 @@ button.map-course-row:is(:hover,:focus-visible,[aria-pressed="true"]) { backgrou
 }
 .calendar-google-connect:hover, .calendar-google-connect:focus-visible { background: #e9e6df; }
 .calendar-google-connect:disabled { opacity: .66; cursor: wait; }
+.cloud-schedule-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 6px 4px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #55584f;
+}
+.cloud-schedule-status[hidden] { display: none; }
+.cloud-schedule-status[data-state="saved"] { color: #345d4a; }
+.cloud-schedule-status a, .cloud-schedule-status button {
+  color: #922c48;
+  background: none;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
