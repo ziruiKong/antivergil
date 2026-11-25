@@ -165,7 +165,7 @@ async function sendCode() {
   resendAvailableAt = Date.now() + 60000;
   $("#google-login-mount").hidden = true;
   $("#code-form").hidden = false;
-  $("#code-destination").textContent = "We sent a six-digit code to " + verificationEmailAddress;
+
   $("#verification-code").focus();
 }
 $("#code-form").addEventListener("submit", async event => {
