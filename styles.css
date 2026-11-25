@@ -13662,7 +13662,6 @@ body.auth-authenticated .my-page {
 
 .prof-trend-panel {
   grid-column: 1 / -1;
-  padding-right: 0;
 }
 
 .prof-trend-panel .prof-term-chart {
