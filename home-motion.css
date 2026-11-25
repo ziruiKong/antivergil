@@ -44,13 +44,29 @@ footer { padding-block: min(1rem, 1.5dvh); }
 }
 
 @media (max-width: 650px) {
+  .gallery {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gallery::-webkit-scrollbar {
+    display: none;
+  }
+
   .gallery-track {
     height: 100%;
     align-items: stretch;
+    transform: none !important;
   }
 
   .gallery-track .tile:nth-child(n) {
     height: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
   }
 
   .gallery-track .tile {
@@ -75,6 +91,8 @@ footer { padding-block: min(1rem, 1.5dvh); }
   }
 
   .intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
     gap: 12px;
     padding-block: .85rem;
   }
@@ -85,6 +103,7 @@ footer { padding-block: min(1rem, 1.5dvh); }
   }
 
   .signin {
+    justify-self: start;
     min-height: 44px;
     display: inline-flex;
     align-items: center;

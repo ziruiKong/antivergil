@@ -25,6 +25,7 @@ dialog.addEventListener('cancel',e=>{if(!choices)e.preventDefault()});
 document.querySelector('#cookies').onclick=showConsent;
 if(!choices)showConsent();
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const mobileGallery=matchMedia('(max-width: 650px)');
 function scramble(event){
   if(reduced.matches)return;
   const label=event.currentTarget;
@@ -88,12 +89,21 @@ resizeTrack();
 let resumeTimer;
 function syncPlayback(){
   clearTimeout(resumeTimer);
+  if(mobileGallery.matches){
+    motion.pause();
+    motion.currentTime=0;
+    return;
+  }
   if(reduced.matches || document.hidden || gallery.matches(':hover,:focus-within'))motion.pause();
   else motion.play();
 }
 for(const event of ['pointerenter','pointerleave','focusin'])gallery.addEventListener(event,syncPlayback);
 gallery.addEventListener('focusout',()=>requestAnimationFrame(syncPlayback));
 reduced.addEventListener('change',syncPlayback);
+mobileGallery.addEventListener('change',()=>{
+  if(!mobileGallery.matches)gallery.scrollLeft=0;
+  syncPlayback();
+});
 document.addEventListener('visibilitychange',syncPlayback);
 syncPlayback();
 
