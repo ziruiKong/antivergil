@@ -8,6 +8,11 @@ import { verificationEmail } from './lib/verification-email.mjs';
 
 const google = new OAuth2Client();
 const digest = value => createHash('sha256').update(value).digest('hex');
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const validEmail = value => {
+  const email = String(value || '').trim();
+  return email.length <= 254 && EMAIL_PATTERN.test(email);
+};
 
 export default async function emailAuth(request) {
   const origin = request.headers.get('origin');
@@ -25,12 +30,12 @@ export default async function emailAuth(request) {
     const body = JSON.parse(raw);
     let email, subject, name, picture, provider;
 
-    if (body.provider === 'ubc-email') {
+    if (body.provider === 'email' || body.provider === 'ubc-email') {
       email = String(body.email || '').trim().toLowerCase();
-      if (!/^[^\s@]+@student\.ubc\.ca$/.test(email)) return send({ error: 'Use your UBC student email ending in @student.ubc.ca.' }, 400);
+      if (!validEmail(email)) return send({ error: 'Use a valid email address.' }, 400);
       const { sql } = getDatabase();
       const [existing] = await sql`SELECT subject FROM course_alert_recipients WHERE email = ${email} ORDER BY subject LIMIT 1`;
-      subject = existing?.subject || `ubc:${email}`;
+      subject = existing?.subject || `email:${email}`;
       name = email.split('@')[0];
       provider = 'email';
     } else {
@@ -40,7 +45,7 @@ export default async function emailAuth(request) {
       const googleUser = ticket?.getPayload();
       if (!googleUser?.email_verified || !googleUser.sub) return send({ error: 'Google sign-in expired. Choose your account again.' }, 401);
       email = String(googleUser.email || '').toLowerCase();
-      if (!/^[^\s@]+@(?:columbia\.edu|student\.ubc\.ca)$/.test(email)) return send({ error: 'Use your university email.' }, 400);
+      if (!validEmail(email)) return send({ error: 'Use a valid Google account email.' }, 400);
       subject = googleUser.sub;
       name = googleUser.name || email.split('@')[0];
       picture = googleUser.picture;

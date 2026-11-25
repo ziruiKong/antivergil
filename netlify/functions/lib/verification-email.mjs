@@ -34,7 +34,7 @@ export function verificationEmail(code, accountName = "your account") {
 </td></tr>
 </table>
 </td></tr>
-<tr><td align="center" style="padding:0 20px 40px;font-size:12px;line-height:1.8;color:#858b90">Antivergil · Columbia Course Planner<br><a href="https://antivergil.cc" style="color:#687076;text-decoration:none">antivergil.cc</a></td></tr>
+<tr><td align="center" style="padding:0 20px 40px;font-size:12px;line-height:1.8;color:#858b90">Antivergil · Course Planner<br><a href="https://antivergil.cc" style="color:#687076;text-decoration:none">antivergil.cc</a></td></tr>
 </table></body></html>`,
   };
 }

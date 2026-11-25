@@ -8,7 +8,7 @@
   <script>if(/\/login\.html$/i.test(location.pathname))history.replaceState(null,"","/login/"+location.search);</script>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="login.css?v=20261125-ubc-email-signup-3" />
+  <link rel="stylesheet" href="login.css?v=20261125-all-email-signup-1" />
 </head>
 <body>
   <main class="login-shell">
@@ -51,13 +51,13 @@
             <span>Continue with LionMail</span>
           </button>
 
-          <button class="ubc-register-link" id="show-ubc-register" type="button">Create an account with email</button>
-          <form id="ubc-email-form" class="email-form ubc-email-form" hidden>
-            <div class="ubc-email-row">
-              <label><span>UBC student email</span><input id="ubc-email" class="email-input" type="email" autocomplete="email" inputmode="email" placeholder="name@student.ubc.ca" required /></label>
+          <button class="email-register-link" id="show-email-register" type="button">Continue with email</button>
+          <form id="email-register-form" class="email-form" hidden>
+            <div class="email-register-row">
+              <label><span>Email address</span><input id="registration-email" class="email-input" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com" maxlength="254" required /></label>
               <button class="email-submit" type="submit">Continue</button>
             </div>
-            <button class="ubc-back-link" id="back-to-google" type="button">Google sign-in ↗</button>
+            <button class="email-back-link" id="back-to-google" type="button">Use LionMail ↗</button>
           </form>
 
 
@@ -73,6 +73,6 @@
   <script src="profile-store.js?v=20261125-profile-3"></script>
   <script src="schedule-cloud.js?v=2"></script>
   <script src="verification-input.js?v=1"></script>
-  <script src="login.js?v=20261125-ubc-email-signup-3"></script>
+  <script src="login.js?v=20261125-all-email-signup-1"></script>
 </body>
 </html>
