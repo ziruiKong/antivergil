@@ -97,16 +97,6 @@ a { -webkit-tap-highlight-color: transparent; }
   margin: 20px auto 0;
 }
 
-.profile-step-kicker {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
 .profile-progress {
   position: relative;
   display: flex;
@@ -185,6 +175,7 @@ a { -webkit-tap-highlight-color: transparent; }
   z-index: 1;
   width: 24px;
   height: 24px;
+  margin-top: 4px;
   display: grid;
   place-items: center;
   border: 1.5px solid var(--ink);
@@ -205,10 +196,6 @@ a { -webkit-tap-highlight-color: transparent; }
   color: var(--paper);
 }
 
-.profile-step.is-complete:not(.is-active) {
-  align-items: center;
-}
-
 .profile-step-body {
   min-width: 0;
   padding: 0 0 6px;
@@ -227,7 +214,7 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-step h2 {
-  margin: 0;
+  margin: 0 0 18px;
   font-size: clamp(23px, 3vw, 31px);
   font-weight: 650;
   letter-spacing: -.04em;
@@ -235,13 +222,6 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 
 .profile-step h2:focus { outline: none; }
-
-.profile-step-hint {
-  margin: 9px 0 20px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
 
 .profile-options {
   display: grid;
@@ -339,6 +319,7 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-interest.is-selected {
   border-color: var(--accent);
   background: var(--accent);
+  color: #fff;
 }
 
 .profile-actions {
@@ -433,6 +414,7 @@ a { -webkit-tap-highlight-color: transparent; }
   .profile-step-marker {
     width: 22px;
     height: 22px;
+    margin-top: 2px;
   }
   .profile-step.is-active .profile-step-body {
     padding: 2px 0 18px;

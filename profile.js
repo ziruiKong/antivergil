@@ -41,9 +41,7 @@
   function activePanel(index) {
     if (index === 0) {
       return `
-        <p class="profile-step-kicker">01 · Student level</p>
         <h2 tabindex="-1">Where are you studying?</h2>
-        <p class="profile-step-hint">This sets which course levels appear in Browse. Joint 4000-level courses remain visible to both paths.</p>
         <div class="profile-options">
           <button class="profile-choice${state.stage === "undergraduate" ? " is-selected" : ""}" type="button" data-stage="undergraduate">
             Undergraduate
@@ -58,9 +56,7 @@
     if (index === 1) {
       const schools = store.SCHOOL_OPTIONS[state.stage] || [];
       return `
-        <p class="profile-step-kicker">02 · School</p>
         <h2 tabindex="-1">Which school are you in?</h2>
-        <p class="profile-step-hint">Your school helps frame the course recommendations without hiding courses from other departments.</p>
         <div class="profile-options">
           ${schools.map((school) => choiceMarkup(school, state.school === school.id, "school")).join("")}
         </div>`;
@@ -68,9 +64,7 @@
     if (index === 2) {
       const majors = choicesForStage(store.MAJOR_OPTIONS);
       return `
-        <p class="profile-step-kicker">03 · Field of study</p>
         <h2 tabindex="-1">What do you study?</h2>
-        <p class="profile-step-hint">Courses from your field move to the front of Browse. Use search if the list is long.</p>
         <input class="profile-major-search" id="profile-major-search" type="search" value="${esc(state.majorQuery)}" placeholder="Find your major or field" autocomplete="off">
         <div class="profile-major-grid" id="profile-major-grid">
           ${majors.filter((item) => item.label.toLowerCase().includes(state.majorQuery.toLowerCase())).map((major) => choiceMarkup(major, state.major === major.id, "major")).join("") || `<p class="profile-step-hint">No matching field. Choose “Other / Interdisciplinary”.</p>`}
@@ -78,9 +72,7 @@
     }
     if (index === 3) {
       return `
-        <p class="profile-step-kicker">04 · Interests</p>
         <h2 tabindex="-1">What are you curious about?</h2>
-        <p class="profile-step-hint">Choose a few interests. These add a lighter personal signal on top of your major and course level.</p>
         <div class="profile-interest-grid">
           ${store.INTEREST_OPTIONS.map((interest) => `
             <button class="profile-interest${state.interests.includes(interest.id) ? " is-selected" : ""}" type="button" data-interest="${esc(interest.id)}" aria-pressed="${state.interests.includes(interest.id)}">${esc(interest.label)}</button>`).join("")}

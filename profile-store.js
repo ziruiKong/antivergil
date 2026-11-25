@@ -88,7 +88,15 @@
   function read(email) {
     try {
       const value = JSON.parse(localStorage.getItem(storageKey(email)) || "null");
-      return value && value.version === 1 && value.email ? value : null;
+      const complete = value
+        && value.version === 1
+        && value.email
+        && ["undergraduate", "graduate"].includes(value.stage)
+        && value.school
+        && value.major
+        && Array.isArray(value.interests)
+        && value.interests.length > 0;
+      return complete ? value : null;
     } catch {
       return null;
     }
