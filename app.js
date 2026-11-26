@@ -1437,6 +1437,7 @@ function decorateStampCards(selector) {
     .filter((track) => Number.parseFloat(track) > 0.5).length || 1;
   cards.forEach((card, index) => {
     const column = index % columns;
+    card.classList.toggle("stamp-edge-left", column > 0);
     card.classList.toggle("stamp-edge-right", column < columns - 1);
     card.classList.toggle("stamp-edge-bottom", index + columns < cards.length);
     card.style.setProperty("--stamp-column", String(column));

@@ -15098,3 +15098,20 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
   padding-inline: 4px;
   white-space: nowrap;
 }
+
+/* Bridge the two inner stamp cuts with one shared perforated seam. */
+#search-results > .course-card.stamp-edge-left::before {
+  content: "" !important;
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  bottom: 9px;
+  left: -6px;
+  width: 12px;
+  pointer-events: none;
+  background-color: #fdfdfb;
+  background-image: radial-gradient(circle at 50% 5px, var(--sa-bg) 2.7px, transparent 3px);
+  background-position: center top;
+  background-size: 12px 10px;
+  background-repeat: repeat-y;
+}
