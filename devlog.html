@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f3f0">
+  <base href="/">
+  <title>Development Log | Antivergil</title>
+  <style>
+    :root { color-scheme: light; --paper:#f3f3f0; --ink:#121212; --muted:#777873; --rule:rgba(18,18,18,.34); }
+    * { box-sizing:border-box; }
+    html { min-height:100%; background:var(--paper); scroll-behavior:smooth; }
+    body { min-height:100vh; margin:0; background:var(--paper); color:var(--ink); font-family:Arial,Helvetica,sans-serif; -webkit-font-smoothing:antialiased; }
+    .site-header { padding:28px clamp(22px,2.25vw,34px) 0; }
+    .site-nav { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; min-height:28px; }
+    .site-nav__link { color:var(--ink); text-decoration:none; font:500 12px/1 ui-monospace,"SFMono-Regular",Consolas,monospace; transition:opacity 160ms ease; }
+    .site-nav__link:hover { opacity:.5; }
+    .site-nav__link:last-child { justify-self:end; }
+    .brand { display:flex; width:78px; align-items:center; justify-content:center; }
+    .brand img { display:block; width:100%; height:auto; }
+    main { width:100%; padding:34px clamp(22px,2.25vw,34px) 84px; }
+    .log-head,.log-entry { display:grid; grid-template-columns:minmax(220px,32.5%) minmax(0,1fr); }
+    .log-head { align-items:end; min-height:54px; padding:0 0 17px; border-bottom:1px solid var(--ink); }
+    .log-head span { font:500 15px/1.2 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.035em; text-transform:uppercase; }
+    .log-entry { align-items:center; min-height:96px; padding:25px 0; border-bottom:1px solid var(--rule); outline:none; transition:background-color 160ms ease,color 160ms ease; }
+    .log-entry:hover,.log-entry:focus { background:#171918; color:var(--paper); }
+    .log-entry__date { padding-right:24px; color:#343632; font-size:18px; line-height:1.45; font-variant-numeric:tabular-nums; transition:color 160ms ease; }
+    .log-entry:hover .log-entry__date,.log-entry:focus .log-entry__date { color:#d1d2cd; }
+    .log-entry__title { display:flex; align-items:center; justify-content:space-between; gap:24px; font-size:20px; font-weight:600; line-height:1.4; letter-spacing:.005em; }
+    .log-entry__title::after { flex:none; color:var(--muted); content:"⌄"; font-size:20px; font-weight:400; transition:transform 180ms ease,color 180ms ease; }
+    .log-entry:hover .log-entry__title::after,.log-entry:focus .log-entry__title::after { color:var(--paper); transform:rotate(180deg); }
+    .log-entry__details { grid-column:1 / -1; width:100%; max-height:0; margin-top:0; padding:0 24px; overflow:hidden; background:#171918; color:var(--paper); opacity:0; visibility:hidden; transform:translateY(-8px); transition:max-height 240ms ease,margin 200ms ease,padding 200ms ease,opacity 160ms ease,transform 180ms ease,visibility 180ms; }
+    .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:260px; margin-top:18px; padding:22px 24px 24px; opacity:1; visibility:visible; transform:translateY(0); }
+    .log-entry__details-header { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:18px; }
+    .log-entry__detail-title { margin:0; color:#d1d2cd; font:500 13px/1.3 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.04em; text-transform:uppercase; }
+    .log-entry__status { display:inline-flex; align-items:center; gap:8px; color:#f3f3f0; font-size:15px; font-weight:600; }
+    .log-entry__status::before { width:9px; height:9px; border-radius:50%; background:#91c096; content:""; }
+    .log-entry__facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px 28px; margin-bottom:20px; }
+    .log-entry__fact-label { display:block; margin-bottom:6px; color:#a7aaa3; font:500 11px/1.2 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.05em; text-transform:uppercase; }
+    .log-entry__fact-value { display:block; color:var(--paper); font-size:16px; line-height:1.35; font-variant-numeric:tabular-nums; }
+    .log-entry__steps { display:flex; flex-wrap:wrap; gap:10px 24px; margin:0; padding:16px 0 0; border-top:1px solid #565954; list-style:none; }
+    .log-entry__steps li { display:flex; align-items:center; gap:9px; color:#e1e2dd; font-size:14px; line-height:1.4; }
+    .log-entry__steps li::before { color:#91c096; content:"✓"; font-weight:700; }
+    @media (max-width:700px) {
+      .site-header { padding:22px 20px 0; }
+      .brand { width:72px; }
+      main { padding:29px 20px 64px; }
+      .log-head,.log-entry { grid-template-columns:minmax(170px,34%) minmax(0,1fr); }
+      .log-head { min-height:48px; padding-bottom:14px; }
+      .log-head span { font-size:13px; }
+      .log-entry { min-height:82px; padding:19px 0; }
+      .log-entry__date { padding-right:14px; font-size:15px; }
+      .log-entry__title { font-size:17px; }
+      .log-entry__facts { gap:14px 18px; }
+    }
+    @media (max-width:520px) {
+      .site-header { padding-top:20px; }
+      .brand { width:68px; }
+      main { padding:26px 18px 56px; }
+      .log-head,.log-entry { grid-template-columns:1fr; }
+      .log-head { min-height:38px; padding-bottom:12px; }
+      .log-head span { font-size:12px; }
+      .log-entry { min-height:0; padding:18px 0; }
+      .log-entry__date { padding:0 0 7px; color:var(--muted); font-size:13px; }
+      .log-entry__title { font-size:17px; }
+      .log-entry__details { padding-right:16px; padding-left:16px; }
+      .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:380px; padding:18px 16px 20px; }
+      .log-entry__details-header { align-items:flex-start; flex-direction:column; gap:10px; margin-bottom:15px; }
+      .log-entry__facts { grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+      .log-entry__fact-value { font-size:14px; }
+      .log-entry__steps { flex-direction:column; gap:9px; padding-top:13px; }
+      .log-entry__steps li { font-size:13px; }
+    }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Site">
+      <a class="site-nav__link" href="/about/">ABOUT</a>
+      <a class="brand" href="/about/" aria-label="Antivergil home"><img src="assets/antivergil-logo-cutout.png?v=20261124-logo-cutout-1" alt="Antivergil"></a>
+      <a class="site-nav__link" href="mailto:zk2332@columbia.edu">CONTACT</a>
+    </nav>
+  </header>
+  <main>
+    <div class="log-head" aria-hidden="true"><span>Date</span><span>Deployment</span></div>
+    <section class="log-list" id="deployment-log" aria-label="Recent successful deployments"></section>
+  </main>
+  <script id="deployment-data" type="application/json">[{"date":"11/26/2026 · 11:42 AM EST","run":88,"title":"Align Friends profile panel heights","sha":"9332e02","seconds":59,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 11:35 AM EST","run":87,"title":"Refine profile friends and sign-out actions","sha":"b8b3c95","seconds":52,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 9:00 AM EST","run":4,"title":"chore(data): refresh course data","sha":"b1f33d7","seconds":51,"event":"schedule","workflow":"Refresh Antivergil data","steps":["Refresh official enrollment data","Commit updated snapshots","Assemble static site","Upload site","Deploy refreshed site"]},{"date":"11/26/2026 · 3:29 AM EST","run":86,"title":"Restore complete application assets","sha":"f58ac3a","seconds":53,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 3:21 AM EST","run":85,"title":"Improve narrow course modal layout","sha":"7427e33","seconds":54,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:29 AM EST","run":84,"title":"Redesign profile page like onboarding","sha":"581e03b","seconds":51,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:25 AM EST","run":83,"title":"Skip sign-in screen for saved users","sha":"361339e","seconds":52,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:22 AM EST","run":82,"title":"Clear verification state on browser back","sha":"8fc38e4","seconds":55,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:17 AM EST","run":81,"title":"Refine onboarding layout and school major flow","sha":"0ed73ec","seconds":52,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:04 AM EST","run":80,"title":"Match onboarding cards to verification style","sha":"167e4a2","seconds":50,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:01 AM EST","run":79,"title":"Restore email sign-in underline","sha":"e80bd7f","seconds":45,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 2:00 AM EST","run":78,"title":"Pin verification return link to viewport bottom","sha":"7803104","seconds":43,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:57 AM EST","run":77,"title":"Add local auth previews and verification return link","sha":"0e3fe09","seconds":43,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:51 AM EST","run":76,"title":"Tune login action typography hierarchy","sha":"adc857a","seconds":54,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:49 AM EST","run":75,"title":"Apply consistent typography to sign-in buttons","sha":"7cd65c8","seconds":51,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:47 AM EST","run":74,"title":"Make email sign-in typography visibly match privacy style","sha":"12053eb","seconds":49,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:45 AM EST","run":73,"title":"Match email sign-in typography to privacy settings","sha":"02bd0a4","seconds":45,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:40 AM EST","run":72,"title":"Stabilize homepage gallery and Safari privacy control","sha":"2b9a8b7","seconds":54,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:36 AM EST","run":71,"title":"Add consent-gated privacy analytics and refresh homepage","sha":"ca2aaf3","seconds":47,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]},{"date":"11/26/2026 · 1:17 AM EST","run":70,"title":"Ship latest site UI and privacy experience","sha":"d3bc29c","seconds":45,"event":"push","workflow":"Deploy Antivergil","steps":["Assemble static site","Upload site","Deploy to GitHub Pages"]}]</script>
+  <script>
+    (() => {
+      const records = JSON.parse(document.getElementById('deployment-data').textContent);
+      const list = document.getElementById('deployment-log');
+      const fragment = document.createDocumentFragment();
+      for (const record of records) {
+        const item = document.createElement('article');
+        item.className = 'log-entry';
+        item.tabIndex = 0;
+        item.setAttribute('aria-label', `Deployment ${record.run}: ${record.title}`);
+        const date = document.createElement('div');
+        date.className = 'log-entry__date';
+        date.textContent = record.date;
+        const title = document.createElement('div');
+        title.className = 'log-entry__title';
+        title.textContent = `Run #${record.run} · ${record.title}`;
+        const details = document.createElement('div');
+        details.className = 'log-entry__details';
+        const detailsHeader = document.createElement('div');
+        detailsHeader.className = 'log-entry__details-header';
+        const detailTitle = document.createElement('p');
+        detailTitle.className = 'log-entry__detail-title';
+        detailTitle.textContent = `GitHub Actions · ${record.workflow}`;
+        const status = document.createElement('span');
+        status.className = 'log-entry__status';
+        status.textContent = 'Succeeded';
+        detailsHeader.append(detailTitle, status);
+        const facts = document.createElement('div');
+        facts.className = 'log-entry__facts';
+        for (const [label, value] of [['Run', `#${record.run} · ${record.event} event`], ['Commit', record.sha], ['Duration', `${record.seconds} seconds`]]) {
+          const fact = document.createElement('div');
+          const factLabel = document.createElement('span');
+          factLabel.className = 'log-entry__fact-label';
+          factLabel.textContent = label;
+          const factValue = document.createElement('span');
+          factValue.className = 'log-entry__fact-value';
+          factValue.textContent = value;
+          fact.append(factLabel, factValue);
+          facts.append(fact);
+        }
+        const steps = document.createElement('ul');
+        steps.className = 'log-entry__steps';
+        for (const label of (record.steps || ['Assemble static site', 'Upload site', 'Deploy to GitHub Pages'])) {
+          const step = document.createElement('li');
+          step.textContent = label;
+          steps.append(step);
+        }
+        details.append(detailsHeader, facts, steps);
+        item.append(date, title, details);
+        fragment.append(item);
+      }
+      list.replaceChildren(fragment);
+    })();
+  </script>
+</body>
+</html>

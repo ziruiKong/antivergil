@@ -68,6 +68,7 @@ await writeFile(
   withRootBase(await readFile(path.join(root, "index.html"), "utf8")),
 );
 await writeRoute("home", "home.html");
+await writeRoute("devlog", "devlog.html");
 await writeRoute("about", "home.html");
 await writeRoute("login", "login.html");
 await writeRoute("onboarding", "profile.html");

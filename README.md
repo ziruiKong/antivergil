@@ -13,6 +13,7 @@
 - `/planner/`：学业规划
 - `/calendar/`：日历
 - `/map/`：校园地图
+- `/devlog/`：GitHub Pages 部署记录
 
 本地运行 `node serve.mjs` 后可以直接访问上述路径，旧 `.html` 和 `#/...` 链接会自动跳转到新地址。
 
