@@ -52,6 +52,26 @@
     { id: "other", label: "Other / Interdisciplinary", stages: ["undergraduate", "graduate"], deptCodes: [], keywords: [] },
   ];
 
+  const liberalArtsMajors = [
+    "computer-science", "data-science", "economics", "mathematics", "statistics",
+    "political-science", "sociology", "psychology", "history", "english",
+    "art-history", "east-asian-studies", "biology", "chemistry", "physics", "other",
+  ];
+  const SCHOOL_MAJORS = {
+    "columbia-college": liberalArtsMajors,
+    "general-studies": liberalArtsMajors,
+    barnard: liberalArtsMajors,
+    engineering: ["computer-science", "data-science", "financial-engineering", "operations-research", "mathematics", "statistics", "biology", "chemistry", "physics", "other"],
+    gsas: ["computer-science", "data-science", "economics", "operations-research", "mathematics", "statistics", "qmss", "political-science", "sociology", "psychology", "history", "english", "art-history", "east-asian-studies", "biology", "chemistry", "physics", "other"],
+    business: ["business", "finance", "analytics", "economics", "statistics", "data-science", "other"],
+    sipa: ["economics", "statistics", "data-science", "qmss", "political-science", "public-policy", "sociology", "history", "other"],
+    mailman: ["public-health", "biology", "statistics", "data-science", "psychology", "economics", "public-policy", "other"],
+    journalism: ["journalism", "political-science", "sociology", "history", "data-science", "other"],
+    law: ["law", "political-science", "public-policy", "history", "sociology", "other"],
+    "teachers-college": ["education", "psychology", "sociology", "public-policy", "other"],
+    "other-school": null,
+  };
+
   const INTEREST_OPTIONS = [
     { id: "technology", label: "Technology & AI", deptCodes: ["COMS", "IEOR"], keywords: ["computer", "software", "artificial intelligence", "machine learning", "algorithm"] },
     { id: "finance", label: "Finance & Markets", deptCodes: ["FINC", "BUEC", "ECON", "ACCT"], keywords: ["finance", "investment", "market", "valuation"] },
@@ -222,6 +242,7 @@
     KEY_PREFIX,
     SCHOOL_OPTIONS,
     MAJOR_OPTIONS,
+    SCHOOL_MAJORS,
     INTEREST_OPTIONS,
     WORKLOAD_OPTIONS,
     SCHOOL_DEPTS,

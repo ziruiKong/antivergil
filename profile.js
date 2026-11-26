@@ -43,6 +43,11 @@
     return items.filter((item) => !item.stages || item.stages.includes(state.stage));
   }
 
+  function majorsForSelection() {
+    const allowedMajors = store.SCHOOL_MAJORS?.[state.school];
+    return choicesForStage(store.MAJOR_OPTIONS).filter((item) => !allowedMajors || allowedMajors.includes(item.id));
+  }
+
   function choiceMarkup(item, selected, extra = "") {
     return `<button class="profile-choice${selected ? " is-selected" : ""}" type="button" data-${extra || "choice"}="${esc(item.id)}" aria-pressed="${selected}">${esc(item.label)}</button>`;
   }
@@ -69,12 +74,13 @@
         </div>`;
     }
     if (index === 2) {
-      const majors = choicesForStage(store.MAJOR_OPTIONS);
+      const majors = majorsForSelection();
       return `
         <h2 tabindex="-1">What do you study?</h2>
+        <p class="profile-major-context">Fields for ${esc(store.schoolLabel(state))}</p>
         <input class="profile-major-search" id="profile-major-search" type="search" value="${esc(state.majorQuery)}" placeholder="Find your major or field" autocomplete="off">
         <div class="profile-major-grid" id="profile-major-grid">
-          ${majors.filter((item) => item.label.toLowerCase().includes(state.majorQuery.toLowerCase())).map((major) => choiceMarkup(major, state.major === major.id, "major")).join("") || `<p class="profile-major-empty">No matching field. Choose “Other / Interdisciplinary”.</p>`}
+          ${majors.filter((item) => item.label.toLowerCase().includes(state.majorQuery.toLowerCase())).map((major) => choiceMarkup(major, state.major === major.id, "major")).join("") || `<p class="profile-major-empty">No matching field for this school.</p>`}
         </div>`;
     }
     if (index === 3) {
@@ -156,13 +162,15 @@
     if (stage) {
       state.stage = stage.dataset.stage;
       if (!store.SCHOOL_OPTIONS[state.stage]?.some((item) => item.id === state.school)) state.school = "";
-      if (state.major && !choicesForStage(store.MAJOR_OPTIONS).some((item) => item.id === state.major)) state.major = "";
+      if (state.major && !majorsForSelection().some((item) => item.id === state.major)) state.major = "";
       advance(1);
       return;
     }
     const school = event.target.closest("[data-school]");
     if (school) {
       state.school = school.dataset.school;
+      if (state.major && !majorsForSelection().some((item) => item.id === state.major)) state.major = "";
+      state.majorQuery = "";
       advance(2);
       return;
     }
