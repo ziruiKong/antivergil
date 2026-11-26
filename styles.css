@@ -15075,7 +15075,7 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
 #search-results {
   grid-template-columns: repeat(auto-fit, 394px);
   justify-content: start;
-  column-gap: 12px;
+  column-gap: 0;
 }
 
 @media (min-width: 431px) and (max-width: 827px) {
