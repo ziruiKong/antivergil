@@ -15099,23 +15099,48 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
   white-space: nowrap;
 }
 
-/* Bridge the two inner stamp cuts with one shared perforated seam. */
-#search-results > .course-card.stamp-edge-right::after {
-  opacity: 0 !important;
+/* Join adjacent search tickets edge-to-edge, with one shared perforation. */
+#search-results > .course-card.stamp-edge-right::after { content: none !important; }
+
+#search-results > .course-card.stamp-edge-right:not(.stamp-edge-left) > .stamp-shape {
+  -webkit-mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 0 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
+  mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 0 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
 }
 
-#search-results > .course-card.stamp-edge-left::before {
+#search-results > .course-card.stamp-edge-left:not(.stamp-edge-right) > .stamp-shape {
+  -webkit-mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
+  mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 2px, #000 2.4px) 0 0 / 100% 12px no-repeat round;
+}
+
+#search-results > .course-card.stamp-edge-left.stamp-edge-right > .stamp-shape {
+  -webkit-mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat;
+  mask:
+    radial-gradient(circle at 50% 0, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat,
+    radial-gradient(circle at 50% 100%, transparent 2px, #000 2.4px) 0 0 / 12px 100% round no-repeat;
+}
+
+#search-results > .course-card.stamp-edge-left > .stamp-shape::after {
   content: "" !important;
   position: absolute;
-  z-index: 3;
+  z-index: 1;
   top: 0;
   bottom: 0;
-  left: -8px;
-  width: 16px;
+  left: 0;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, #a6a69f 0 1px, transparent 1px 6px);
   pointer-events: none;
-  background-color: #fefefd;
-  background-image: repeating-linear-gradient(to bottom, #a6a69f 0 1px, transparent 1px 6px);
-  background-position: center;
-  background-size: 1px 6px;
-  background-repeat: repeat-y;
 }

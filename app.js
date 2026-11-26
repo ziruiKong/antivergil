@@ -1435,10 +1435,14 @@ function decorateStampCards(selector) {
   const columns = getComputedStyle(list).gridTemplateColumns
     .split(/\s+/)
     .filter((track) => Number.parseFloat(track) > 0.5).length || 1;
+  const lastRowStart = Math.floor((cards.length - 1) / columns) * columns;
+  const lastRowColumns = cards.length - lastRowStart;
   cards.forEach((card, index) => {
     const column = index % columns;
+    const rowStart = Math.floor(index / columns) * columns;
+    const rowColumns = rowStart === lastRowStart ? lastRowColumns : columns;
     card.classList.toggle("stamp-edge-left", column > 0);
-    card.classList.toggle("stamp-edge-right", column < columns - 1);
+    card.classList.toggle("stamp-edge-right", column < rowColumns - 1);
     card.classList.toggle("stamp-edge-bottom", index + columns < cards.length);
     card.style.setProperty("--stamp-column", String(column));
   });
