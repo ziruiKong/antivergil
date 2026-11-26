@@ -1432,7 +1432,9 @@ function decorateStampCards(selector) {
   if (!list) return;
   const cards = [...list.querySelectorAll(":scope > .course-card")];
   if (!cards.length) return;
-  const columns = getComputedStyle(list).gridTemplateColumns.split(/\s+/).filter(Boolean).length || 1;
+  const columns = getComputedStyle(list).gridTemplateColumns
+    .split(/\s+/)
+    .filter((track) => Number.parseFloat(track) > 0.5).length || 1;
   cards.forEach((card, index) => {
     const column = index % columns;
     card.classList.toggle("stamp-edge-right", column < columns - 1);

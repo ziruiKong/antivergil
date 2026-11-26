@@ -10687,13 +10687,10 @@ body.join-page-open {
   }
 }
 
-/* Three-up browse index and connected two-up search results */
-#course-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
+/* Three-up course index with a proportional card scale */
+#course-list,
 #search-results {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 #course-list > .course-card,
@@ -15072,4 +15069,21 @@ body.auth-authenticated #view-me .campus-friend-verify button {
 
 body.auth-authenticated #view-me .campus-friend-status.is-error {
   color: #9b3151;
+}
+
+/* Keep search-result tickets adjacent by collapsing unused fixed-width tracks. */
+#search-results {
+  grid-template-columns: repeat(auto-fit, 394px);
+  justify-content: center;
+}
+
+@media (min-width: 431px) and (max-width: 827px) {
+  #search-results { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 430px) {
+  #search-results {
+    grid-template-columns: 394px;
+    justify-content: start;
+  }
 }
