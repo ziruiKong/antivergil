@@ -81,11 +81,11 @@ function completeSignIn(user) {
   const profile = window.AntivergilProfile?.read(user.email);
   if (!profile) {
     try { sessionStorage.setItem(NEXT_KEY, next); } catch (_) {}
-    location.assign("/onboarding/");
+    location.replace("/onboarding/");
     return;
   }
   try { sessionStorage.removeItem(NEXT_KEY); } catch (_) {}
-  location.assign(next);
+  location.replace(next);
 }
 
 function loadGoogleScript() {
@@ -232,6 +232,60 @@ const codeForm = $("#code-form");
 const feedback = $("#verification-feedback");
 const localCodePreview = ["localhost", "127.0.0.1"].includes(location.hostname)
   && new URLSearchParams(location.search).get("preview") === "code";
+
+function savedUser() {
+  let user = null;
+  try { user = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch {}
+  if (!user?.email) {
+    try {
+      const entry = document.cookie.split("; ").find((item) => item.startsWith(`${AUTH_COOKIE}=`));
+      user = entry ? JSON.parse(decodeURIComponent(entry.slice(AUTH_COOKIE.length + 1))) : null;
+    } catch {}
+  }
+  return isValidEmail(user?.email) ? user : null;
+}
+
+function clearRestoredVerification() {
+  codeInput.value = "";
+  codeInput.readOnly = false;
+  codeForm.hidden = true;
+  codeForm.removeAttribute("aria-busy");
+  codeForm.classList.remove("verification-error", "verification-success");
+  feedback.textContent = "";
+  $("#code-destination").textContent = "";
+  verificationEmailAddress = "";
+  verificationCredential = "";
+  manualEmailMode = false;
+  lastSubmittedCode = "";
+  verifyingCode = false;
+  verifiedCode = false;
+  $("#registration-email").value = "";
+  $("#email-register-form").hidden = true;
+  $("#show-email-register").hidden = false;
+  setGoogleControlVisible(true);
+  clearStatus();
+}
+
+window.addEventListener("pageshow", () => {
+  if (localCodePreview || (codeForm.hidden && !codeInput.value)) return;
+  const wasShowingVerification = !codeForm.hidden;
+  clearRestoredVerification();
+  if (!wasShowingVerification) return;
+
+  const user = savedUser();
+  if (!user) return;
+  const next = safeNextPath();
+  if (!window.AntivergilProfile?.read(user.email)) {
+    try {
+      if (!sessionStorage.getItem(NEXT_KEY)) sessionStorage.setItem(NEXT_KEY, next);
+    } catch {}
+    location.replace("/onboarding/");
+    return;
+  }
+  try { sessionStorage.removeItem(NEXT_KEY); } catch {}
+  location.replace(next);
+});
+
 if (localCodePreview) {
   requestAnimationFrame(() => showCodeEntry("student@student.ubc.ca"));
 }
@@ -254,7 +308,11 @@ async function verifyEnteredCode() {
     verifiedCode = true;
     codeForm.classList.add("verification-success");
     feedback.textContent = "";
-    window.setTimeout(() => completeSignIn(user), 350);
+    window.setTimeout(() => {
+      codeInput.value = "";
+      codeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      completeSignIn(user);
+    }, 350);
   } catch (error) {
     codeForm.classList.remove("verification-error");
     void codeForm.offsetWidth;
