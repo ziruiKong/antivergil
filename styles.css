@@ -10687,10 +10687,13 @@ body.join-page-open {
   }
 }
 
-/* Three-up course index with a proportional card scale */
-#course-list,
-#search-results {
+/* Three-up browse index and connected two-up search results */
+#course-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#search-results {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 #course-list > .course-card,
