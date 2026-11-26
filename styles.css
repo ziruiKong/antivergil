@@ -14753,7 +14753,8 @@ body.auth-authenticated #view-me .campus-friends .my-panel-head {
 body.auth-authenticated #view-me .campus-friends .campus-friend-toolbar {
   display: grid;
   grid-template-columns: minmax(170px, .7fr) minmax(0, 1.3fr);
-  align-items: end;
+  grid-auto-rows: minmax(88px, auto);
+  align-items: stretch;
   gap: 12px;
 }
 
