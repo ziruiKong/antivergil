@@ -290,6 +290,8 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 .email-register-link:hover,
 .email-back-link:hover { color: var(--ink); text-decoration: none; }
+.email-register-link { text-decoration: underline; text-underline-offset: 3px; }
+.email-register-link:hover { text-decoration: underline; }
 .email-register-row {
   display: flex;
   align-items: stretch;
