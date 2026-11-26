@@ -14733,3 +14733,236 @@ body.auth-authenticated .my-page {
     display: none;
   }
 }
+
+/* Keep Friends in the profile stack and use the same quiet card language. */
+body.auth-authenticated #view-me .campus-friends {
+  min-height: 0;
+  margin: 16px 0 0;
+  padding: 22px 23px 23px;
+  border: 0;
+  border-radius: 2px;
+  background: #eeeee8;
+  box-shadow: none;
+  color: var(--sa-ink);
+}
+
+body.auth-authenticated #view-me .campus-friends .my-panel-head {
+  margin-bottom: 15px;
+}
+
+body.auth-authenticated #view-me .campus-friends .campus-friend-toolbar {
+  display: grid;
+  grid-template-columns: minmax(170px, .7fr) minmax(0, 1.3fr);
+  align-items: end;
+  gap: 12px;
+}
+
+body.auth-authenticated #view-me .campus-friend-code,
+body.auth-authenticated #view-me .campus-friend-invite {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(18, 18, 18, .14);
+  background: rgba(255, 255, 255, .58);
+}
+
+body.auth-authenticated #view-me .campus-friend-code > span,
+body.auth-authenticated #view-me .campus-friend-invite > label {
+  color: var(--sa-ink-2);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+body.auth-authenticated #view-me .campus-friend-code code {
+  width: fit-content;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(18, 18, 18, .14);
+  background: #f8f8f4;
+  color: var(--sa-ink);
+  font: 600 12px/1.2 var(--sa-font);
+  letter-spacing: .04em;
+  user-select: all;
+}
+
+body.auth-authenticated #view-me .campus-friend-invite-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+body.auth-authenticated #view-me .campus-friend-invite input,
+body.auth-authenticated #view-me .campus-friends button {
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 11px;
+  border: 1px solid rgba(18, 18, 18, .2);
+  border-radius: 0;
+  background: #fff;
+  color: var(--sa-ink);
+  font: 600 11px/1.2 var(--sa-font);
+}
+
+body.auth-authenticated #view-me .campus-friend-invite input {
+  width: 100%;
+  font-weight: 400;
+}
+
+body.auth-authenticated #view-me .campus-friends button {
+  cursor: pointer;
+}
+
+body.auth-authenticated #view-me .campus-friend-invite button,
+body.auth-authenticated #view-me .campus-friend-list [data-friend-action="open"],
+body.auth-authenticated #view-me .campus-friend-profile button {
+  border-color: var(--sa-ink);
+  background: var(--sa-ink);
+  color: #fff;
+}
+
+body.auth-authenticated #view-me .campus-friends button:hover {
+  border-color: #1e6ef3;
+  background: #1e6ef3;
+  color: #fff;
+}
+
+body.auth-authenticated #view-me .campus-friend-status {
+  min-height: 0;
+  margin: 10px 0 0;
+  color: var(--sa-ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+body.auth-authenticated #view-me .campus-friend-status:empty {
+  display: none;
+}
+
+body.auth-authenticated #view-me .campus-friend-list {
+  margin: 12px 0 0;
+}
+
+body.auth-authenticated #view-me .campus-friend-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(18, 18, 18, .14);
+}
+
+body.auth-authenticated #view-me .campus-friend-list li b {
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+body.auth-authenticated #view-me .campus-friend-profile {
+  margin-top: 14px;
+  padding: 15px 0 0;
+  border-top: 1px solid rgba(18, 18, 18, .16);
+}
+
+body.auth-authenticated #view-me .campus-friend-profile h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+body.auth-authenticated #view-me .campus-friend-profile h4 {
+  margin: 16px 0 8px;
+  color: var(--sa-ink-2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  body.auth-authenticated #view-me .campus-friends {
+    padding: 18px;
+  }
+
+  body.auth-authenticated #view-me .campus-friend-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  body.auth-authenticated #view-me .campus-friend-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  body.auth-authenticated #view-me .campus-friend-list li b {
+    grid-column: 1 / -1;
+  }
+
+  body.auth-authenticated #view-me .campus-friend-invite-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Keep the one remaining profile action compact and aligned to the right. */
+body.auth-authenticated #view-me .my-footer-actions {
+  justify-content: flex-end;
+}
+
+body.auth-authenticated #view-me .my-footer-actions [data-my-signout] {
+  flex: 0 0 auto;
+  min-width: 116px;
+  margin-left: auto;
+}
+
+/* Keep verification inline as a quiet fallback if Google requires an email code. */
+body.auth-authenticated #view-me .campus-friend-verify[hidden] {
+  display: none !important;
+}
+
+body.auth-authenticated #view-me .campus-friend-verify {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+body.auth-authenticated #view-me .campus-friend-verify label {
+  color: var(--sa-ink-2);
+  font-size: 11px;
+}
+
+body.auth-authenticated #view-me .campus-friend-verify > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+body.auth-authenticated #view-me .campus-friend-verify input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(18, 18, 18, .2);
+  border-radius: 0;
+  background: #fff;
+  color: var(--sa-ink);
+  font: 500 13px/1.2 var(--sa-font);
+  letter-spacing: .08em;
+}
+
+body.auth-authenticated #view-me .campus-friend-verify button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-color: var(--sa-ink);
+  background: var(--sa-ink);
+  color: #fff;
+}
+
+body.auth-authenticated #view-me .campus-friend-status.is-error {
+  color: #9b3151;
+}

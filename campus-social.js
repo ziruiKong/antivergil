@@ -19,19 +19,27 @@
   function renderFriends(message = "") {
     if (!panel || !user) return;
     if (!social) {
-      panel.innerHTML = `<h2>Friends</h2><p>${text(message || "Loading…")}</p>
-        <a href="/login/?next=%2Faccount%2F">Reconnect Google</a>`;
+      const needsGoogle = !user.sub;
+      panel.innerHTML = `<div class="my-panel-head"><h2>Friends</h2><span>Share course plans</span></div>
+        <p class="campus-friend-status" role="status" aria-live="polite">${text(message || (needsGoogle ? "Friends will be ready when Google is connected." : "Loading…"))}</p>
+        ${needsGoogle ? `<form class="campus-friend-verify" data-campus-google-verify hidden>
+            <label for="campus-google-code">Verification code</label>
+            <div><input id="campus-google-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="6-digit code">
+              <button type="submit">Verify</button></div>
+          </form>` : `<a class="campus-friend-connect" href="/login/?next=%2Faccount%2F">Reconnect Google <span aria-hidden="true">↗</span></a>`}`;
       return;
     }
     const selected = social.friends.find((friend) => friend.code === activeFriend && friend.accepted);
     const shares = selected ? social.shares.filter((entry) => entry.code === selected.code) : [];
-    panel.innerHTML = `<h2>Friends</h2>
-      <div class="campus-friend-controls"><label>Your friend code <code>${text(social.code)}</code></label>
-        <form id="campus-friend-invite"><label for="campus-friend-code">Add a friend</label>
-          <input id="campus-friend-code" name="code" required pattern="[A-Za-z0-9_\\-]{12}" maxlength="12" placeholder="Friend code">
-          <button type="submit">Send request</button>
-        </form></div>
-      <p id="campus-friend-status" role="status">${text(message)}</p>
+    panel.innerHTML = `<div class="my-panel-head"><h2>Friends</h2><span>Share course plans</span></div>
+      <div class="campus-friend-toolbar">
+        <div class="campus-friend-code"><span>Your friend code</span><code>${text(social.code)}</code></div>
+        <form id="campus-friend-invite" class="campus-friend-invite"><label for="campus-friend-code">Add a friend</label>
+          <div class="campus-friend-invite-row"><input id="campus-friend-code" name="code" required pattern="[A-Za-z0-9_\\-]{12}" maxlength="12" placeholder="Friend code">
+          <button type="submit">Send request</button></div>
+        </form>
+      </div>
+      <p id="campus-friend-status" class="campus-friend-status" role="status">${text(message)}</p>
       <ul class="campus-friend-list">${social.friends.map((friend) => `<li><b>${text(friend.name)}</b>
         ${friend.accepted ? `<button data-friend-action="open" data-code="${text(friend.code)}">View profile</button>`
           : friend.outgoing ? '<span>Request sent</span>'
@@ -77,7 +85,14 @@
 
   panel?.addEventListener("submit", (event) => {
     event.preventDefault();
-    perform("invite", new FormData(event.target).get("code").trim());
+    if (event.target.matches("[data-campus-google-verify]")) {
+      const code = new FormData(event.target).get("code").trim();
+      document.dispatchEvent(new CustomEvent("campus-google-verification", { detail: { code } }));
+      return;
+    }
+    if (event.target.id === "campus-friend-invite") {
+      perform("invite", new FormData(event.target).get("code").trim());
+    }
   });
   panel?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-friend-action]");
@@ -258,11 +273,29 @@
   }, 12000);
 
   window.CampusSocial = {
+    setGoogleConnectStatus(message, error = false) {
+      const status = find("campus-friend-status");
+      if (!status) return;
+      status.textContent = message || "";
+      status.classList.toggle("is-error", Boolean(error));
+    },
+    showGoogleVerification(email) {
+      const status = find("campus-friend-status");
+      const form = panel?.querySelector("[data-campus-google-verify]");
+      if (status) {
+        status.textContent = `A code was sent to ${email}. Enter it here to finish connecting.`;
+        status.classList.remove("is-error");
+      }
+      if (form) {
+        form.hidden = false;
+        form.querySelector("input")?.focus();
+      }
+    },
     setAccount(account, currentTerm) {
       const changed = user?.sub !== account?.sub || term !== currentTerm;
       user = account;
       term = currentTerm;
-      panel.hidden = !user?.sub;
+      if (panel) panel.hidden = !user;
       if (changed) renderFriends();
       if (user?.sub) refresh();
     },

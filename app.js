@@ -6337,8 +6337,108 @@ function handleGoogleCredential(response) {
   }
 }
 
+let friendsGoogleCredential = "";
+const friendsEmailAuthEndpoint = new URL("/api/email-auth", window.COLUMBIA_AUTH?.scheduleApi || location.origin).href;
+
+function setFriendsGoogleStatus(message, error = false) {
+  window.CampusSocial?.setGoogleConnectStatus(message, error);
+}
+
+async function finishFriendsGoogleConnection(result) {
+  if (!result?.token || !result.user) throw new Error("Google connection could not be completed. Try again.");
+  localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
+  authUser = { ...result.user, email: String(result.user.email || "").toLowerCase() };
+  saveAuthUser(authUser);
+  try {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${AUTH_COOKIE}=${encodeURIComponent(JSON.stringify(authUser))}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
+  } catch { /* local storage remains the primary session */ }
+  friendsGoogleCredential = "";
+  renderRailBrand();
+  renderAccount();
+  restoreProfileSchedule();
+  renderCalendar();
+  refreshMapPins();
+  renderMyPage();
+  refreshCloudSchedule({ force: true, repaint: true });
+  setFriendsGoogleStatus("Connected. Friends are ready.");
+  toast("Google connected.");
+}
+
+async function requestFriendsGoogleAuth(credential, code = "") {
+  const payloadPart = String(credential || "").split(".")[1];
+  if (!payloadPart) throw new Error("Google sign-in expired. Try again.");
+  let payload;
+  try {
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    payload = JSON.parse(atob(normalized + "=".repeat((4 - normalized.length % 4) % 4)));
+  } catch { throw new Error("Google sign-in could not be verified. Try again."); }
+  const selectedEmail = String(payload.email || "").toLowerCase();
+  if (!payload.email_verified || selectedEmail !== String(authUser?.email || "").toLowerCase()) {
+    throw new Error("Choose the Google account that matches this profile email.");
+  }
+  const response = await fetch(friendsEmailAuthEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential, ...(code ? { code } : {}) }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Google connection failed. Try again.");
+  if (result.token && result.user) {
+    await finishFriendsGoogleConnection(result);
+    return;
+  }
+  if (result.sent && result.email) {
+    friendsGoogleCredential = credential;
+    window.CampusSocial?.showGoogleVerification(result.email);
+    return;
+  }
+  throw new Error("Google connection could not be completed. Try again.");
+}
+
+async function startFriendsGoogleConnection() {
+  if (!authUser || authUser.sub) return;
+  setFriendsGoogleStatus("Checking Google sign-in…");
+  try {
+    if (!googleConfigured()) throw new Error("Google sign-in is unavailable right now.");
+    await loadGoogleScript();
+    if (!window.google?.accounts?.id) throw new Error("Google sign-in is unavailable right now.");
+    window.google.accounts.id.initialize({
+      client_id: window.COLUMBIA_AUTH.googleClientId,
+      callback: async ({ credential }) => {
+        setFriendsGoogleStatus("Connecting your account…");
+        try { await requestFriendsGoogleAuth(credential); }
+        catch (error) {
+          try { sessionStorage.removeItem("antivergil-friends-google-onetap"); } catch {}
+          setFriendsGoogleStatus(error.message || "Google connection failed.", true);
+        }
+      },
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      login_hint: authUser.email,
+    });
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed?.()) {
+        try { sessionStorage.removeItem("antivergil-friends-google-onetap"); } catch {}
+        setFriendsGoogleStatus("Friends will be ready when you sign in with Google.");
+      }
+    });
+  } catch (error) {
+    try { sessionStorage.removeItem("antivergil-friends-google-onetap"); } catch {}
+    setFriendsGoogleStatus(error.message || "Google connection failed.", true);
+  }
+}
+
+document.addEventListener("campus-google-verification", async (event) => {
+  if (!friendsGoogleCredential) return;
+  setFriendsGoogleStatus("Verifying your email…");
+  try { await requestFriendsGoogleAuth(friendsGoogleCredential, event.detail?.code || ""); }
+  catch (error) { setFriendsGoogleStatus(error.message || "The code could not be verified.", true); }
+});
+
 function renderMyPage() {
   const host = $("#my-page");
+  const friendsPanel = $("#campus-friends");
   if (!host) return;
   if (!authUser) {
     redirectToLogin("/account/");
@@ -6391,6 +6491,7 @@ function renderMyPage() {
       </div>
     </header>
     ${profileSummary}
+    <div id="my-friends-mount"></div>
     <div class="my-grid">
       <section class="my-panel my-schedule-panel">
         <div class="my-panel-head"><h2>Scheduled courses</h2><span>${esc(termShort(state.term))}</span></div>
@@ -6413,16 +6514,20 @@ function renderMyPage() {
       </section>
     </div>
     <div class="my-footer-actions">
-      <button class="btn small primary" type="button" data-my-path="browse">Browse courses</button>
-      <button class="btn small ghost" type="button" data-my-path="planner">Open plan</button>
-      <button class="btn small ghost" type="button" data-my-path="calendar">Calendar</button>
       <button class="btn small ghost" type="button" data-my-signout>Sign out</button>
     </div>`;
+  const friendsMount = host.querySelector("#my-friends-mount");
+  if (friendsPanel && friendsMount) friendsMount.append(friendsPanel);
+  if (friendsPanel && authUser && !authUser.sub && !String(authUser.email || "").endsWith(".local")) {
+    let attempted = false;
+    try { attempted = sessionStorage.getItem("antivergil-friends-google-onetap") === "1"; } catch {}
+    if (!attempted) {
+      try { sessionStorage.setItem("antivergil-friends-google-onetap", "1"); } catch {}
+      window.setTimeout(startFriendsGoogleConnection, 500);
+    }
+  }
   host.querySelectorAll("[data-my-course]").forEach((button) => {
     button.addEventListener("click", () => openCourse(button.dataset.myCourse));
-  });
-  host.querySelectorAll("[data-my-path]").forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.myPath));
   });
   host.querySelector("[data-my-signout]")?.addEventListener("click", signOut);
 }
