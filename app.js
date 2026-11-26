@@ -6358,7 +6358,6 @@ function renderMyPage() {
   const profileSummary = profile
     ? `<section class="my-profile-summary" aria-labelledby="my-profile-title">
         <div class="my-profile-copy">
-          <span class="my-section-kicker">Planner profile</span>
           <h2 id="my-profile-title">${esc(profile.stage === "undergraduate" ? "Undergraduate" : "Graduate")} · ${esc(window.AntivergilProfile.majorLabel(profile))}</h2>
           <p><span>${esc(window.AntivergilProfile.schoolLabel(profile))}</span><i>·</i><span>${esc(window.AntivergilProfile.WORKLOAD_OPTIONS.find((item) => item.id === profile.workload)?.label || "Balanced")}</span></p>
           <div class="my-profile-tags">${window.AntivergilProfile.interestLabels(profile).map((label) => `<span>${esc(label)}</span>`).join("")}</div>
@@ -6371,7 +6370,6 @@ function renderMyPage() {
       <div class="my-identity">
         <div class="my-avatar">${avatar}</div>
         <div class="my-identity-copy">
-          <span class="my-section-kicker">Student account</span>
           <h1>${esc(authUser.name || "Antivergil user")}</h1>
           <p>${esc(authUser.email || "")}</p>
         </div>
@@ -6385,24 +6383,23 @@ function renderMyPage() {
     ${profileSummary}
     <div class="my-grid">
       <section class="my-panel">
-        <div class="my-panel-head"><span>${esc(termShort(state.term))}</span><h2>Scheduled courses</h2></div>
+        <div class="my-panel-head"><h2>Scheduled courses</h2><span>${esc(termShort(state.term))}</span></div>
         <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
         ${state.schedule.length ? `<div class="my-course-list">${state.schedule.map((section) =>
           `<button type="button" data-my-course="${esc(section.code)}"><b>${esc(section.code)}</b><span>${esc(section.title)}</span></button>`).join("")}</div>`
           : '<div class="dept-empty my-empty"><b>No scheduled courses.</b></div>'}
-        <p><a href="/calendar/">Open calendar ↗</a></p>
       </section>
       <section class="my-panel my-plan-panel">
-        <div class="my-panel-head"><span>Workspace</span><h2>Plan</h2></div>
+        <div class="my-panel-head"><h2>Plan</h2></div>
         ${plannedCodes.length ? `<div class="my-course-list">${plannedCodes.map((code) =>
           `<button type="button" data-my-course="${esc(code)}"><b>${esc(code)}</b><span>${esc(titleForCode(code))}</span></button>`).join("")}</div>`
-          : `<div class="dept-empty my-empty"><b>No courses yet.</b><span>Add a course from Browse or your semester plan.</span></div>`}
+          : `<div class="dept-empty my-empty"><b>No courses yet.</b></div>`}
       </section>
       <section class="my-panel">
-        <div class="my-panel-head"><span>Feedback</span><h2>Ratings</h2></div>
+        <div class="my-panel-head"><h2>Ratings</h2></div>
         ${ratings.length ? `<div class="my-rating-list">${ratings.map((item) =>
           `<button type="button" data-my-course="${esc(item.code)}"><b>${esc(item.code)}</b><span>${"★".repeat(item.value)}${"☆".repeat(5 - item.value)}</span></button>`).join("")}</div>`
-          : `<div class="dept-empty my-empty"><b>No ratings yet.</b><span>Rate a course to tune future recommendations.</span></div>`}
+          : `<div class="dept-empty my-empty"><b>No ratings yet.</b></div>`}
       </section>
     </div>
     <div class="my-footer-actions">
