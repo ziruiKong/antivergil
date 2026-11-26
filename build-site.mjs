@@ -19,6 +19,7 @@ const runtimeFiles = [
   "verification-input.js",
   "profile-store.js",
   "schedule-cloud.js",
+  "privacy.js",
   "profile.css",
   "profile.js",
   "campus-model.js",

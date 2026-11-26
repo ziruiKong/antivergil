@@ -29,7 +29,17 @@ const CUSTOM_TERMS_KEY = "cu-custom-terms";
 const TERM_STORAGE_KEY = "cu-selected-term";
 const COURSE_RATINGS_KEY = "cu-course-ratings-v1";
 const PENDING_COURSE_KEY = "cu-auth-pending-course";
+const CONSENT_STORAGE_KEY = "antivergil-consent-v1";
 let courseRatingCache = null;
+
+function preferenceStorageAllowed() {
+  try {
+    const consent = JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY) || "null");
+    return consent?.preferences !== false;
+  } catch {
+    return true;
+  }
+}
 
 function readCourseRatings() {
   if (courseRatingCache) return courseRatingCache;
@@ -53,9 +63,14 @@ function setCourseRating(code, value) {
 }
 
 function readSavedTerm() {
+  if (!preferenceStorageAllowed()) return null;
   try { return localStorage.getItem(TERM_STORAGE_KEY); } catch { return null; }
 }
 function saveSelectedTerm(term) {
+  if (!preferenceStorageAllowed()) {
+    try { localStorage.removeItem(TERM_STORAGE_KEY); } catch { /* ignore */ }
+    return;
+  }
   try { localStorage.setItem(TERM_STORAGE_KEY, term); } catch { /* ignore */ }
 }
 
@@ -2218,6 +2233,7 @@ function makeTermInfo(term) {
 }
 
 function loadCustomTerms() {
+  if (!preferenceStorageAllowed()) return;
   try {
     const saved = JSON.parse(localStorage.getItem(CUSTOM_TERMS_KEY) || "[]");
     for (const t of saved) {
@@ -2227,6 +2243,10 @@ function loadCustomTerms() {
 }
 
 function persistCustomTerms() {
+  if (!preferenceStorageAllowed()) {
+    try { localStorage.removeItem(CUSTOM_TERMS_KEY); } catch { /* ignore */ }
+    return;
+  }
   const custom = SEMESTERS.filter((s) => s.custom).map((s) => s.term);
   localStorage.setItem(CUSTOM_TERMS_KEY, JSON.stringify(custom));
 }
@@ -4456,6 +4476,7 @@ function saveCalendarEvents(events = state.calendarEvents) {
 }
 
 function loadCalendarVisibility() {
+  if (!preferenceStorageAllowed()) return [];
   try {
     const parsed = JSON.parse(localStorage.getItem(CALENDAR_VISIBILITY_KEY) || "[]");
     return Array.isArray(parsed) ? parsed : [];
@@ -4465,6 +4486,10 @@ function loadCalendarVisibility() {
 }
 
 function saveCalendarVisibility() {
+  if (!preferenceStorageAllowed()) {
+    try { localStorage.removeItem(CALENDAR_VISIBILITY_KEY); } catch { /* ignore */ }
+    return;
+  }
   try { localStorage.setItem(CALENDAR_VISIBILITY_KEY, JSON.stringify(state.calendarHiddenSources || [])); } catch {}
 }
 

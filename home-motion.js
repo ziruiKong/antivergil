@@ -15,8 +15,9 @@ function currentSelection(){
 
 function persist(value){
   choices={necessary:true,...value};
-  try {localStorage.setItem(key,JSON.stringify(choices));}catch{}
-  document.querySelector('#cookies').setAttribute('aria-label','Cookie settings saved');
+  if(window.AntivergilPrivacy?.save) window.AntivergilPrivacy.save(value);
+  else try {localStorage.setItem(key,JSON.stringify(choices));}catch{}
+  document.querySelector('#cookies').setAttribute('aria-label','Privacy settings saved');
 }
 
 function showConsent(){
@@ -51,12 +52,18 @@ function scramble(event){
 }
 for(const tile of gallery.children){
   const img=tile.querySelector('img');
-  const title=tile.textContent.replace(' ↗','');
+  const title=tile.dataset.title || tile.textContent.replace(' ↗','');
   const frame=document.createElement('div');
   frame.className='photo-window';
   frame.append(img);
   tile.setAttribute('aria-label',title);
   tile.replaceChildren(frame);
+  if(tile.dataset.credit){
+    const credit=document.createElement('span');
+    credit.className='tile-credit';
+    credit.textContent=tile.dataset.credit;
+    frame.append(credit);
+  }
 }
 for(const link of document.querySelectorAll('nav a')){
   link.addEventListener('pointerenter',()=>scramble({currentTarget:link}));
