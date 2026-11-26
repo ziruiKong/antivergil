@@ -20,10 +20,10 @@
   --muted: #62625b;
   --line: rgba(18, 18, 18, .3);
   --soft-line: rgba(18, 18, 18, .14);
-  --accent: #1e6ef3;
+  --accent: #222;
   --surface: #fff;
   --surface-hover: #f0f0ea;
-  --profile-max: 1060px;
+  --profile-max: 620px;
   --profile-gutter: 24px;
   --marker-size: 24px;
   --step-column: 32px;
@@ -98,25 +98,25 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-page {
   width: min(var(--profile-max), calc(100% - (var(--profile-gutter) * 2)));
-  margin: 20px auto 0;
+  margin: clamp(36px, 7vh, 72px) auto 0;
 }
 
 .profile-progress {
   position: sticky;
   top: 0;
   z-index: 20;
-  width: 100%;
-  height: 10px;
-  margin: 14px 0 0;
-  padding: 4px 0 0;
-  background: var(--paper);
+  width: min(var(--profile-max), calc(100% - (var(--profile-gutter) * 2)));
+  height: 4px;
+  margin: 18px auto 0;
+  padding: 0;
+  background: transparent;
 }
 
 .profile-progress > i {
   position: relative;
   display: block;
   width: 100%;
-  height: 6px;
+  height: 3px;
   overflow: hidden;
   background: var(--soft-line);
 }
@@ -146,7 +146,7 @@ a { -webkit-tap-highlight-color: transparent; }
   display: grid;
   gap: 0;
   margin: 0;
-  padding: 8px 0 0;
+  padding: 18px 0 0;
   list-style: none;
 }
 
@@ -155,7 +155,7 @@ a { -webkit-tap-highlight-color: transparent; }
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
-  padding: 0 10px 34px 0;
+  padding: 0 0 26px;
 }
 
 .profile-step::before {
@@ -185,22 +185,19 @@ a { -webkit-tap-highlight-color: transparent; }
   position: relative;
   z-index: 1;
   min-width: 0;
-  margin-right: 8px;
-  padding: 24px 26px 26px;
-  border: 1.5px solid var(--ink);
-  background: var(--surface);
-  box-shadow:
-    6px 6px 0 0 var(--paper),
-    8px 8px 0 1px var(--ink);
+  margin-right: 0;
+  padding: 30px;
+  border: 0;
+  border-radius: 2px;
+  background: #eeeee8;
+  box-shadow: none;
 }
 
 .profile-step.is-active .profile-step-body {
-  padding: 24px 26px 26px;
-  border-color: var(--ink);
-  background: var(--surface);
-  box-shadow:
-    6px 6px 0 0 var(--paper),
-    8px 8px 0 1px var(--accent);
+  padding: 30px;
+  border: 0;
+  background: #eeeee8;
+  box-shadow: none;
   animation: profile-step-in 360ms cubic-bezier(.16, 1, .3, 1) both;
 }
 
@@ -211,7 +208,8 @@ a { -webkit-tap-highlight-color: transparent; }
 
 .profile-step h2 {
   margin: 0 0 22px;
-  font-size: clamp(24px, 2.8vw, 32px);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(25px, 2.4vw, 30px);
   font-weight: 600;
   letter-spacing: -.05em;
   line-height: 1.08;
@@ -236,11 +234,12 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-choice {
   min-height: 64px;
   padding: 14px 15px;
-  border: 1.5px solid var(--ink);
-  background: var(--surface);
+  border: 1px solid rgba(18, 18, 18, .16);
+  background: rgba(255, 255, 255, .58);
   color: var(--ink);
-  font-size: 14.5px;
-  font-weight: 500;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.25;
   text-align: left;
   cursor: pointer;
@@ -250,15 +249,16 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-choice:hover,
 .profile-choice:focus-visible {
   outline: none;
-  background: var(--surface-hover);
+  border-color: rgba(18, 18, 18, .4);
+  background: rgba(255, 255, 255, .84);
   color: var(--ink);
 }
 
 .profile-choice:active { transform: translateY(1px); }
 
 .profile-choice.is-selected {
-  border-color: var(--ink);
-  background: var(--accent);
+  border-color: #222;
+  background: #222;
   color: #fff;
 }
 
@@ -276,15 +276,15 @@ a { -webkit-tap-highlight-color: transparent; }
   height: 48px;
   margin-bottom: 12px;
   padding: 0 13px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid rgba(18, 18, 18, .16);
   border-radius: 0;
   outline: 0;
-  background: var(--surface);
+  background: rgba(255, 255, 255, .58);
   color: var(--ink);
   font-size: 14px;
 }
 .profile-major-search:focus {
-  outline: 2px solid var(--accent);
+  outline: 1px solid #222;
   outline-offset: -2px;
   background: var(--surface);
 }
@@ -326,9 +326,9 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-interest {
   min-height: 42px;
   padding: 10px 14px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid rgba(18, 18, 18, .16);
   border-radius: 0;
-  background: var(--surface);
+  background: rgba(255, 255, 255, .58);
   color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
@@ -339,12 +339,13 @@ a { -webkit-tap-highlight-color: transparent; }
 .profile-interest:hover,
 .profile-interest:focus-visible {
   outline: none;
-  background: var(--surface-hover);
+  border-color: rgba(18, 18, 18, .4);
+  background: rgba(255, 255, 255, .84);
 }
 
 .profile-interest.is-selected {
-  border-color: var(--ink);
-  background: var(--accent);
+  border-color: #222;
+  background: #222;
   color: #fff;
 }
 
@@ -361,40 +362,35 @@ a { -webkit-tap-highlight-color: transparent; }
   .profile-nav-link { font-size: 12px; }
   .profile-brand { width: 84px; }
   .profile-page {
-    width: auto;
-    margin: 16px 16px 0;
+    width: min(400px, calc(100% - 32px));
+    margin: 22px auto 0;
   }
   .profile-progress {
-    width: 100%;
-    margin: 10px 0 0;
-    padding: 4px 0 0;
+    width: min(400px, calc(100% - 32px));
+    margin: 12px auto 0;
+    padding: 0;
   }
   .profile-step {
     gap: 0;
+    padding-bottom: 18px;
   }
   .profile-step.is-active .profile-step-body {
-    padding: 18px 16px 20px;
+    padding: 18px 16px;
   }
   .profile-step-body {
-    margin-right: 7px;
-    padding: 18px 16px 20px;
-    box-shadow:
-      5px 5px 0 0 var(--paper),
-      7px 7px 0 1px var(--ink);
-  }
-  .profile-step.is-active .profile-step-body {
-    box-shadow:
-      5px 5px 0 0 var(--paper),
-      7px 7px 0 1px var(--accent);
+    margin-right: 0;
+    padding: 18px 16px;
+    box-shadow: none;
   }
   .profile-step h2 {
-    margin-bottom: 18px;
-    font-size: 24px;
+    margin-bottom: 14px;
+    font-size: 22px;
   }
   .profile-options,
   .profile-major-grid { grid-template-columns: 1fr; }
   .profile-major-grid { max-height: 350px; }
-  .profile-choice { min-height: 54px; }
+  .profile-choice { min-height: 46px; padding: 11px 13px; font-size: 13px; }
+  .profile-interest { min-height: 38px; padding: 8px 12px; font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
