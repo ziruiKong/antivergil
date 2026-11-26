@@ -245,6 +245,25 @@ function savedUser() {
   return isValidEmail(user?.email) ? user : null;
 }
 
+let authRedirectStarted = false;
+function redirectSavedUser() {
+  if (localCodePreview || authRedirectStarted) return;
+  const user = savedUser();
+  if (!user) return;
+
+  authRedirectStarted = true;
+  const next = safeNextPath();
+  if (!window.AntivergilProfile?.read(user.email)) {
+    try {
+      if (!sessionStorage.getItem(NEXT_KEY)) sessionStorage.setItem(NEXT_KEY, next);
+    } catch {}
+    location.replace("/onboarding/");
+    return;
+  }
+  try { sessionStorage.removeItem(NEXT_KEY); } catch {}
+  location.replace(next);
+}
+
 function clearRestoredVerification() {
   codeInput.value = "";
   codeInput.readOnly = false;
@@ -266,25 +285,13 @@ function clearRestoredVerification() {
   clearStatus();
 }
 
-window.addEventListener("pageshow", () => {
-  if (localCodePreview || (codeForm.hidden && !codeInput.value)) return;
-  const wasShowingVerification = !codeForm.hidden;
-  clearRestoredVerification();
-  if (!wasShowingVerification) return;
-
-  const user = savedUser();
-  if (!user) return;
-  const next = safeNextPath();
-  if (!window.AntivergilProfile?.read(user.email)) {
-    try {
-      if (!sessionStorage.getItem(NEXT_KEY)) sessionStorage.setItem(NEXT_KEY, next);
-    } catch {}
-    location.replace("/onboarding/");
-    return;
-  }
-  try { sessionStorage.removeItem(NEXT_KEY); } catch {}
-  location.replace(next);
-});
+function restoreLoginPage() {
+  if (localCodePreview) return;
+  if (!codeForm.hidden || codeInput.value) clearRestoredVerification();
+  redirectSavedUser();
+}
+window.addEventListener("pageshow", restoreLoginPage);
+restoreLoginPage();
 
 if (localCodePreview) {
   requestAnimationFrame(() => showCodeEntry("student@student.ubc.ca"));
