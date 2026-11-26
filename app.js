@@ -665,7 +665,7 @@ function getSections() {
 /* ---------- 路由 / 导航 ---------- */
 const NAV = [
   ["browse", "Browse"],
-  ["rankings", "Ranking"],
+  ["me", "Community"],
   ["analysis", "Enrollment"],
   ["planner", "Plan"],
   ["calendar", "Calendar"],
@@ -991,6 +991,9 @@ function buildNav() {
       const toggle = $("#mobile-nav-toggle");
       if (toggle.getAttribute("aria-expanded") === "true") toggle.focus();
       switchView(b.dataset.view);
+      if (b.dataset.view === "me") {
+        requestAnimationFrame(() => $("#campus-friends")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
     });
     const toggle = $("#mobile-nav-toggle");
     toggle.addEventListener("click", () => {
