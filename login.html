@@ -8,7 +8,7 @@
   <script>if(/\/login\.html$/i.test(location.pathname))history.replaceState(null,"","/login/"+location.search);</script>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="login.css?v=20261126-privacy-font-5" />
+  <link rel="stylesheet" href="login.css?v=20261126-verification-link-1" />
 </head>
 <body>
   <main class="login-shell">
@@ -57,6 +57,7 @@
           <form id="code-form" class="email-form" hidden><p class="verification-notice">A six-digit code has been sent to<br><strong id="code-destination"></strong></p><div class="code-input-wrap"><div class="code-digit-display" aria-hidden="true"><span class="code-digit"></span><span class="code-digit"></span><span class="code-digit"></span><span class="code-digit"></span><span class="code-digit"></span><span class="code-digit"></span></div><input id="verification-code" aria-label="Six-digit verification code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /></div><p id="verification-feedback" role="status" aria-live="polite"></p><div class="verification-actions"><button type="button" id="change-email">Switch account</button><button type="button" id="resend-code">Resend code</button></div></form>
           <p class="login-status" id="login-status" aria-live="polite" hidden></p>
         </div>
+        <a class="verification-login-link" href="/login/">Back to sign in</a>
       </div>
     </section>
   </main>
@@ -66,6 +67,6 @@
   <script src="schedule-cloud.js?v=2"></script>
   <script src="privacy.js?v=20261126-privacy-1"></script>
   <script src="verification-input.js?v=1"></script>
-  <script src="login.js?v=20261126-auth-cookie-1"></script>
+  <script src="login.js?v=20261126-code-preview-1"></script>
 </body>
 </html>

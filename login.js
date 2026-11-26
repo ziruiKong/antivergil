@@ -230,6 +230,12 @@ let lastSubmittedCode = "";
 const codeInput = $("#verification-code");
 const codeForm = $("#code-form");
 const feedback = $("#verification-feedback");
+const localCodePreview = ["localhost", "127.0.0.1"].includes(location.hostname)
+  && new URLSearchParams(location.search).get("preview") === "code";
+if (localCodePreview) {
+  requestAnimationFrame(() => showCodeEntry("student@student.ubc.ca"));
+}
+
 async function verifyEnteredCode() {
   const code = codeInput.value;
   if (!/^\d{6}$/.test(code) || verifyingCode || verifiedCode || code === lastSubmittedCode) return;

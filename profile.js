@@ -3,6 +3,8 @@
   const stepsHost = document.querySelector("#profile-steps");
   const progressFill = document.querySelector("#profile-progress-fill");
   const progressRoot = progressFill?.closest(".profile-progress");
+  const localOnboardingPreview = ["localhost", "127.0.0.1"].includes(location.hostname)
+    && new URLSearchParams(location.search).get("preview") === "onboarding";
   let user = null;
   try { user = JSON.parse(localStorage.getItem("cu-auth-user") || "null"); } catch {}
   if (!user?.email) {
@@ -12,6 +14,9 @@
       if (user?.email) localStorage.setItem("cu-auth-user", JSON.stringify(user));
     } catch {}
   }
+  if (localOnboardingPreview) {
+    user = { email: "preview@student.ubc.ca", name: "Preview Student", sub: "local-onboarding-preview" };
+  }
 
   if (!user?.email || !store) {
     try { sessionStorage.setItem("antivergil-next", "/onboarding/"); } catch {}
@@ -19,7 +24,7 @@
     return;
   }
 
-  const existing = store.read(user.email);
+  const existing = localOnboardingPreview ? null : store.read(user.email);
   const state = {
     stage: existing?.stage || "",
     school: existing?.school || "",
@@ -130,6 +135,7 @@
 
   function finishProfile() {
     if (!isComplete(0) || !isComplete(1) || !isComplete(2) || !isComplete(3) || !isComplete(4)) return;
+    if (localOnboardingPreview) return;
     store.save({
       email: user.email,
       stage: state.stage,

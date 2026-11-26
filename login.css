@@ -609,6 +609,26 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 .verification-actions button:hover { color: #111; }
 .verification-actions button:disabled { opacity: .45; cursor: default; }
+.verification-login-link { display: none; }
+.login-panel:has(#code-form:not([hidden])) .verification-login-link {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  display: block;
+  color: var(--ink);
+  font: 700 12px/1.4 Arial, Helvetica, sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.login-panel:has(#code-form:not([hidden])) .verification-login-link:hover {
+  color: #555;
+}
+.login-panel:has(#code-form:not([hidden])) .verification-login-link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
 @media (max-height: 700px) {
   .login-main:has(#code-form:not([hidden])) .login-visual { opacity: .18; }
 }
