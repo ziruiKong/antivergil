@@ -15074,7 +15074,8 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
 /* Keep search-result tickets adjacent by collapsing unused fixed-width tracks. */
 #search-results {
   grid-template-columns: repeat(auto-fit, 394px);
-  justify-content: center;
+  justify-content: start;
+  column-gap: 12px;
 }
 
 @media (min-width: 431px) and (max-width: 827px) {
@@ -15090,10 +15091,10 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
 
 /* Keep the credit value fully inside its metadata cell on compact search tickets. */
 #search-results > .course-card .cc-meta {
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, .9fr) minmax(0, .75fr) 60px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr) minmax(0, 1fr) 64px;
 }
 
 #search-results > .course-card .cc-meta > .chip.credits {
-  padding-inline: 3px;
+  padding-inline: 4px;
   white-space: nowrap;
 }
