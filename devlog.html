@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#f3f3f0">
   <base href="/">
   <title>Development Log | Antivergil</title>
+  <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1">
   <style>
     :root { color-scheme: light; --paper:#f3f3f0; --ink:#121212; --muted:#777873; --rule:rgba(18,18,18,.34); }
     * { box-sizing:border-box; }
@@ -22,25 +24,15 @@
     .log-head,.log-entry { display:grid; grid-template-columns:minmax(220px,32.5%) minmax(0,1fr); }
     .log-head { align-items:end; min-height:54px; padding:0 0 17px; border-bottom:1px solid var(--ink); }
     .log-head span { font:500 15px/1.2 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.035em; text-transform:uppercase; }
-    .log-entry { align-items:center; min-height:96px; padding:25px 0; border-bottom:1px solid var(--rule); outline:none; transition:background-color 160ms ease,color 160ms ease; }
-    .log-entry:hover,.log-entry:focus { background:#171918; color:var(--paper); }
-    .log-entry__date { padding-right:24px; color:#343632; font-size:18px; line-height:1.45; font-variant-numeric:tabular-nums; transition:color 160ms ease; }
-    .log-entry:hover .log-entry__date,.log-entry:focus .log-entry__date { color:#d1d2cd; }
-    .log-entry__title { display:flex; align-items:center; justify-content:space-between; gap:24px; font-size:20px; font-weight:600; line-height:1.4; letter-spacing:.005em; }
+    .log-entry { align-items:center; min-height:110px; padding:25px 14px; border-bottom:1px solid var(--rule); outline:none; transition:background-color 180ms ease; }
+    .log-entry:hover,.log-entry:focus { background:#e8e9e5; }
+    .log-entry__date { padding-right:24px; color:#343632; font-size:21px; line-height:1.4; font-variant-numeric:tabular-nums; }
+    .log-entry__title { display:flex; align-items:center; justify-content:space-between; gap:24px; font-size:23px; font-weight:600; line-height:1.4; letter-spacing:.005em; }
     .log-entry__title::after { flex:none; color:var(--muted); content:"⌄"; font-size:20px; font-weight:400; transition:transform 180ms ease,color 180ms ease; }
-    .log-entry:hover .log-entry__title::after,.log-entry:focus .log-entry__title::after { color:var(--paper); transform:rotate(180deg); }
-    .log-entry__details { grid-column:1 / -1; width:100%; max-height:0; margin-top:0; padding:0 24px; overflow:hidden; background:#171918; color:var(--paper); opacity:0; visibility:hidden; transform:translateY(-8px); transition:max-height 240ms ease,margin 200ms ease,padding 200ms ease,opacity 160ms ease,transform 180ms ease,visibility 180ms; }
-    .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:260px; margin-top:18px; padding:22px 24px 24px; opacity:1; visibility:visible; transform:translateY(0); }
-    .log-entry__details-header { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:18px; }
-    .log-entry__detail-title { margin:0; color:#d1d2cd; font:500 13px/1.3 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.04em; text-transform:uppercase; }
-    .log-entry__status { display:inline-flex; align-items:center; gap:8px; color:#f3f3f0; font-size:15px; font-weight:600; }
-    .log-entry__status::before { width:9px; height:9px; border-radius:50%; background:#91c096; content:""; }
-    .log-entry__facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px 28px; margin-bottom:20px; }
-    .log-entry__fact-label { display:block; margin-bottom:6px; color:#a7aaa3; font:500 11px/1.2 ui-monospace,"SFMono-Regular",Consolas,monospace; letter-spacing:.05em; text-transform:uppercase; }
-    .log-entry__fact-value { display:block; color:var(--paper); font-size:16px; line-height:1.35; font-variant-numeric:tabular-nums; }
-    .log-entry__steps { display:flex; flex-wrap:wrap; gap:10px 24px; margin:0; padding:16px 0 0; border-top:1px solid #565954; list-style:none; }
-    .log-entry__steps li { display:flex; align-items:center; gap:9px; color:#e1e2dd; font-size:14px; line-height:1.4; }
-    .log-entry__steps li::before { color:#91c096; content:"✓"; font-weight:700; }
+    .log-entry:hover .log-entry__title::after,.log-entry:focus .log-entry__title::after { color:var(--ink); transform:rotate(180deg); }
+    .log-entry__details { display:grid; grid-column:1 / -1; grid-template-columns:minmax(220px,32.5%) minmax(0,1fr); width:100%; max-height:0; margin-top:0; overflow:hidden; color:#343632; opacity:0; visibility:hidden; transform:translateY(-5px); transition:max-height 220ms ease,margin 180ms ease,opacity 160ms ease,transform 180ms ease,visibility 180ms; }
+    .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:120px; margin-top:12px; opacity:1; visibility:visible; transform:translateY(0); }
+    .log-entry__summary { grid-column:2; max-width:62ch; margin:0; font-size:19px; line-height:1.55; }
     @media (max-width:700px) {
       .site-header { padding:22px 20px 0; }
       .brand { width:72px; }
@@ -48,10 +40,10 @@
       .log-head,.log-entry { grid-template-columns:minmax(170px,34%) minmax(0,1fr); }
       .log-head { min-height:48px; padding-bottom:14px; }
       .log-head span { font-size:13px; }
-      .log-entry { min-height:82px; padding:19px 0; }
-      .log-entry__date { padding-right:14px; font-size:15px; }
-      .log-entry__title { font-size:17px; }
-      .log-entry__facts { gap:14px 18px; }
+      .log-entry { min-height:88px; padding:19px 10px; }
+      .log-entry__date { padding-right:14px; font-size:17px; }
+      .log-entry__title { font-size:19px; }
+      .log-entry__summary { font-size:16px; }
     }
     @media (max-width:520px) {
       .site-header { padding-top:20px; }
@@ -61,15 +53,12 @@
       .log-head { min-height:38px; padding-bottom:12px; }
       .log-head span { font-size:12px; }
       .log-entry { min-height:0; padding:18px 0; }
-      .log-entry__date { padding:0 0 7px; color:var(--muted); font-size:13px; }
-      .log-entry__title { font-size:17px; }
-      .log-entry__details { padding-right:16px; padding-left:16px; }
-      .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:380px; padding:18px 16px 20px; }
-      .log-entry__details-header { align-items:flex-start; flex-direction:column; gap:10px; margin-bottom:15px; }
-      .log-entry__facts { grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
-      .log-entry__fact-value { font-size:14px; }
-      .log-entry__steps { flex-direction:column; gap:9px; padding-top:13px; }
-      .log-entry__steps li { font-size:13px; }
+      .log-entry { padding:16px 10px; }
+      .log-entry__date { padding:0 0 7px; color:var(--muted); font-size:16px; }
+      .log-entry__title { font-size:19px; }
+      .log-entry__details { grid-template-columns:1fr; }
+      .log-entry:hover .log-entry__details,.log-entry:focus .log-entry__details { max-height:160px; margin-top:9px; }
+      .log-entry__summary { grid-column:1; font-size:16px; line-height:1.5; }
     }
     @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; } }
   </style>
@@ -90,6 +79,28 @@
   <script>
     (() => {
       const records = JSON.parse(document.getElementById('deployment-data').textContent);
+      const summaries = {
+        88: 'Adjusted the Friends panel so its height aligns with the surrounding profile cards.',
+        87: 'Refined the Friends and sign-out actions for a clearer profile experience.',
+        4: 'Refreshed the course snapshots with the latest official enrollment data.',
+        86: 'Restored the complete set of application assets across the site.',
+        85: 'Improved the course details layout for narrow screens.',
+        84: 'Reshaped the profile page using the onboarding card style.',
+        83: 'Returning users now go straight to their profile when their session is saved.',
+        82: 'Cleared verification details when navigating back from onboarding.',
+        81: 'Refined onboarding and connected major choices to school selection.',
+        80: 'Aligned onboarding cards with the verification page styling.',
+        79: 'Restored the email sign-in underline for clearer interaction.',
+        78: 'Kept the verification return action within easy reach.',
+        77: 'Added local sign-in previews and a return path from verification.',
+        76: 'Refined typography across the sign-in actions.',
+        75: 'Matched the email and Google sign-in button styles.',
+        74: 'Improved the visual hierarchy of the email sign-in text.',
+        73: 'Aligned email sign-in typography with the privacy settings.',
+        72: 'Stabilized the homepage gallery and Safari privacy control.',
+        71: 'Added consent-based privacy analytics and refreshed the homepage.',
+        70: 'Released an updated site experience and privacy settings.'
+      };
       const list = document.getElementById('deployment-log');
       const fragment = document.createDocumentFragment();
       for (const record of records) {
@@ -102,39 +113,13 @@
         date.textContent = record.date;
         const title = document.createElement('div');
         title.className = 'log-entry__title';
-        title.textContent = `Run #${record.run} · ${record.title}`;
+        title.textContent = record.title;
         const details = document.createElement('div');
         details.className = 'log-entry__details';
-        const detailsHeader = document.createElement('div');
-        detailsHeader.className = 'log-entry__details-header';
-        const detailTitle = document.createElement('p');
-        detailTitle.className = 'log-entry__detail-title';
-        detailTitle.textContent = `GitHub Actions · ${record.workflow}`;
-        const status = document.createElement('span');
-        status.className = 'log-entry__status';
-        status.textContent = 'Succeeded';
-        detailsHeader.append(detailTitle, status);
-        const facts = document.createElement('div');
-        facts.className = 'log-entry__facts';
-        for (const [label, value] of [['Run', `#${record.run} · ${record.event} event`], ['Commit', record.sha], ['Duration', `${record.seconds} seconds`]]) {
-          const fact = document.createElement('div');
-          const factLabel = document.createElement('span');
-          factLabel.className = 'log-entry__fact-label';
-          factLabel.textContent = label;
-          const factValue = document.createElement('span');
-          factValue.className = 'log-entry__fact-value';
-          factValue.textContent = value;
-          fact.append(factLabel, factValue);
-          facts.append(fact);
-        }
-        const steps = document.createElement('ul');
-        steps.className = 'log-entry__steps';
-        for (const label of (record.steps || ['Assemble static site', 'Upload site', 'Deploy to GitHub Pages'])) {
-          const step = document.createElement('li');
-          step.textContent = label;
-          steps.append(step);
-        }
-        details.append(detailsHeader, facts, steps);
+        const summary = document.createElement('p');
+        summary.className = 'log-entry__summary';
+        summary.textContent = summaries[record.run] || record.title;
+        details.append(summary);
         item.append(date, title, details);
         fragment.append(item);
       }
