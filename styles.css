@@ -14840,21 +14840,89 @@ body.auth-authenticated #view-me .campus-friend-status {
   line-height: 1.4;
 }
 
+body.auth-authenticated #view-me .campus-friend-status.has-update {
+  padding: 10px 12px;
+  border-left: 3px solid #9b3151;
+  background: #f8e9ee;
+  color: #572033;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 body.auth-authenticated #view-me .campus-friend-status:empty {
   display: none;
 }
 
+body.auth-authenticated #view-me .campus-friend-group {
+  margin-top: 17px;
+}
+
+body.auth-authenticated #view-me .campus-friend-group + .campus-friend-group {
+  margin-top: 19px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(18, 18, 18, .14);
+}
+
+body.auth-authenticated #view-me .campus-friend-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.auth-authenticated #view-me .campus-friend-group-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.auth-authenticated #view-me .campus-friend-request-count {
+  padding: 4px 8px;
+  border: 1px solid rgba(18, 18, 18, .18);
+  color: var(--sa-ink-2);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+body.auth-authenticated #view-me .campus-friend-request-count.has-requests {
+  border-color: #9b3151;
+  background: #9b3151;
+  color: #fff;
+  font-weight: 700;
+}
+
+body.auth-authenticated #view-me .campus-friend-empty {
+  margin: 8px 0 0;
+  color: var(--sa-ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 body.auth-authenticated #view-me .campus-friend-list {
-  margin: 12px 0 0;
+  margin: 7px 0 0;
 }
 
 body.auth-authenticated #view-me .campus-friend-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 10px 0;
   border-top: 1px solid rgba(18, 18, 18, .14);
+}
+
+body.auth-authenticated #view-me .campus-friend-list li.is-incoming {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+  border: 1px solid rgba(155, 49, 81, .3);
+  background: #fff8fa;
+}
+
+body.auth-authenticated #view-me .campus-friend-person {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 5px;
 }
 
 body.auth-authenticated #view-me .campus-friend-list li b {
@@ -14863,6 +14931,35 @@ body.auth-authenticated #view-me .campus-friend-list li b {
   font-size: 13px;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+body.auth-authenticated #view-me .campus-friend-tag {
+  color: var(--sa-ink-2);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+body.auth-authenticated #view-me .campus-friend-list li.is-incoming .campus-friend-tag {
+  color: #8c2947;
+  font-weight: 700;
+}
+
+body.auth-authenticated #view-me .campus-friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+body.auth-authenticated #view-me .campus-friend-list li.is-incoming [data-friend-action="accept"] {
+  border-color: #9b3151;
+  background: #9b3151;
+  color: #fff;
+}
+
+body.auth-authenticated #view-me .campus-friend-list li.is-incoming [data-friend-action="accept"]:hover {
+  border-color: #7f263f;
+  background: #7f263f;
 }
 
 body.auth-authenticated #view-me .campus-friend-profile {
@@ -14898,11 +14995,17 @@ body.auth-authenticated #view-me .campus-friend-profile h4 {
 
 @media (max-width: 420px) {
   body.auth-authenticated #view-me .campus-friend-list li {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  body.auth-authenticated #view-me .campus-friend-list li b {
-    grid-column: 1 / -1;
+  body.auth-authenticated #view-me .campus-friend-actions,
+  body.auth-authenticated #view-me .campus-friend-list li > button {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  body.auth-authenticated #view-me .campus-friend-actions {
+    justify-content: flex-start;
   }
 
   body.auth-authenticated #view-me .campus-friend-invite-row {

@@ -29,8 +29,19 @@
           </form>` : `<a class="campus-friend-connect" href="/login/?next=%2Faccount%2F">Reconnect Google <span aria-hidden="true">↗</span></a>`}`;
       return;
     }
-    const selected = social.friends.find((friend) => friend.code === activeFriend && friend.accepted);
+    const incoming = social.friends.filter((friend) => !friend.accepted && !friend.outgoing);
+    const outgoing = social.friends.filter((friend) => !friend.accepted && friend.outgoing);
+    const accepted = social.friends.filter((friend) => friend.accepted);
+    const selected = accepted.find((friend) => friend.code === activeFriend);
     const shares = selected ? social.shares.filter((entry) => entry.code === selected.code) : [];
+    const incomingRows = incoming.map((friend) => `<li class="is-incoming"><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Needs your response</span></div>
+      <div class="campus-friend-actions"><button data-friend-action="accept" data-code="${text(friend.code)}">Accept</button>
+      <button data-friend-action="remove" data-code="${text(friend.code)}">Decline</button></div></li>`).join("");
+    const outgoingRows = outgoing.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Awaiting response</span></div>
+      <button data-friend-action="remove" data-code="${text(friend.code)}">Cancel request</button></li>`).join("");
+    const acceptedRows = accepted.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b></div>
+      <div class="campus-friend-actions"><button data-friend-action="open" data-code="${text(friend.code)}">View profile</button>
+      <button data-friend-action="remove" data-code="${text(friend.code)}">Remove</button></div></li>`).join("");
     panel.innerHTML = `<div class="my-panel-head"><h2>Friends</h2><span>Share course plans</span></div>
       <div class="campus-friend-toolbar">
         <div class="campus-friend-code"><span>Your friend code</span><code>${text(social.code)}</code></div>
@@ -39,12 +50,18 @@
           <button type="submit">Send request</button></div>
         </form>
       </div>
-      <p id="campus-friend-status" class="campus-friend-status" role="status">${text(message)}</p>
-      <ul class="campus-friend-list">${social.friends.map((friend) => `<li><b>${text(friend.name)}</b>
-        ${friend.accepted ? `<button data-friend-action="open" data-code="${text(friend.code)}">View profile</button>`
-          : friend.outgoing ? '<span>Request sent</span>'
-            : `<button data-friend-action="accept" data-code="${text(friend.code)}">Accept</button>`}
-        <button data-friend-action="remove" data-code="${text(friend.code)}">${friend.accepted ? "Remove" : friend.outgoing ? "Cancel" : "Decline"}</button></li>`).join("")}</ul>
+      <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
+      <section class="campus-friend-group" aria-labelledby="campus-incoming-heading">
+        <div class="campus-friend-group-head"><h3 id="campus-incoming-heading">Incoming requests</h3>
+          <span class="campus-friend-request-count ${incoming.length ? "has-requests" : ""}">${incoming.length ? `${incoming.length} waiting` : "None"}</span></div>
+        ${incoming.length ? `<ul class="campus-friend-list">${incomingRows}</ul>` : '<p class="campus-friend-empty">No new requests right now.</p>'}
+      </section>
+      ${outgoing.length ? `<section class="campus-friend-group" aria-labelledby="campus-outgoing-heading">
+        <div class="campus-friend-group-head"><h3 id="campus-outgoing-heading">Sent requests</h3></div>
+        <ul class="campus-friend-list">${outgoingRows}</ul></section>` : ""}
+      ${accepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
+        <div class="campus-friend-group-head"><h3 id="campus-accepted-heading">Your friends</h3></div>
+        <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
       ${selected ? `<section class="campus-friend-profile">
         <h3>${text(selected.name)}</h3>
         <button data-friend-action="share" data-code="${text(selected.code)}">Share my ${text(term.replace("-", " "))} courses</button>
@@ -58,10 +75,24 @@
     const account = user.sub;
     request = call().then((response) => {
       if (user?.sub !== account) return;
-      const changed = !social || JSON.stringify([social.code, social.shares, social.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])])
+      const previous = social;
+      const acceptedByOther = previous?.friends.find((friend) => friend.outgoing && !friend.accepted
+        && response.friends.some((next) => next.code === friend.code && next.accepted));
+      const newIncoming = response.friends.filter((friend) => !friend.accepted && !friend.outgoing
+        && !previous?.friends.some((old) => old.code === friend.code && !old.accepted && !old.outgoing));
+      const changed = !previous || JSON.stringify([previous.code, previous.shares, previous.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])])
         !== JSON.stringify([response.code, response.shares, response.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])]);
       social = response;
-      if (changed) renderFriends();
+      if (changed) {
+        const message = acceptedByOther
+          ? `${acceptedByOther.name} accepted your friend request. You are now friends.`
+          : newIncoming.length === 1
+            ? `${newIncoming[0].name} sent you a friend request.`
+            : newIncoming.length > 1
+              ? `You have ${newIncoming.length} new friend requests.`
+              : "";
+        renderFriends(message);
+      }
       share.hidden = false;
       renderPoints();
     }).catch((error) => {
@@ -71,15 +102,30 @@
   }
 
   async function perform(action, code) {
+    const friend = social?.friends.find((entry) => entry.code === code);
+    const name = friend?.name || "your friend";
     try {
       await call({ action, code, term });
       if (request) await request;
       await refresh();
       const status = find("campus-friend-status");
-      if (status) status.textContent = ({ share: "Courses shared.", invite: "Friend request sent.", accept: "Friend added.", remove: "Removed." })[action];
+      if (status) {
+        status.textContent = ({
+          share: "Courses shared.",
+          invite: "Friend request sent. Waiting for a response.",
+          accept: `You and ${name} are now friends.`,
+          remove: friend?.accepted ? "Friend removed." : friend?.outgoing ? "Friend request canceled." : "Friend request declined.",
+        })[action];
+        status.classList.add("has-update");
+        status.classList.remove("is-error");
+      }
     } catch (error) {
       const status = find("campus-friend-status");
-      if (status) status.textContent = error.message;
+      if (status) {
+        status.textContent = error.message;
+        status.classList.remove("has-update");
+        status.classList.add("is-error");
+      }
     }
   }
 
