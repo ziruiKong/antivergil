@@ -7677,14 +7677,17 @@ if (responsiveSearchField) {
   window.addEventListener("resize", updateSearchPlaceholder, { passive: true });
 }
 
-// Scale the entire standard ticket when the single-column layout expands.
+// Keep desktop search tickets at their grid track width; only scale the
+// single-column layout to fit its available width.
 const ticketResizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const width = entry.contentRect.width;
     const narrow = window.matchMedia("(max-width: 827px)").matches;
-    const gap = 0;
+    const gap = Number.parseFloat(getComputedStyle(entry.target).columnGap) || 0;
     const columns = narrow ? 1 : Math.max(1, Math.min(3, Math.floor((width + gap) / (394 + gap))));
-    const scale = (width - (columns - 1) * gap) / (columns * 394);
+    const scale = entry.target.id === "search-results" && !narrow
+      ? 1
+      : (width - (columns - 1) * gap) / (columns * 394);
     entry.target.style.setProperty("--ticket-scale", String(scale));
   }
 });
