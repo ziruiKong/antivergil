@@ -15100,6 +15100,10 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
 }
 
 /* Bridge the two inner stamp cuts with one shared perforated seam. */
+#search-results > .course-card.stamp-edge-right::after {
+  opacity: 0 !important;
+}
+
 #search-results > .course-card.stamp-edge-left::before {
   content: "" !important;
   position: absolute;
