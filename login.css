@@ -232,7 +232,7 @@ a { -webkit-tap-highlight-color: transparent; }
   place-items: center;
   background: #202124;
   color: #f3f3f0;
-  font-family: "DM Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: .015em;
@@ -328,6 +328,11 @@ a { -webkit-tap-highlight-color: transparent; }
 .email-register-row .email-submit { background: var(--ink); color: var(--paper); }
 .email-register-row .email-submit:hover { background: #333; }
 .email-back-link { padding: 3px 0 0; font-size: 14px; }
+
+.login-auth button {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
 
 .google-login:focus-visible,
 .email-submit:focus-visible,
