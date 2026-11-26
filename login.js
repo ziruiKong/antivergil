@@ -1,4 +1,6 @@
 const STORAGE_KEY = "cu-auth-user";
+const AUTH_COOKIE = "antivergil-auth";
+const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 const NEXT_KEY = "antivergil-next";
 const DEFAULT_NEXT = "/browse/";
 const $ = (selector) => document.querySelector(selector);
@@ -63,6 +65,10 @@ function saveUser(user) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   } catch (_) {}
+  try {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${AUTH_COOKIE}=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=${AUTH_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+  } catch (_) {}
 }
 
 function completeSignIn(user) {
@@ -75,7 +81,7 @@ function completeSignIn(user) {
   const profile = window.AntivergilProfile?.read(user.email);
   if (!profile) {
     try { sessionStorage.setItem(NEXT_KEY, next); } catch (_) {}
-    location.assign("/profile/");
+    location.assign("/onboarding/");
     return;
   }
   try { sessionStorage.removeItem(NEXT_KEY); } catch (_) {}

@@ -665,7 +665,7 @@ const VIEW_PATHS = {
   calendar: "/calendar/",
   map: "/map/",
   history: "/history/",
-  me: "/account/",
+  me: "/profile/",
   search: "/search/",
   instructor: "/instructor/",
   department: "/department/",
@@ -682,6 +682,7 @@ const PATH_VIEWS = {
   map: "map",
   history: "history",
   account: "me",
+  profile: "me",
   me: "me",
   search: "search",
   instructor: "instructor",
@@ -6069,15 +6070,30 @@ function setTermMenuOpen(open) {
  * 账户 / Google 登录
  * ============================================================ */
 const AUTH_STORAGE_KEY = "cu-auth-user";
+const AUTH_COOKIE = "antivergil-auth";
 
 function loadAuthUser() {
-  try { return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "null"); } catch { return null; }
+  let user = null;
+  try { user = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "null"); } catch {}
+  if (user?.email) return user;
+  try {
+    const entry = document.cookie.split("; ").find((item) => item.startsWith(`${AUTH_COOKIE}=`));
+    user = entry ? JSON.parse(decodeURIComponent(entry.slice(AUTH_COOKIE.length + 1))) : null;
+    if (user?.email) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
+  } catch {
+    return null;
+  }
 }
 function saveAuthUser(user) {
   try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user)); } catch { /* ignore */ }
 }
 function clearAuthUser() {
   try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignore */ }
+  try {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${AUTH_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  } catch { /* ignore */ }
 }
 
 let authUser = loadAuthUser();
@@ -6091,13 +6107,6 @@ function isValidEmail(value) {
 if (authUser && !isValidEmail(authUser.email || "")) {
   authUser = null;
   clearAuthUser();
-}
-
-if (authUser && window.AntivergilProfile && !window.AntivergilProfile.read(authUser.email)) {
-  try {
-    sessionStorage.setItem("antivergil-next", `${location.pathname}${location.search}`);
-  } catch { /* ignore storage errors */ }
-  location.replace("/profile/");
 }
 
 function initialsOf(user) {
@@ -6176,7 +6185,7 @@ function renderAccount() {
       <div class="account-status">${providerStatus}</div>
     `;
     $("#account-signout")?.addEventListener("click", signOut);
-    $("#account-profile")?.addEventListener("click", () => location.assign("/profile/?edit=1"));
+    $("#account-profile")?.addEventListener("click", () => location.assign("/onboarding/?edit=1"));
     $("#account-done")?.addEventListener("click", closeAccount);
     return;
   }
@@ -6329,7 +6338,7 @@ function renderMyPage() {
           <p><span>${esc(window.AntivergilProfile.schoolLabel(profile))}</span><i>·</i><span>${esc(window.AntivergilProfile.WORKLOAD_OPTIONS.find((item) => item.id === profile.workload)?.label || "Balanced")}</span></p>
           <div class="my-profile-tags">${window.AntivergilProfile.interestLabels(profile).map((label) => `<span>${esc(label)}</span>`).join("")}</div>
         </div>
-        <a class="my-edit-profile" href="/profile/?edit=1"><span>Edit profile</span><span aria-hidden="true">↗</span></a>
+        <a class="my-edit-profile" href="/onboarding/?edit=1"><span>Edit profile</span><span aria-hidden="true">↗</span></a>
       </section>`
     : "";
   host.innerHTML = `

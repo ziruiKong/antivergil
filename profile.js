@@ -5,9 +5,16 @@
   const progressRoot = progressFill?.closest(".profile-progress");
   let user = null;
   try { user = JSON.parse(localStorage.getItem("cu-auth-user") || "null"); } catch {}
+  if (!user?.email) {
+    try {
+      const entry = document.cookie.split("; ").find((item) => item.startsWith("antivergil-auth="));
+      user = entry ? JSON.parse(decodeURIComponent(entry.slice("antivergil-auth=".length))) : null;
+      if (user?.email) localStorage.setItem("cu-auth-user", JSON.stringify(user));
+    } catch {}
+  }
 
   if (!user?.email || !store) {
-    try { sessionStorage.setItem("antivergil-next", "/profile/"); } catch {}
+    try { sessionStorage.setItem("antivergil-next", "/onboarding/"); } catch {}
     location.replace("/login/");
     return;
   }

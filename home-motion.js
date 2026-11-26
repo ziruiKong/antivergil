@@ -1,24 +1,33 @@
 const dialog = document.querySelector('#consent');
 const categories = ['preferences','statistics','marketing'];
+const defaults = {preferences:true,statistics:true,marketing:true};
 const key = 'antivergil-consent-v1';
 let choices;
 try { choices = JSON.parse(localStorage.getItem(key)); } catch {}
-function showConsent(){
-  for(const name of categories) dialog.querySelector('[name="'+name+'"]').checked = !!choices?.[name];
-  showTab('consent-main');
-  dialog.showModal();
+
+function applyChoices(value = defaults){
+  for(const name of categories) dialog.querySelector('[name="'+name+'"]').checked = Boolean(value?.[name] ?? defaults[name]);
 }
-function showTab(id){
-  for(const button of dialog.querySelectorAll('[data-tab]')) button.setAttribute('aria-pressed', String(button.dataset.tab===id));
-  for(const panel of dialog.querySelectorAll('[data-panel]')) panel.hidden = panel.id!==id;
+
+function currentSelection(){
+  return Object.fromEntries(categories.map(name=>[name,dialog.querySelector('[name="'+name+'"]').checked]));
 }
-dialog.addEventListener('click', event=>{
-  const button=event.target.closest('button');
-  if(!button)return;
-  if(button.dataset.tab){showTab(button.dataset.tab);return;}
-  if(!button.dataset.choice)return;
-  choices=Object.fromEntries(categories.map(name=>[name,button.dataset.choice==='all'||(button.dataset.choice==='selection'&&dialog.querySelector('[name="'+name+'"]').checked)]));
+
+function persist(value){
+  choices={necessary:true,...value};
   try {localStorage.setItem(key,JSON.stringify(choices));}catch{}
+  document.querySelector('#cookies').setAttribute('aria-label','Cookie settings saved');
+}
+
+function showConsent(){
+  applyChoices(choices);
+  if(!dialog.open) dialog.showModal();
+}
+
+dialog.addEventListener('click', event=>{
+  const button=event.target.closest('button[data-choice]');
+  if(!button)return;
+  persist(currentSelection());
   dialog.close();
 });
 dialog.addEventListener('cancel',e=>{if(!choices)e.preventDefault()});

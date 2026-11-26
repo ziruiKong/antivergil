@@ -34,6 +34,7 @@ const appRoutes = [
   "map",
   "history",
   "account",
+  "profile",
   "search",
   "instructor",
   "department",
@@ -68,7 +69,7 @@ await writeFile(
 await writeRoute("home", "home.html");
 await writeRoute("about", "home.html");
 await writeRoute("login", "login.html");
-await writeRoute("profile", "profile.html");
+await writeRoute("onboarding", "profile.html");
 await Promise.all(appRoutes.map((route) => writeRoute(route, "index.html")));
 const coursePages = new Map();
 const catalogFiles = (await readdir(path.join(root, "data"))).filter((file) => /^courses-\d{4}-(Spring|Summer|Fall)\.js$/.test(file));

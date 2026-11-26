@@ -137,3 +137,230 @@ footer { padding-block: min(1rem, 1.5dvh); }
     padding-bottom: max(.75rem, env(safe-area-inset-bottom));
   }
 }
+
+/* Consent & privacy settings */
+dialog#consent {
+  --consent-bar-height: 59px;
+  width: min(560px, calc(100vw - 24px));
+  height: fit-content;
+  max-height: min(520px, calc(100svh - 24px));
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  color: #070707;
+  box-shadow: 0 32px 110px rgba(0, 0, 0, .26);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 500;
+}
+
+dialog#consent::backdrop {
+  background: rgba(18, 16, 12, .5);
+  backdrop-filter: blur(5px);
+}
+
+dialog#consent[open] {
+  animation: consent-in .24s ease-out;
+}
+
+@keyframes consent-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+dialog#consent .consent-head {
+  display: flex;
+  height: var(--consent-bar-height);
+  min-height: var(--consent-bar-height);
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, .16);
+}
+
+dialog#consent .consent-wordmark {
+  display: block;
+  width: 92px;
+  height: auto;
+}
+
+dialog#consent .consent-body {
+  padding: 6px 18px 3px;
+}
+
+dialog#consent .consent-options {
+  min-height: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+dialog#consent .consent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 46px;
+  align-items: center;
+  gap: 14px;
+  min-height: 61px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .14);
+  cursor: pointer;
+  text-align: left;
+}
+
+dialog#consent .consent-row:last-child {
+  border-bottom: 0;
+}
+
+dialog#consent .consent-row > span:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+dialog#consent .consent-row strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+dialog#consent .consent-row small {
+  color: #716e67;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+dialog#consent .consent-always {
+  grid-column: 2;
+  color: #716e67;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+dialog#consent .consent-row input {
+  grid-column: 3;
+  display: block;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  appearance: none;
+  border: 1px solid #000;
+  border-radius: 99px;
+  background: #fff;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+dialog#consent .consent-row input::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #000;
+  transition: transform .18s ease, background .18s ease;
+}
+
+dialog#consent .consent-row input:checked {
+  border-color: #000;
+  background: #000;
+}
+
+dialog#consent .consent-row input:checked::before {
+  background: #fff;
+  transform: translateX(18px);
+}
+
+dialog#consent .consent-row input:disabled {
+  opacity: 1;
+}
+
+dialog#consent .consent-row {
+  min-height: 61px;
+}
+
+dialog#consent .consent-row small {
+  display: block;
+}
+
+dialog#consent .consent-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  height: var(--consent-bar-height);
+  min-height: var(--consent-bar-height);
+  padding: 0 16px;
+  border-top: 1px solid rgba(0, 0, 0, .16);
+}
+
+dialog#consent .consent-actions > div {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+}
+
+dialog#consent .consent-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 15px;
+  border: 1.5px solid #000;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+dialog#consent .consent-actions button:hover {
+  background: #000;
+  color: #fff;
+}
+
+dialog#consent .consent-actions .consent-primary {
+  background: #000;
+  color: #fff;
+}
+
+dialog#consent .consent-actions .consent-primary:hover {
+  background: #fff;
+  color: #000;
+}
+
+@media (max-width: 760px) {
+  dialog#consent {
+    --consent-bar-height: calc(64px + env(safe-area-inset-bottom));
+    width: min(560px, calc(100vw - 24px));
+    max-width: 560px;
+    height: fit-content;
+    max-height: calc(100svh - 24px);
+    margin: auto;
+  }
+
+  dialog#consent .consent-body {
+    padding: 6px 16px 3px;
+  }
+
+  dialog#consent .consent-actions {
+    display: flex;
+    padding: 0 18px;
+    background: #fff;
+  }
+
+  dialog#consent .consent-actions > div {
+    display: flex;
+    width: 100%;
+  }
+
+  dialog#consent .consent-actions button {
+    flex: 1;
+    min-width: 0;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+}

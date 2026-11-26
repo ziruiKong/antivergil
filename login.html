@@ -8,7 +8,7 @@
   <script>if(/\/login\.html$/i.test(location.pathname))history.replaceState(null,"","/login/"+location.search);</script>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="login.css?v=20261125-google-clean-4" />
+  <link rel="stylesheet" href="login.css?v=20261125-nav-font-1" />
 </head>
 <body>
   <main class="login-shell">
@@ -44,7 +44,7 @@
           </button>
 
           <button class="email-register-link" id="show-email-register" type="button">Continue with email</button>
-          <form id="email-register-form" class="email-form" hidden>
+          <form id="email-register-form" class="email-form email-register-form" hidden>
             <div class="email-register-row">
               <label><span>Email address</span><input id="registration-email" class="email-input" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com" maxlength="254" required /></label>
               <button class="email-submit" type="submit">Continue</button>
@@ -65,6 +65,6 @@
   <script src="profile-store.js?v=20261125-all-accounts-1"></script>
   <script src="schedule-cloud.js?v=2"></script>
   <script src="verification-input.js?v=1"></script>
-  <script src="login.js?v=20261125-google-clean-2"></script>
+  <script src="login.js?v=20261126-auth-cookie-1"></script>
 </body>
 </html>

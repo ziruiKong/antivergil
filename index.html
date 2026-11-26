@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
   <script>
-    let visitor = true;
-    try { visitor = !JSON.parse(localStorage.getItem("cu-auth-user")); } catch {}
+    (() => {
+    let cachedAuthUser = null;
+    try { cachedAuthUser = JSON.parse(localStorage.getItem("cu-auth-user") || "null"); } catch {}
+    if (!cachedAuthUser?.email) {
+      try {
+        const entry = document.cookie.split("; ").find((item) => item.startsWith("antivergil-auth="));
+        cachedAuthUser = entry ? JSON.parse(decodeURIComponent(entry.slice("antivergil-auth=".length))) : null;
+        if (cachedAuthUser?.email) localStorage.setItem("cu-auth-user", JSON.stringify(cachedAuthUser));
+      } catch {}
+    }
+    const visitor = !cachedAuthUser?.email;
     if (visitor) {
       const legacy = String(location.hash || "").replace(/^#\/?/, "").split("?")[0];
       const legacyPaths = {
@@ -14,7 +23,7 @@
         calendar: "/calendar/",
         map: "/map/",
         history: "/history/",
-        me: "/account/",
+        me: "/profile/",
         search: "/search/",
         instructor: "/instructor/",
         department: "/department/",
@@ -30,6 +39,7 @@
         location.replace("/login/");
       }
     }
+    })();
   </script>
   <base href="/" />
   <meta charset="UTF-8" />
@@ -394,6 +404,6 @@
   <script src="profile-store.js?v=20261125-all-accounts-1"></script>
   <script src="schedule-cloud.js?v=6"></script>
   <script src="campus-social.js?v=1"></script>
-  <script src="app.js?v=20261125-all-accounts-1"></script>
+  <script src="app.js?v=20261126-auth-cookie-1"></script>
 </body>
 </html>
