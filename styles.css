@@ -15090,10 +15090,10 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
 
 /* Keep the credit value fully inside its metadata cell on compact search tickets. */
 #search-results > .course-card .cc-meta {
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, .9fr) minmax(0, .75fr) 52px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .9fr) minmax(0, .75fr) 60px;
 }
 
 #search-results > .course-card .cc-meta > .chip.credits {
-  padding-inline: 4px;
+  padding-inline: 3px;
   white-space: nowrap;
 }
