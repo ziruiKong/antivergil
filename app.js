@@ -92,8 +92,8 @@ function saveSelectedTerm(term) {
 }
 
 const SCHOOL_INFO = {
-  columbia: { label: "Columbia", short: "Columbia", mark: "C" },
-  miami: { label: "Miami Oxford", short: "Oxford", mark: "M" },
+  columbia: { label: "Columbia", short: "Columbia", logo: "/assets/columbia-crown.jpg" },
+  miami: { label: "Miami Oxford", short: "Oxford", logo: "/assets/miami-logo.png" },
 };
 
 function schoolFromEmail(email) {
@@ -760,7 +760,7 @@ const NAV = [
   ["calendar", "Calendar"],
   ["map", "Map"],
 ];
-const MIAMI_VIEWS = new Set(["browse", "planner", "calendar", "community", "me"]);
+const MIAMI_VIEWS = new Set(["browse", "search", "planner", "calendar", "community", "me"]);
 
 function currentNav() {
   return state.school === "miami" ? NAV.filter(([id]) => MIAMI_VIEWS.has(id)) : NAV;
@@ -1204,7 +1204,10 @@ function renderSchoolSwitch() {
   const label = $("#school-menu-label");
   const mark = $("#school-menu-mark");
   if (label) label.textContent = info.label;
-  if (mark) mark.textContent = info.mark;
+  if (mark) {
+    mark.classList.add("has-logo");
+    mark.innerHTML = `<img src="${info.logo}" alt="">`;
+  }
   $("#school-menu-btn")?.setAttribute("aria-expanded", "false");
   const menu = $("#school-menu");
   if (menu) {
@@ -1213,6 +1216,11 @@ function renderSchoolSwitch() {
       const active = button.dataset.schoolOption === school;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
+      const optionMark = button.querySelector(".school-option-mark");
+      if (optionMark) {
+        optionMark.classList.add("has-logo");
+        optionMark.innerHTML = `<img src="${SCHOOL_INFO[button.dataset.schoolOption].logo}" alt="">`;
+      }
     });
   }
   document.documentElement.dataset.school = school;
@@ -7404,7 +7412,8 @@ function applySuggestion(it) {
   if (it.type === "department") {
     openSearch("", { department: it.value });
   } else if (it.type === "instructor") {
-    openInstructor(it.value);
+    if (state.school === "miami") openSearch(it.value);
+    else openInstructor(it.value);
   } else {
     openSearch(it.value);
   }

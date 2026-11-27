@@ -16007,8 +16007,19 @@ body[data-view="community"] #view-community .community-friend-row.is-incoming .c
   height: 21px;
   font-size: 9px;
 }
-body[data-school="miami"] .school-menu-mark {
-  background: #b51f38;
+.school-menu-mark.has-logo,
+.school-option-mark.has-logo {
+  padding: 2px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  background: #fff;
+}
+.school-menu-mark img,
+.school-option-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: contain;
 }
 .school-menu {
   position: absolute;

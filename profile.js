@@ -15,7 +15,12 @@
     } catch {}
   }
   if (localOnboardingPreview) {
-    user = { email: "preview@student.ubc.ca", name: "Preview Student", sub: "local-onboarding-preview" };
+    const previewSchool = new URLSearchParams(location.search).get("school");
+    user = {
+      email: previewSchool === "miami" || previewSchool === "oxford" ? "preview@miamioh.edu" : "preview@student.ubc.ca",
+      name: "Preview Student",
+      sub: "local-onboarding-preview",
+    };
   }
 
   if (!user?.email || !store) {
@@ -24,16 +29,34 @@
     return;
   }
 
+  const institution = store.institutionForEmail(user.email);
   const existing = localOnboardingPreview ? null : store.read(user.email);
+  const schoolOptions = store.schoolOptionsFor(existing?.stage || "", institution);
+  const majorOptions = store.majorOptionsFor(institution);
+  const interests = store.interestsFor(institution);
   const state = {
+    institution,
     stage: existing?.stage || "",
-    school: existing?.school || "",
-    major: existing?.major || "",
-    interests: Array.isArray(existing?.interests) ? [...existing.interests] : [],
+    school: schoolOptions.some((item) => item.id === existing?.school) ? existing.school : "",
+    major: majorOptions.some((item) => item.id === existing?.major) ? existing.major : "",
+    interests: Array.isArray(existing?.interests)
+      ? existing.interests.filter((id) => interests.some((item) => item.id === id))
+      : [],
     workload: existing?.workload || "",
     step: existing ? 4 : 0,
     majorQuery: "",
   };
+
+  document.body.dataset.institution = institution;
+  document.title = institution === "miami" ? "Antivergil · Miami Oxford" : "Antivergil";
+  const contextName = document.querySelector("#profile-school-context-name");
+  const contextMark = document.querySelector("#profile-school-context-mark");
+  if (contextName) contextName.textContent = store.institutionLabel(institution);
+  if (contextMark) {
+    const logo = institution === "miami" ? "/assets/miami-logo.png" : "/assets/columbia-crown.jpg";
+    contextMark.classList.add("has-logo");
+    contextMark.innerHTML = `<img src="${logo}" alt="">`;
+  }
 
   const esc = (value) => String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -44,8 +67,8 @@
   }
 
   function majorsForSelection() {
-    const allowedMajors = store.SCHOOL_MAJORS?.[state.school];
-    return choicesForStage(store.MAJOR_OPTIONS).filter((item) => !allowedMajors || allowedMajors.includes(item.id));
+    const allowedMajors = store.schoolMajorsFor(state.institution)?.[state.school];
+    return choicesForStage(majorOptions).filter((item) => !allowedMajors || allowedMajors.includes(item.id));
   }
 
   function choiceMarkup(item, selected, extra = "") {
@@ -55,7 +78,7 @@
   function activePanel(index) {
     if (index === 0) {
       return `
-        <h2 tabindex="-1">Where are you studying?</h2>
+        <h2 tabindex="-1">What stage are you studying at ${esc(store.institutionLabel(state.institution))}?</h2>
         <div class="profile-options">
           <button class="profile-choice${state.stage === "undergraduate" ? " is-selected" : ""}" type="button" data-stage="undergraduate">
             Undergraduate
@@ -66,9 +89,9 @@
         </div>`;
     }
     if (index === 1) {
-      const schools = store.SCHOOL_OPTIONS[state.stage] || [];
+      const schools = store.schoolOptionsFor(state.stage, state.institution);
       return `
-        <h2 tabindex="-1">Which school are you in?</h2>
+        <h2 tabindex="-1">${state.institution === "miami" ? "Which Miami college are you in?" : "Which school are you in?"}</h2>
         <div class="profile-options">
           ${schools.map((school) => choiceMarkup(school, state.school === school.id, "school")).join("")}
         </div>`;
@@ -87,7 +110,7 @@
       return `
         <h2 tabindex="-1">What are you curious about?</h2>
         <div class="profile-interest-grid">
-          ${store.INTEREST_OPTIONS.map((interest) => `
+          ${interests.map((interest) => `
             <button class="profile-interest${state.interests.includes(interest.id) ? " is-selected" : ""}" type="button" data-interest="${esc(interest.id)}" aria-pressed="${state.interests.includes(interest.id)}">${esc(interest.label)}</button>`).join("")}
         </div>`;
     }
@@ -144,6 +167,7 @@
     if (localOnboardingPreview) return;
     store.save({
       email: user.email,
+      institution: state.institution,
       stage: state.stage,
       school: state.school,
       major: state.major,
@@ -161,7 +185,7 @@
     const stage = event.target.closest("[data-stage]");
     if (stage) {
       state.stage = stage.dataset.stage;
-      if (!store.SCHOOL_OPTIONS[state.stage]?.some((item) => item.id === state.school)) state.school = "";
+      if (!store.schoolOptionsFor(state.stage, state.institution).some((item) => item.id === state.school)) state.school = "";
       if (state.major && !majorsForSelection().some((item) => item.id === state.major)) state.major = "";
       advance(1);
       return;

@@ -1,7 +1,7 @@
 (function () {
   const KEY_PREFIX = "antivergil-profile-v1:";
 
-  const SCHOOL_OPTIONS = {
+  const COLUMBIA_SCHOOL_OPTIONS = {
     undergraduate: [
       { id: "columbia-college", label: "Columbia College" },
       { id: "engineering", label: "Fu Foundation School of Engineering and Applied Science" },
@@ -19,6 +19,21 @@
       { id: "law", label: "Columbia Law School" },
       { id: "teachers-college", label: "Teachers College" },
       { id: "other-school", label: "Other school / Institution" },
+    ],
+  };
+
+  const MIAMI_SCHOOL_OPTIONS = {
+    undergraduate: [
+      { id: "miami-arts-science", label: "College of Arts and Science" },
+      { id: "miami-business", label: "Farmer School of Business" },
+      { id: "miami-engineering", label: "College of Engineering and Computing" },
+      { id: "miami-creative-arts", label: "College of Creative Arts" },
+      { id: "miami-education-health", label: "College of Education, Health, and Society" },
+      { id: "miami-other", label: "Other / Interdisciplinary" },
+    ],
+    graduate: [
+      { id: "miami-graduate", label: "Graduate School" },
+      { id: "miami-other", label: "Other / Interdisciplinary" },
     ],
   };
 
@@ -52,6 +67,42 @@
     { id: "other", label: "Other / Interdisciplinary", stages: ["undergraduate", "graduate"], deptCodes: [], keywords: [] },
   ];
 
+  const MIAMI_MAJOR_OPTIONS = [
+    { id: "miami-computer-science", label: "Computer Science", stages: ["undergraduate", "graduate"], deptCodes: ["CSE", "MTH"], keywords: ["computer", "software", "algorithm", "artificial intelligence", "machine learning"] },
+    { id: "miami-data-science", label: "Data Science", stages: ["undergraduate", "graduate"], deptCodes: ["STA", "CSE", "ISA"], keywords: ["data science", "machine learning", "statistics", "analytics"] },
+    { id: "miami-cybersecurity", label: "Cybersecurity", stages: ["undergraduate", "graduate"], deptCodes: ["CYB", "CSE"], keywords: ["cybersecurity", "security", "networks", "systems"] },
+    { id: "miami-electrical-engineering", label: "Electrical & Computer Engineering", stages: ["undergraduate", "graduate"], deptCodes: ["ECE", "CSE"], keywords: ["electrical", "computer engineering", "circuits", "signals"] },
+    { id: "miami-mechanical-engineering", label: "Mechanical & Manufacturing Engineering", stages: ["undergraduate", "graduate"], deptCodes: ["MME", "EGM"], keywords: ["mechanical", "manufacturing", "design", "robotics"] },
+    { id: "miami-chemical-engineering", label: "Chemical, Paper & Biomedical Engineering", stages: ["undergraduate", "graduate"], deptCodes: ["CPB", "CHM"], keywords: ["chemical engineering", "biomedical", "paper", "materials"] },
+    { id: "miami-architecture", label: "Architecture & Interior Design", stages: ["undergraduate", "graduate"], deptCodes: ["ARC"], keywords: ["architecture", "interior design", "built environment", "studio"] },
+    { id: "miami-emerging-technology", label: "Emerging Technology & Interactive Media", stages: ["undergraduate", "graduate"], deptCodes: ["IMS", "CCA"], keywords: ["interactive media", "game design", "creative technology", "design"] },
+    { id: "miami-accountancy", label: "Accountancy", stages: ["undergraduate", "graduate"], deptCodes: ["ACC"], keywords: ["accounting", "audit", "tax", "financial reporting"] },
+    { id: "miami-finance", label: "Finance", stages: ["undergraduate", "graduate"], deptCodes: ["FIN", "ECO"], keywords: ["finance", "investment", "markets", "valuation"] },
+    { id: "miami-marketing", label: "Marketing", stages: ["undergraduate", "graduate"], deptCodes: ["MKT", "STC"], keywords: ["marketing", "consumer", "brand", "strategy"] },
+    { id: "miami-management", label: "Management & Entrepreneurship", stages: ["undergraduate", "graduate"], deptCodes: ["MGT", "ESP", "ORG"], keywords: ["management", "entrepreneurship", "leadership", "strategy"] },
+    { id: "miami-business-analytics", label: "Business Analytics & Information Systems", stages: ["undergraduate", "graduate"], deptCodes: ["ISA", "BUS", "STA"], keywords: ["analytics", "information systems", "data", "operations"] },
+    { id: "miami-economics", label: "Economics", stages: ["undergraduate", "graduate"], deptCodes: ["ECO"], keywords: ["economics", "econometrics", "market", "policy"] },
+    { id: "miami-statistics", label: "Statistics", stages: ["undergraduate", "graduate"], deptCodes: ["STA"], keywords: ["statistics", "probability", "inference", "data"] },
+    { id: "miami-mathematics", label: "Mathematics", stages: ["undergraduate", "graduate"], deptCodes: ["MTH"], keywords: ["mathematics", "analysis", "algebra", "quantitative"] },
+    { id: "miami-political-science", label: "Political Science", stages: ["undergraduate", "graduate"], deptCodes: ["POL", "CIV"], keywords: ["politics", "government", "policy", "public affairs"] },
+    { id: "miami-psychology", label: "Psychology", stages: ["undergraduate", "graduate"], deptCodes: ["PSY"], keywords: ["psychology", "behavior", "cognition", "research"] },
+    { id: "miami-sociology", label: "Sociology", stages: ["undergraduate", "graduate"], deptCodes: ["SOC", "SJS"], keywords: ["society", "social", "inequality", "justice"] },
+    { id: "miami-history", label: "History", stages: ["undergraduate", "graduate"], deptCodes: ["HST"], keywords: ["history", "historical", "archive", "public history"] },
+    { id: "miami-english", label: "English & Literature", stages: ["undergraduate", "graduate"], deptCodes: ["ENG"], keywords: ["literature", "writing", "novel", "rhetoric"] },
+    { id: "miami-communication", label: "Media, Journalism & Strategic Communication", stages: ["undergraduate", "graduate"], deptCodes: ["MAC", "JRN", "STC", "MJF", "FST"], keywords: ["media", "journalism", "communication", "film"] },
+    { id: "miami-biology", label: "Biology", stages: ["undergraduate", "graduate"], deptCodes: ["BIO", "MBI"], keywords: ["biology", "cells", "microbiology", "ecology"] },
+    { id: "miami-chemistry", label: "Chemistry & Biochemistry", stages: ["undergraduate", "graduate"], deptCodes: ["CHM"], keywords: ["chemistry", "biochemistry", "molecular", "laboratory"] },
+    { id: "miami-physics", label: "Physics", stages: ["undergraduate", "graduate"], deptCodes: ["PHY"], keywords: ["physics", "quantum", "mechanics", "astronomy"] },
+    { id: "miami-environment", label: "Environmental Science & Sustainability", stages: ["undergraduate", "graduate"], deptCodes: ["IES", "GEO", "GLG"], keywords: ["environment", "sustainability", "climate", "earth"] },
+    { id: "miami-education", label: "Education", stages: ["undergraduate", "graduate"], deptCodes: ["TCE", "EDL", "EDP", "EHS"], keywords: ["education", "teaching", "learning", "curriculum"] },
+    { id: "miami-kinesiology", label: "Kinesiology, Nutrition & Health", stages: ["undergraduate", "graduate"], deptCodes: ["KNH", "GHS"], keywords: ["kinesiology", "nutrition", "health", "exercise"] },
+    { id: "miami-nursing", label: "Nursing", stages: ["undergraduate", "graduate"], deptCodes: ["NSG", "MMS", "PAS"], keywords: ["nursing", "health", "clinical", "patient care"] },
+    { id: "miami-social-work", label: "Family Science & Social Work", stages: ["undergraduate", "graduate"], deptCodes: ["FSW", "GTY"], keywords: ["social work", "family", "community", "aging"] },
+    { id: "miami-creative-arts", label: "Art, Music & Theatre", stages: ["undergraduate", "graduate"], deptCodes: ["ART", "MUS", "THE", "CCA"], keywords: ["art", "music", "theatre", "performance", "studio"] },
+    { id: "miami-international-studies", label: "International & Area Studies", stages: ["undergraduate", "graduate"], deptCodes: ["ITS", "AAA", "AMS", "WLC"], keywords: ["international", "global", "area studies", "culture"] },
+    { id: "miami-other", label: "Other / Interdisciplinary", stages: ["undergraduate", "graduate"], deptCodes: ["WST", "HON", "UNV"], keywords: [] },
+  ];
+
   const liberalArtsMajors = [
     "computer-science", "data-science", "economics", "mathematics", "statistics",
     "political-science", "sociology", "psychology", "history", "english",
@@ -72,6 +123,90 @@
     "other-school": null,
   };
 
+  const MIAMI_SCHOOL_MAJORS = {
+    "miami-arts-science": [
+      "miami-computer-science", "miami-data-science", "miami-cybersecurity", "miami-economics",
+      "miami-statistics", "miami-mathematics", "miami-political-science", "miami-psychology",
+      "miami-sociology", "miami-history", "miami-english", "miami-biology", "miami-chemistry",
+      "miami-physics", "miami-environment", "miami-international-studies", "miami-other",
+    ],
+    "miami-business": [
+      "miami-accountancy", "miami-finance", "miami-marketing", "miami-management",
+      "miami-business-analytics", "miami-economics", "miami-statistics", "miami-other",
+    ],
+    "miami-engineering": [
+      "miami-computer-science", "miami-data-science", "miami-cybersecurity",
+      "miami-electrical-engineering", "miami-mechanical-engineering",
+      "miami-chemical-engineering", "miami-emerging-technology", "miami-mathematics",
+      "miami-physics", "miami-other",
+    ],
+    "miami-creative-arts": [
+      "miami-architecture", "miami-emerging-technology", "miami-communication",
+      "miami-creative-arts", "miami-english", "miami-other",
+    ],
+    "miami-education-health": [
+      "miami-education", "miami-kinesiology", "miami-nursing", "miami-social-work",
+      "miami-psychology", "miami-biology", "miami-other",
+    ],
+    "miami-graduate": [
+      "miami-computer-science", "miami-data-science", "miami-cybersecurity",
+      "miami-electrical-engineering", "miami-mechanical-engineering",
+      "miami-chemical-engineering", "miami-accountancy", "miami-finance",
+      "miami-management", "miami-business-analytics", "miami-economics",
+      "miami-statistics", "miami-mathematics", "miami-political-science",
+      "miami-psychology", "miami-sociology", "miami-history", "miami-english",
+      "miami-communication", "miami-biology", "miami-chemistry", "miami-physics",
+      "miami-environment", "miami-education", "miami-kinesiology", "miami-nursing",
+      "miami-social-work", "miami-creative-arts", "miami-international-studies", "miami-other",
+    ],
+    "miami-other": null,
+  };
+
+  const MIAMI_SCHOOL_ALIASES = {
+    "columbia-college": "miami-arts-science",
+    "general-studies": "miami-arts-science",
+    barnard: "miami-arts-science",
+    engineering: "miami-engineering",
+    business: "miami-business",
+    gsas: "miami-graduate",
+    sipa: "miami-arts-science",
+    mailman: "miami-education-health",
+    journalism: "miami-creative-arts",
+    law: "miami-arts-science",
+    "teachers-college": "miami-education-health",
+    "other-school": "miami-other",
+  };
+
+  const MIAMI_MAJOR_ALIASES = {
+    "computer-science": "miami-computer-science",
+    "data-science": "miami-data-science",
+    economics: "miami-economics",
+    "financial-engineering": "miami-finance",
+    "operations-research": "miami-business-analytics",
+    mathematics: "miami-mathematics",
+    statistics: "miami-statistics",
+    business: "miami-management",
+    finance: "miami-finance",
+    analytics: "miami-business-analytics",
+    qmss: "miami-data-science",
+    "political-science": "miami-political-science",
+    "public-policy": "miami-political-science",
+    sociology: "miami-sociology",
+    psychology: "miami-psychology",
+    history: "miami-history",
+    english: "miami-english",
+    "art-history": "miami-creative-arts",
+    "east-asian-studies": "miami-international-studies",
+    biology: "miami-biology",
+    chemistry: "miami-chemistry",
+    physics: "miami-physics",
+    "public-health": "miami-kinesiology",
+    journalism: "miami-communication",
+    law: "miami-other",
+    education: "miami-education",
+    other: "miami-other",
+  };
+
   const INTEREST_OPTIONS = [
     { id: "technology", label: "Technology & AI", deptCodes: ["COMS", "IEOR"], keywords: ["computer", "software", "artificial intelligence", "machine learning", "algorithm"] },
     { id: "finance", label: "Finance & Markets", deptCodes: ["FINC", "BUEC", "ECON", "ACCT"], keywords: ["finance", "investment", "market", "valuation"] },
@@ -83,6 +218,19 @@
     { id: "climate", label: "Climate & Environment", deptCodes: ["EESC", "EEEB"], keywords: ["climate", "environment", "sustainability", "earth"] },
     { id: "entrepreneurship", label: "Entrepreneurship", deptCodes: ["BUSI", "FINC"], keywords: ["entrepreneur", "venture", "startup", "innovation"] },
     { id: "culture", label: "Languages & Culture", deptCodes: ["EALC", "EAAS", "CHIN", "JAPN", "KORE", "ENGL"], keywords: ["language", "culture", "literature", "history"] },
+  ];
+
+  const MIAMI_INTEREST_OPTIONS = [
+    { id: "technology", label: "Technology & AI", deptCodes: ["CSE", "IMS", "CYB"], keywords: ["computer", "software", "artificial intelligence", "machine learning", "algorithm"] },
+    { id: "finance", label: "Finance & Markets", deptCodes: ["FIN", "ECO", "ACC"], keywords: ["finance", "investment", "market", "valuation"] },
+    { id: "data", label: "Data & Statistics", deptCodes: ["STA", "ISA", "CSE"], keywords: ["data", "statistics", "probability", "analytics"] },
+    { id: "policy", label: "Policy & Society", deptCodes: ["POL", "SOC", "SJS", "CIV"], keywords: ["policy", "politics", "government", "society"] },
+    { id: "health", label: "Health & Medicine", deptCodes: ["BIO", "PSY", "KNH", "NSG", "MMS"], keywords: ["health", "medicine", "nursing", "neuroscience"] },
+    { id: "arts", label: "Arts & Design", deptCodes: ["ART", "MUS", "THE", "ARC", "IMS"], keywords: ["art", "design", "music", "visual", "architecture"] },
+    { id: "media", label: "Media & Communication", deptCodes: ["MAC", "JRN", "STC", "MJF", "FST"], keywords: ["media", "journalism", "communication", "film"] },
+    { id: "climate", label: "Climate & Environment", deptCodes: ["IES", "GEO", "GLG"], keywords: ["climate", "environment", "sustainability", "earth"] },
+    { id: "entrepreneurship", label: "Entrepreneurship", deptCodes: ["ESP", "MGT", "BUS"], keywords: ["entrepreneur", "venture", "startup", "innovation"] },
+    { id: "culture", label: "Languages & Culture", deptCodes: ["AAA", "AMS", "ITS", "WLC", "SPN", "CHI", "JPN", "KOR"], keywords: ["language", "culture", "literature", "history"] },
   ];
 
   const WORKLOAD_OPTIONS = [
@@ -118,8 +266,51 @@
     "other-school": [],
   };
 
+  const MIAMI_SCHOOL_DEPTS = {
+    "miami-arts-science": ["CSE", "ECO", "STA", "MTH", "POL", "SOC", "HST", "ENG", "BIO", "CHM", "PHY"],
+    "miami-business": ["ACC", "FIN", "MKT", "MGT", "ISA", "BUS", "ECO", "ESP"],
+    "miami-engineering": ["CSE", "ECE", "MME", "CPB", "EGM", "CYB", "IMS"],
+    "miami-creative-arts": ["ARC", "ART", "MUS", "THE", "IMS", "MAC", "JRN"],
+    "miami-education-health": ["TCE", "EDL", "EDP", "KNH", "NSG", "FSW", "PSY"],
+    "miami-graduate": ["CSE", "ECE", "MME", "CPB", "ACC", "FIN", "ECO", "STA", "PSY", "TCE"],
+    "miami-other": [],
+  };
+
   function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
+  }
+
+  function institutionForEmail(email) {
+    const domain = normalizeEmail(email).split("@").at(-1);
+    return domain === "miamioh.edu" || domain.endsWith(".miamioh.edu") ? "miami" : "columbia";
+  }
+
+  function institutionLabel(institution) {
+    return institution === "miami" ? "Miami University, Oxford" : "Columbia University";
+  }
+
+  function profileInstitution(profile) {
+    const stored = String(profile?.institution || "").toLowerCase();
+    return stored === "miami" || stored === "columbia"
+      ? stored
+      : institutionForEmail(profile?.email);
+  }
+
+  function schoolOptionsFor(stage, institution = "columbia") {
+    const source = institution === "miami" ? MIAMI_SCHOOL_OPTIONS : COLUMBIA_SCHOOL_OPTIONS;
+    return source[stage] || [];
+  }
+
+  function majorOptionsFor(institution = "columbia") {
+    return institution === "miami" ? MIAMI_MAJOR_OPTIONS : MAJOR_OPTIONS;
+  }
+
+  function schoolMajorsFor(institution = "columbia") {
+    return institution === "miami" ? MIAMI_SCHOOL_MAJORS : SCHOOL_MAJORS;
+  }
+
+  function interestsFor(institution = "columbia") {
+    return institution === "miami" ? MIAMI_INTEREST_OPTIONS : INTEREST_OPTIONS;
   }
 
   function storageKey(email) {
@@ -180,12 +371,18 @@
   }
 
   function schoolLabel(profile) {
-    return SCHOOL_OPTIONS[profile?.stage]?.find((item) => item.id === profile.school)?.label
-      || "Columbia University";
+    const institution = profileInstitution(profile);
+    const schoolId = institution === "miami" ? (MIAMI_SCHOOL_ALIASES[profile?.school] || profile?.school) : profile?.school;
+    return schoolOptionsFor(profile?.stage, institution)
+      .find((item) => item.id === schoolId)?.label
+      || institutionLabel(institution);
   }
 
   function major(profile) {
-    return MAJOR_OPTIONS.find((item) => item.id === profile?.major) || MAJOR_OPTIONS.at(-1);
+    const institution = profileInstitution(profile);
+    const options = majorOptionsFor(institution);
+    const majorId = institution === "miami" ? (MIAMI_MAJOR_ALIASES[profile?.major] || profile?.major) : profile?.major;
+    return options.find((item) => item.id === majorId) || options.at(-1);
   }
 
   function majorLabel(profile) {
@@ -194,11 +391,11 @@
 
   function interestLabels(profile) {
     const ids = new Set(profile?.interests || []);
-    return INTEREST_OPTIONS.filter((item) => ids.has(item.id)).map((item) => item.label);
+    return interestsFor(profileInstitution(profile)).filter((item) => ids.has(item.id)).map((item) => item.label);
   }
 
   function courseLevel(code) {
-    const match = String(code || "").match(/(\d{4})/);
+    const match = String(code || "").match(/(\d{3,4})/);
     return match ? Number(match[1]) : null;
   }
 
@@ -213,15 +410,19 @@
 
   function relevance(profile, course) {
     if (!profile || !course) return 0;
+    const institution = profileInstitution(profile);
+    const schoolId = institution === "miami" ? (MIAMI_SCHOOL_ALIASES[profile.school] || profile.school) : profile.school;
     const selectedMajor = major(profile);
+    const schoolDepartments = institution === "miami" ? MIAMI_SCHOOL_DEPTS : SCHOOL_DEPTS;
+    const interestOptions = interestsFor(institution);
     const department = String(course.deptCode || "").toUpperCase();
     const haystack = `${course.code || ""} ${course.title || ""} ${course.desc || ""}`.toLowerCase();
     let score = selectedMajor?.deptCodes?.includes(department) ? 60 : 0;
-    if (SCHOOL_DEPTS[profile.school]?.includes(department)) score += 18;
+    if (schoolDepartments[schoolId]?.includes(department)) score += 18;
     for (const keyword of selectedMajor?.keywords || []) {
       if (haystack.includes(keyword)) score += 8;
     }
-    for (const interest of INTEREST_OPTIONS) {
+    for (const interest of interestOptions) {
       if (!(profile.interests || []).includes(interest.id)) continue;
       if (interest.deptCodes?.includes(department)) score += 18;
       for (const keyword of interest.keywords || []) {
@@ -240,13 +441,25 @@
 
   window.AntivergilProfile = {
     KEY_PREFIX,
-    SCHOOL_OPTIONS,
+    SCHOOL_OPTIONS: COLUMBIA_SCHOOL_OPTIONS,
+    COLUMBIA_SCHOOL_OPTIONS,
+    MIAMI_SCHOOL_OPTIONS,
     MAJOR_OPTIONS,
+    MIAMI_MAJOR_OPTIONS,
     SCHOOL_MAJORS,
+    MIAMI_SCHOOL_MAJORS,
     INTEREST_OPTIONS,
+    MIAMI_INTEREST_OPTIONS,
     WORKLOAD_OPTIONS,
     SCHOOL_DEPTS,
+    MIAMI_SCHOOL_DEPTS,
     normalizeEmail,
+    institutionForEmail,
+    institutionLabel,
+    schoolOptionsFor,
+    majorOptionsFor,
+    schoolMajorsFor,
+    interestsFor,
     read,
     save,
     readSchedules,
