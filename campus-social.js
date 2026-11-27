@@ -53,7 +53,7 @@
       return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(preview)}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
     }).join("");
     const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b></header>
-      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : ""}">${messageContent(entry)}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
+      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : entry.attachment?.kind === "file" ? `has-file ${String(entry.attachment.mime || "").startsWith("image/") ? "has-image" : ""}` : ""}">${messageContent(entry)}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
       <form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
       <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
@@ -81,6 +81,7 @@
       <div id="community-toast" class="community-toast" role="status" aria-live="polite" hidden></div>`;
     const scroller = panel.querySelector(".community-messages");
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    hydrateMediaAttachments();
   }
 
   const scheduleCatalogCache = new Map();
@@ -163,15 +164,96 @@
     </section>`;
   }
 
-  function messageContent(entry) {
-    if (entry.attachment?.kind === "schedule") return scheduleAttachment(entry);
-    return `<p>${text(entry.body)}</p>${entry.attachment ? attachmentControl(entry) : ""}`;
+  function fileDetails(item, entry) {
+    const name = String(item.name || entry.body || "File").trim();
+    const mime = String(item.mime || "").toLowerCase();
+    const fromName = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+    const extension = fromName || mime.split("/").pop() || "file";
+    const kind = extension === "pdf" ? "pdf"
+      : ["doc", "docx", "rtf", "pages"].includes(extension) ? "document"
+        : ["xls", "xlsx", "csv", "numbers"].includes(extension) ? "spreadsheet"
+          : ["ppt", "pptx", "key"].includes(extension) ? "presentation"
+            : ["zip", "rar", "7z", "tar", "gz"].includes(extension) ? "archive"
+              : mime.startsWith("image/") ? "image"
+                : ["txt", "md", "json", "js", "ts", "html", "css"].includes(extension) ? "text"
+                  : "file";
+    const label = {
+      pdf: "PDF document",
+      document: "Document",
+      spreadsheet: "Spreadsheet",
+      presentation: "Presentation",
+      archive: "Archive",
+      image: "Image",
+      text: "Text file",
+      file: "File",
+    }[kind];
+    return { name, extension: extension.slice(0, 6).toUpperCase(), kind, label, isImage: mime.startsWith("image/") };
   }
 
-  function attachmentControl(entry) {
+  function fileAttachment(entry) {
     const item = entry.attachment;
-    const label = String(item.mime || "").startsWith("image/") ? "View image" : "Download file";
-    return `<button type="button" data-attachment="${text(entry.id)}">${text(label)}</button>`;
+    const file = fileDetails(item, entry);
+    return `<article class="community-file-card ${file.isImage ? "is-image" : ""}" data-file-kind="${file.kind}">
+      <div class="community-file-info">
+        <span class="community-file-icon" aria-hidden="true">${text(file.extension)}</span>
+        <div class="community-file-copy"><b>${text(file.name)}</b><span>${text(file.label)}</span></div>
+      </div>
+      ${file.isImage ? `<div class="community-image-preview" data-image-attachment="${text(entry.id)}"><span>Loading image…</span></div>` : ""}
+      <button type="button" data-download-attachment="${text(entry.id)}">Download <span>${text(file.extension)}</span></button>
+    </article>`;
+  }
+
+  function messageContent(entry) {
+    if (entry.attachment?.kind === "schedule") return scheduleAttachment(entry);
+    if (entry.attachment?.kind === "file") return fileAttachment(entry);
+    return `<p>${text(entry.body)}</p>`;
+  }
+
+  let attachmentObserver;
+  async function loadCommunityImage(slot) {
+    if (slot.dataset.loading === "true") return;
+    slot.dataset.loading = "true";
+    const entry = social?.messages?.find((message) => String(message.id) === slot.dataset.imageAttachment);
+    try {
+      const { data } = await window.AntivergilScheduleCloud.attachment(user, slot.dataset.imageAttachment);
+      const blob = new Blob(
+        [Uint8Array.from(atob(data), (character) => character.charCodeAt(0))],
+        { type: entry?.attachment?.mime || "image/jpeg" },
+      );
+      const url = URL.createObjectURL(blob);
+      const image = new Image();
+      image.alt = entry?.attachment?.name || entry?.body || "Shared image";
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.onload = () => URL.revokeObjectURL(url);
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        slot.innerHTML = "<span>Preview unavailable</span>";
+      };
+      image.src = url;
+      slot.replaceChildren(image);
+    } catch {
+      slot.innerHTML = "<span>Preview unavailable</span>";
+    }
+    slot.dataset.loading = "false";
+  }
+
+  function hydrateMediaAttachments() {
+    attachmentObserver?.disconnect();
+    const slots = [...(panel?.querySelectorAll("[data-image-attachment]") || [])];
+    if (!slots.length) return;
+    if (!("IntersectionObserver" in window)) {
+      slots.forEach(loadCommunityImage);
+      return;
+    }
+    attachmentObserver = new IntersectionObserver((entries, observer) => {
+      for (const item of entries) {
+        if (!item.isIntersecting) continue;
+        observer.unobserve(item.target);
+        loadCommunityImage(item.target);
+      }
+    }, { root: panel.querySelector(".community-messages"), rootMargin: "240px 0px" });
+    slots.forEach((slot) => attachmentObserver.observe(slot));
   }
 
   async function attachmentAction(work) {
@@ -215,6 +297,31 @@
     });
   });
   panel?.addEventListener("click", event => {
+    const button = event.target.closest("[data-download-attachment]");
+    if (!button) return;
+    attachmentAction(async () => {
+      button.disabled = true;
+      try {
+        const entry = social.messages.find((message) => String(message.id) === button.dataset.downloadAttachment);
+        if (!entry) throw new Error("Attachment unavailable.");
+        const { data } = await window.AntivergilScheduleCloud.attachment(user, entry.id);
+        const blob = new Blob(
+          [Uint8Array.from(atob(data), (character) => character.charCodeAt(0))],
+          { type: entry.attachment.mime || "application/octet-stream" },
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = entry.attachment.name || entry.body || "attachment";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        showCommunityToast(`Downloading ${link.download}`);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+  panel?.addEventListener("click", event => {
     const button = event.target.closest("[data-share-term],[data-attachment]");
     if (!button) return;
     attachmentAction(async () => {
@@ -237,16 +344,6 @@
           button.classList.add("is-added");
           showCommunityToast(`${scheduleTermLabel(entry.attachment.term)} schedule added to your calendar.`);
           return;
-        }
-        const {data} = await window.AntivergilScheduleCloud.attachment(user,entry.id);
-        const blob = new Blob([Uint8Array.from(atob(data), c => c.charCodeAt(0))],{type:entry.attachment.mime});
-        const url = URL.createObjectURL(blob);
-        if (blob.type.startsWith("image/")) {
-          const img = new Image(); img.alt = entry.attachment.name; img.style.maxWidth = "100%";
-          img.onload = () => URL.revokeObjectURL(url); img.src = url; button.replaceWith(img);
-        } else {
-          const link = document.createElement("a"); link.href = url; link.download = entry.attachment.name; link.click();
-          setTimeout(() => URL.revokeObjectURL(url),60000);
         }
       } finally { button.disabled = false; }
     });
