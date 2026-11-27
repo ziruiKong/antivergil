@@ -665,14 +665,14 @@ function getSections() {
 /* ---------- 路由 / 导航 ---------- */
 const NAV = [
   ["browse", "Browse"],
-  ["me", "Community"],
+  ["community", "Community"],
   ["analysis", "Enrollment"],
   ["planner", "Plan"],
   ["calendar", "Calendar"],
   ["map", "Map"],
 ];
 
-const AUTH_REQUIRED_VIEWS = new Set(["rankings", "analysis", "history", "instructor", "department", "me"]);
+const AUTH_REQUIRED_VIEWS = new Set(["rankings", "analysis", "history", "instructor", "department", "me", "community"]);
 
 const VIEW_PATHS = {
   browse: "/browse/",
@@ -682,7 +682,8 @@ const VIEW_PATHS = {
   calendar: "/calendar/",
   map: "/map/",
   history: "/history/",
-  me: "/community/",
+  me: "/profile/",
+  community: "/community/",
   search: "/search/",
   instructor: "/instructor/",
   department: "/department/",
@@ -701,7 +702,7 @@ const PATH_VIEWS = {
   account: "me",
   profile: "me",
   me: "me",
-  community: "me",
+  community: "community",
   search: "search",
   instructor: "instructor",
   department: "department",
@@ -945,6 +946,7 @@ function switchView(id, opts = {}) {
   if (id === "department") renderDepartmentProfile();
   if (id === "rankings") renderRankings();
   if (id === "me") renderMyPage();
+  if (id === "community") window.CampusSocial?.setAccount(authUser, state.term);
   if (id === "analysis") renderAnalysis();
   if (id === "planner") renderPlanner();
   if (id === "calendar") {
@@ -953,7 +955,7 @@ function switchView(id, opts = {}) {
       syncGoogleCalendar();
     }
   }
-  if (["calendar", "map", "me"].includes(id)) {
+  if (["calendar", "map", "me", "community"].includes(id)) {
     showCloudScheduleStatus(cloudScheduleStatus);
     refreshCloudSchedule();
   }
@@ -973,7 +975,7 @@ const NAV_ICONS = {
 function buildNav() {
   const nav = $("#nav");
   const inkPath = "M110 27C105 14 82 7 56 7C30 7 8 13 5 23C2 34 24 44 53 46C80 48 105 40 111 31C116 24 105 16 94 12C82 8 68 7 55 8";
-  const items = NAV.filter(([id]) => id !== "me" || authUser);
+  const items = NAV.filter(([id]) => id !== "community" || authUser);
   nav.innerHTML = items.map(([id, label]) =>
     `<button data-view="${id}" title="${esc(label)}" aria-label="${esc(label)}">
       <span class="nav-label">
@@ -5646,7 +5648,7 @@ function exportICS() {
     }
   }
   lines.push("END:VCALENDAR");
-  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+  const blob = new Blob([lines.join("\n")], { type: "text/calendar" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `columbia-schedule-${state.term}.ics`;
@@ -7605,7 +7607,7 @@ async function init() {
   window.CampusSocial?.setAccount(authUser, state.term);
   if (window.AntivergilScheduleCloud?.enabled) {
     const refreshVisibleSchedule = () => {
-      if (["calendar", "map", "me"].includes(document.body.dataset.view)) refreshCloudSchedule();
+      if (["calendar", "map", "me", "community"].includes(document.body.dataset.view)) refreshCloudSchedule();
     };
     window.addEventListener("focus", refreshVisibleSchedule);
     document.addEventListener("visibilitychange", refreshVisibleSchedule);

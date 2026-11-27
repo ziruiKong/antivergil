@@ -1,6 +1,6 @@
 (() => {
   const find = (id) => document.getElementById(id);
-  const panel = find("campus-friends");
+  const panel = find("community-chat-root");
   const street = find("campus-street-map");
   const baseButton = find("campus-base-switch");
   const locate = find("campus-locate");
@@ -52,10 +52,10 @@
     const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b></header>
       <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""}"><p>${text(entry.body)}</p><time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
       <form id="community-message-form" class="community-compose"><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit">Send</button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
-    panel.innerHTML = `<div class="community-tabs" role="tablist" aria-label="Community sections"><button type="button" role="tab" id="community-tab-chats" aria-label="Chats" title="Chats" aria-controls="community-panel-chats" aria-selected="${communityTab === 'chats'}" data-community-tab="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5c0 4.2-3.6 7.5-8 7.5-1 0-2-.2-2.9-.5L5 20l1-3.6A7.2 7.2 0 0 1 4 11.5C4 7.4 7.6 4 12 4s8 3.4 8 7.5Z"/></svg></button><button type="button" role="tab" id="community-tab-friends" aria-label="Friends" title="Friends" aria-controls="community-panel-friends" aria-selected="${communityTab === 'friends'}" data-community-tab="friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="8" r="3.2"/><path d="M4 19c0-3.2 2.7-5.3 6-5.3s6 2.1 6 5.3H4ZM17 8h4m-4 4h4"/></svg>${incoming.length ? `<span class="community-tab-count">${incoming.length}</span>` : ''}</button></div>
-      <div id="community-panel-chats" role="tabpanel" aria-labelledby="community-tab-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
+    panel.innerHTML = `<div class="community-tabs" hidden></div>
+      <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
       <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
-      <section id="community-panel-friends" class="community-friend-settings" role="tabpanel" aria-labelledby="community-tab-friends" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div>
+      <section id="community-panel-friends" class="community-friend-settings" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><button type="button" class="community-back-to-chats" data-community-tab="chats">← Chats</button><div><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div></div>
       <div class="campus-friend-toolbar">
         <div class="campus-friend-code"><span>Your friend code</span><code>${text(social.code)}</code></div>
         <form id="campus-friend-invite" class="campus-friend-invite"><label for="campus-friend-code">Add a friend</label>
@@ -375,12 +375,12 @@
   window.addEventListener("pagehide", stop);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stopSharing();
-    else if (!find("view-map")?.hidden || !find("view-me")?.hidden) refresh();
+    else if (!find("view-map")?.hidden || !find("view-community")?.hidden) refresh();
   });
   setInterval(() => {
     if (document.hidden) return;
     renderPoints();
-    if (!find("view-map")?.hidden || !find("view-me")?.hidden) refresh();
+    if (!find("view-map")?.hidden || !find("view-community")?.hidden) refresh();
     if (!find("view-map")?.hidden) {
       shareCurrent();
       if (sharing && !locationRefreshPending && Date.now() - (own?.timestamp || 0) > 30000) {

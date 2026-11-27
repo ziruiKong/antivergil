@@ -23,7 +23,7 @@
         calendar: "/calendar/",
         map: "/map/",
         history: "/history/",
-        me: "/community/",
+        me: "/profile/",
         community: "/community/",
         search: "/search/",
         instructor: "/instructor/",
@@ -48,7 +48,7 @@
   <title>Antivergil</title>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="styles.css?v=20261126-community-navigation-13" />
+  <link rel="stylesheet" href="styles.css?v=20261126-community-navigation-15" />
 </head>
 <body>
   <svg class="ink-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -137,6 +137,11 @@
     <section class="view" id="view-me" hidden>
       <div id="my-page" class="my-page" aria-live="polite"></div>
       <section id="campus-friends" class="my-panel campus-friends" hidden></section>
+    </section>
+
+    <!-- Community messages -->
+    <section class="view" id="view-community" hidden>
+      <section id="community-chat-root" class="campus-friends" aria-label="Community messages"></section>
     </section>
 
     <!-- Instructor profile -->
@@ -408,9 +413,9 @@
   <script src="data/maps-config.js"></script>
   <script src="data/auth-config.js?v=20261126-privacy-1"></script>
   <script src="profile-store.js?v=20261125-all-accounts-1"></script>
-  <script src="schedule-cloud.js?v=6"></script>
+  <script src="schedule-cloud.js?v=7"></script>
   <script src="privacy.js?v=20261126-privacy-1"></script>
-  <script src="campus-social.js?v=20261126-community-navigation-12"></script>
-  <script src="app.js?v=20261126-community-navigation-12"></script>
+  <script src="campus-social.js?v=20261126-community-navigation-14"></script>
+  <script src="app.js?v=20261126-community-navigation-14"></script>
 </body>
 </html>
