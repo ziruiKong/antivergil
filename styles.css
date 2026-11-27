@@ -15702,6 +15702,278 @@ body[data-view="community"] #view-community #community-chat-root .community-list
     font-size: 10px;
   }
 }
+/* Community friends workspace. */
+body[data-view="community"] #view-community #community-panel-friends {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1040px;
+  min-height: 0;
+  margin-inline: auto;
+  padding: 28px 4px 40px;
+  overflow-y: auto;
+  background: var(--sa-bg);
+}
+.community-friends-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+body[data-view="community"] #view-community .community-back-to-chats {
+  display: grid;
+  flex: 0 0 38px;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #ccd7e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #365474;
+  font: 20px/1 system-ui, sans-serif;
+}
+.community-friends-heading h3 {
+  margin: 2px 0 4px;
+  color: #203247;
+  font: 650 25px/1.2 system-ui, sans-serif;
+}
+.community-friends-heading p {
+  margin: 0;
+  color: #737c88;
+  font: 12px/1.45 system-ui, sans-serif;
+}
+.community-friends-kicker {
+  color: #5d7da2;
+  font: 700 9px/1.2 system-ui, sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.community-friends-tools {
+  display: grid;
+  grid-template-columns: minmax(260px, .82fr) minmax(340px, 1.18fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+body[data-view="community"] #view-community #community-panel-friends .campus-friend-code,
+body[data-view="community"] #view-community #community-panel-friends .campus-friend-invite {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #d7e1ec;
+  border-radius: 10px;
+  background: #fff;
+}
+.campus-friend-code > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.campus-friend-code > div > span,
+.community-friend-form-copy h4 {
+  margin: 0;
+  color: #607086;
+  font: 650 10px/1.3 system-ui, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.campus-friend-code code {
+  margin: 0;
+  color: #1f3b58;
+  font: 650 19px/1.25 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .04em;
+}
+body[data-view="community"] #view-community #community-panel-friends .campus-friend-code > button {
+  flex: none;
+  width: auto;
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid #bbcee4;
+  border-radius: 7px;
+  background: #eef5fd;
+  color: #3f648e;
+  font: 600 11px/1.3 system-ui, sans-serif;
+}
+.campus-friend-invite {
+  display: grid !important;
+  align-items: stretch !important;
+}
+.community-friend-form-copy {
+  display: grid;
+  gap: 2px;
+}
+.community-friend-form-copy p {
+  margin: 0;
+  color: #7c8795;
+  font: 10px/1.35 system-ui, sans-serif;
+}
+.campus-friend-invite-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+body[data-view="community"] #view-community #community-panel-friends .campus-friend-invite input {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #ccd8e5;
+  border-radius: 7px;
+  background: #fbfcfe;
+  color: #26384a;
+  font: 12px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+body[data-view="community"] #view-community #community-panel-friends .campus-friend-invite button,
+.community-official-contact > button {
+  width: auto;
+  height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 7px;
+  background: #4778b6;
+  color: #fff;
+  font: 650 11px/1.3 system-ui, sans-serif;
+}
+.community-official-contact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 13px 16px;
+  border: 1px solid #cbdff3;
+  border-radius: 10px;
+  background: #eaf2fd;
+}
+.community-friend-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #e5eef9;
+  color: #3d628d;
+  font: 650 12px/1 system-ui, sans-serif;
+}
+.community-friend-avatar.is-official {
+  background: #111;
+}
+.community-friend-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.community-friend-identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.community-friend-identity b {
+  color: #253749;
+  font: 650 13px/1.35 system-ui, sans-serif;
+}
+.community-friend-identity span {
+  color: #76828f;
+  font: 10px/1.35 system-ui, sans-serif;
+}
+.campus-friend-group {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #d9e1ea;
+  border-radius: 10px;
+  background: #fff;
+}
+.campus-friend-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #e4ebf2;
+}
+.campus-friend-group-head h3 {
+  margin: 0;
+  color: #26384a;
+  font: 650 14px/1.35 system-ui, sans-serif;
+}
+.campus-friend-group-head p {
+  margin: 2px 0 0;
+  color: #808a96;
+  font: 10px/1.35 system-ui, sans-serif;
+}
+.campus-friend-request-count {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 12px;
+  background: #edf2f7;
+  color: #60758c;
+  font: 700 10px/1 system-ui, sans-serif;
+}
+.campus-friend-request-count.has-requests {
+  background: #4778b6;
+  color: #fff;
+}
+body[data-view="community"] #view-community .campus-friend-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.community-friend-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 16px;
+}
+.community-friend-row + .community-friend-row {
+  border-top: 1px solid #edf1f5;
+}
+.community-friend-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+body[data-view="community"] #view-community .community-friend-row-actions button {
+  width: auto;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d1dbe6;
+  border-radius: 6px;
+  background: #fff;
+  color: #516274;
+  font: 600 10px/1.2 system-ui, sans-serif;
+}
+body[data-view="community"] #view-community .community-friend-row.is-incoming .community-friend-row-actions button:first-child {
+  border-color: #4778b6;
+  background: #4778b6;
+  color: #fff;
+}
+.community-friend-empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: #8a929b;
+  font: 11px/1.4 system-ui, sans-serif;
+}
+@media (max-width: 820px) {
+  body[data-view="community"] #view-community #community-panel-friends { padding: 20px 2px 30px; }
+  .community-friends-tools { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .community-friend-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .community-friend-row-actions {
+    grid-column: 2;
+  }
+  .community-official-contact > button { grid-column: 2; justify-self: start; }
+}
 .community-conversation.has-unread .community-conversation-copy b {
   color: #193a5f;
   font-weight: 680;

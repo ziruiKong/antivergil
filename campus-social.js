@@ -41,13 +41,19 @@
     const selectedIsOfficial = Boolean(selected?.official);
     const canBroadcast = selectedIsOfficial && Boolean(social.officialAdmin);
     const personalAccepted = accepted.filter((friend) => !friend.official);
-    const incomingRows = incoming.map((friend) => `<li class="is-incoming"><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Needs your response</span></div>
-      <div class="campus-friend-actions"><button data-friend-action="accept" data-code="${text(friend.code)}">Accept</button>
+    const incomingRows = incoming.map((friend) => `<li class="community-friend-row is-incoming">
+      <span class="community-friend-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span>
+      <div class="community-friend-identity"><b>${text(friend.name)}</b><span>Wants to connect</span></div>
+      <div class="community-friend-row-actions"><button data-friend-action="accept" data-code="${text(friend.code)}">Accept</button>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Decline</button></div></li>`).join("");
-    const outgoingRows = outgoing.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Awaiting response</span></div>
-      <button data-friend-action="remove" data-code="${text(friend.code)}">Cancel request</button></li>`).join("");
-    const acceptedRows = personalAccepted.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b></div>
-      <div class="campus-friend-actions"><button data-friend-action="open" data-code="${text(friend.code)}">Message</button>
+    const outgoingRows = outgoing.map((friend) => `<li class="community-friend-row">
+      <span class="community-friend-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span>
+      <div class="community-friend-identity"><b>${text(friend.name)}</b><span>Request sent</span></div>
+      <div class="community-friend-row-actions"><button data-friend-action="remove" data-code="${text(friend.code)}">Cancel</button></div></li>`).join("");
+    const acceptedRows = personalAccepted.map((friend) => `<li class="community-friend-row">
+      <span class="community-friend-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span>
+      <div class="community-friend-identity"><b>${text(friend.name)}</b><span>Friend</span></div>
+      <div class="community-friend-row-actions"><button data-friend-action="open" data-code="${text(friend.code)}">Message</button>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Remove</button></div></li>`).join("");
     const messages = (social.messages || []).filter((entry) => entry.code === activeFriend);
     const conversations = accepted.map((friend) => {
@@ -66,31 +72,45 @@
     </form>`;
     const officialReadonly = `<div class="community-official-readonly"><b>ANTIVERGIL updates</b><span>Only the official team can publish here.</span></div>`;
     const composer = selected ? (selectedIsOfficial ? (canBroadcast ? broadcastComposer : officialReadonly) : normalComposer) : "";
+    const officialFriend = accepted.find((friend) => friend.official);
+    const officialRow = officialFriend ? `<section class="community-official-contact" aria-label="Official account">
+      <span class="community-friend-avatar is-official" aria-hidden="true"><img src="/assets/favicon.png" alt=""></span>
+      <div class="community-friend-identity"><b>${text(officialFriend.name)}</b><span>Announcements and official updates</span></div>
+      <button type="button" data-friend-action="open" data-code="${text(officialFriend.code)}">Open</button>
+    </section>` : "";
     const chat = selected ? `<header class="community-chat-head"><div>${selected.official ? '<span class="community-chat-avatar" aria-hidden="true"><img src="/assets/favicon.png" alt=""></span>' : ""}<b>${text(selected.name)}</b>${selected.official ? '<span class="community-official-badge">Official</span>' : ""}</div></header>
       <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.official ? "is-official" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : entry.attachment?.kind === "file" ? `has-file ${String(entry.attachment.mime || "").startsWith("image/") ? "has-image" : ""}` : entry.attachment?.kind === "ad" ? "has-ad" : ""}">${messageContent(entry)}<div class="community-message-meta"><time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time>${entry.mine ? `<span class="community-read-state ${entry.pending ? "is-sending" : entry.readAt ? "is-read" : "is-delivered"}">${entry.pending ? "Sending" : entry.readAt ? "Read" : "Delivered"}</span>` : ""}</div></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
       ${composer}` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
       <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
       <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
-      <section id="community-panel-friends" class="community-friend-settings" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><button type="button" class="community-back-to-chats" data-community-tab="chats">← Chats</button><div><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div></div>
-      <div class="campus-friend-toolbar">
-        <div class="campus-friend-code"><span>Your friend code</span><code>${text(social.code)}</code></div>
-        <form id="campus-friend-invite" class="campus-friend-invite"><label for="campus-friend-code">Add a friend</label>
-          <div class="campus-friend-invite-row"><input id="campus-friend-code" name="code" required pattern="[A-Za-z0-9_\\-]{12}" maxlength="12" placeholder="Friend code">
-          <button type="submit">Send request</button></div>
-        </form>
-      </div>
-      <section class="campus-friend-group" aria-labelledby="campus-incoming-heading">
-        <div class="campus-friend-group-head"><h3 id="campus-incoming-heading">Incoming requests</h3>
-          <span class="campus-friend-request-count ${incoming.length ? "has-requests" : ""}">${incoming.length ? `${incoming.length} waiting` : "None"}</span></div>
-        ${incoming.length ? `<ul class="campus-friend-list">${incomingRows}</ul>` : '<p class="campus-friend-empty">No new requests right now.</p>'}
-      </section>
-      ${outgoing.length ? `<section class="campus-friend-group" aria-labelledby="campus-outgoing-heading">
-        <div class="campus-friend-group-head"><h3 id="campus-outgoing-heading">Sent requests</h3></div>
-        <ul class="campus-friend-list">${outgoingRows}</ul></section>` : ""}
-      ${personalAccepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
-        <div class="campus-friend-group-head"><h3 id="campus-accepted-heading">Your friends</h3></div>
-        <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
+      <section id="community-panel-friends" class="community-friend-settings" ${communityTab === 'friends' ? '' : 'hidden'}>
+        <header class="community-friends-heading">
+          <button type="button" class="community-back-to-chats" data-community-tab="chats" aria-label="Back to chats">←</button>
+          <div><span class="community-friends-kicker">Community</span><h3>Friends</h3><p>Connect with classmates and manage invitations.</p></div>
+        </header>
+        <div class="community-friends-tools">
+          <section class="campus-friend-code">
+            <div><span>Your invite code</span><code>${text(social.code)}</code></div>
+            <button type="button" data-copy-friend-code>Copy</button>
+          </section>
+          <form id="campus-friend-invite" class="campus-friend-invite">
+            <div class="community-friend-form-copy"><h4>Add a friend</h4><p>Enter their 12-character invite code.</p></div>
+            <div class="campus-friend-invite-row"><label class="community-sr-only" for="campus-friend-code">Friend code</label><input id="campus-friend-code" name="code" required pattern="[A-Za-z0-9_\\-]{12}" maxlength="12" placeholder="Friend code"><button type="submit">Send request</button></div>
+          </form>
+        </div>
+        ${officialRow}
+        <section class="campus-friend-group" aria-labelledby="campus-incoming-heading">
+          <div class="campus-friend-group-head"><div><h3 id="campus-incoming-heading">Incoming requests</h3><p>People waiting to connect with you.</p></div>
+            <span class="campus-friend-request-count ${incoming.length ? "has-requests" : ""}">${incoming.length || "0"}</span></div>
+          ${incoming.length ? `<ul class="campus-friend-list">${incomingRows}</ul>` : '<p class="community-friend-empty">No new requests.</p>'}
+        </section>
+        ${outgoing.length ? `<section class="campus-friend-group" aria-labelledby="campus-outgoing-heading">
+          <div class="campus-friend-group-head"><div><h3 id="campus-outgoing-heading">Sent requests</h3><p>Waiting for a response.</p></div><span class="campus-friend-request-count">${outgoing.length}</span></div>
+          <ul class="campus-friend-list">${outgoingRows}</ul></section>` : ""}
+        ${personalAccepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
+          <div class="campus-friend-group-head"><div><h3 id="campus-accepted-heading">Your friends</h3><p>Your accepted Community connections.</p></div><span class="campus-friend-request-count">${personalAccepted.length}</span></div>
+          <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
       </section>
       <div id="community-toast" class="community-toast" role="status" aria-live="polite" hidden></div>`;
     const scroller = panel.querySelector(".community-messages");
@@ -591,6 +611,17 @@
       communityTab = tabButton.dataset.communityTab;
       renderFriends();
       panel.querySelector(`[data-community-tab="${communityTab}"]`)?.focus();
+      return;
+    }
+    if (event.target.closest("[data-copy-friend-code]")) {
+      const code = social?.code || "";
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(code)
+          .then(() => showCommunityToast("Invite code copied."))
+          .catch(() => showCommunityToast("Could not copy the invite code.", true));
+      } else {
+        showCommunityToast("Copy is unavailable in this browser.", true);
+      }
       return;
     }
     const button = event.target.closest("[data-friend-action]");
