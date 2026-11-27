@@ -78,12 +78,7 @@
         <div class="campus-friend-group-head"><h3 id="campus-accepted-heading">Your friends</h3></div>
         <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
       </section>
-      <dialog id="community-popup" class="community-popup" aria-labelledby="community-popup-title">
-        <button type="button" class="community-popup-close" data-popup-close aria-label="Close">×</button>
-        <h3 id="community-popup-title"></h3>
-        <p></p>
-        <button type="button" class="community-popup-done" data-popup-close>Done</button>
-      </dialog>`;
+      <div id="community-toast" class="community-toast" role="status" aria-live="polite" hidden></div>`;
     const scroller = panel.querySelector(".community-messages");
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
@@ -184,18 +179,23 @@
     catch (error) {
       const status = find("campus-friend-status");
       if (status) status.textContent = "";
-      showCommunityPopup("Couldn’t complete that", error.message, true);
+      showCommunityToast(error.message, true);
     }
   }
 
-  function showCommunityPopup(title, message, error = false) {
-    const popup = find("community-popup");
-    if (!popup) return;
-    popup.querySelector("h3").textContent = title;
-    popup.querySelector("p").textContent = message;
-    popup.classList.toggle("is-error", error);
-    if (!popup.open) popup.showModal();
-    popup.querySelector("[data-popup-close]")?.focus();
+  let communityToastTimer;
+  function showCommunityToast(message, error = false) {
+    const toast = find("community-toast");
+    if (!toast || !message) return;
+    clearTimeout(communityToastTimer);
+    toast.textContent = message;
+    toast.classList.toggle("is-error", error);
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    communityToastTimer = setTimeout(() => {
+      toast.classList.remove("is-visible");
+      setTimeout(() => { toast.hidden = true; }, 180);
+    }, 2800);
   }
   panel?.addEventListener("change", event => {
     if (!event.target.matches("[data-upload]")) return;
@@ -235,10 +235,7 @@
           });
           button.textContent = "Added to my calendar";
           button.classList.add("is-added");
-          showCommunityPopup(
-            "Schedule added",
-            `${scheduleTermLabel(entry.attachment.term)} schedule was added to your calendar.`,
-          );
+          showCommunityToast(`${scheduleTermLabel(entry.attachment.term)} schedule added to your calendar.`);
           return;
         }
         const {data} = await window.AntivergilScheduleCloud.attachment(user,entry.id);
@@ -391,14 +388,6 @@
     if (event.target.id !== 'community-search-input') return;
     const query = event.target.value.trim().toLowerCase();
     panel.querySelectorAll('.community-conversation').forEach((row) => { row.hidden = !row.dataset.name.includes(query); });
-  });
-  panel?.addEventListener("click", (event) => {
-    if (event.target.closest("[data-popup-close]")) {
-      find("community-popup")?.close();
-      return;
-    }
-    const popup = event.target.closest("#community-popup");
-    if (popup && event.target === popup) popup.close();
   });
   panel?.addEventListener("click", (event) => {
     const tabButton = event.target.closest('[data-community-tab]');
