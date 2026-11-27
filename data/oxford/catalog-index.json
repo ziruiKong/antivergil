@@ -1,13 +1,15 @@
 {
   "school": "Miami University",
   "campus": "Oxford",
-  "generatedAt": "2026-11-27T04:45:42.412Z",
+  "generatedAt": "2026-11-27T05:57:31.537Z",
   "source": "https://miamioh.edu/courselist",
   "summary": {
     "semesterCount": 23,
     "sectionCount": 41877,
     "courseCount": 4744,
     "departmentCount": 102,
+    "instructorCount": 3845,
+    "sectionsWithNamedInstructor": 41130,
     "firstTerm": "2022-Winter",
     "lastTerm": "2027-Summer"
   },

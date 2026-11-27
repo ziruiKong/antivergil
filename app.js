@@ -627,6 +627,14 @@ function sectionTitle(s) {
   return s.code || "";
 }
 
+function displayInstructorName(value) {
+  return String(value || "").split(/\s*;\s*/).map((entry) => {
+    const parts = entry.split(",");
+    if (parts.length < 2) return entry.trim();
+    return `${parts.slice(1).join(",").trim()} ${parts[0].trim()}`.trim();
+  }).filter(Boolean).join("; ");
+}
+
 /* ---------- 课程分组 ---------- */
 function groupByCode(courses) {
   const map = new Map();
@@ -638,7 +646,9 @@ function groupByCode(courses) {
   const list = [];
   const deadline = termDropDeadline(state.term);
   for (const [code, sections] of map) {
-    const best = sections.find((s) => s.instructor) || sections[0];
+    const best = sections.find((s) => s.instructor && s.instructor !== "Staff")
+      || sections.find((s) => s.instructorPrevious)
+      || sections[0];
     const culpaMax = Math.max(...sections.map((s) => s.culpa || 0));
     const points = sections.map((s) => s.points).filter((p) => p != null);
     const capacityTotal = sections.reduce((a, s) => a + (s.capacity || 0), 0);
@@ -685,6 +695,7 @@ function getGrouped() {
     ...c,
     hay: [c.code, c.title, c.dept, c.deptCode,
       ...c.sections.map((s) => s.instructor || ""),
+      ...c.sections.map((s) => s.instructorPrevious || ""),
       ...c.sections.map((s) => s.desc || "")].join(" ").toLowerCase(),
   }));
   groupedCache = { src: state.courses, list };
@@ -742,7 +753,7 @@ function getSections() {
     ...c,
     hay: [
       c.code, c.title, c.dept, c.deptCode,
-      c.section.instructor || "", c.section.desc || "",
+      c.section.instructor || "", c.section.instructorPrevious || "", c.section.desc || "",
       c.section.location || "", c.section.classId || "",
       c.section.callNumber || "",
     ].join(" ").toLowerCase(),
@@ -1527,7 +1538,25 @@ function titleCaseLabel(value) {
 function cardHTML(course, opts = {}) {
   const sec = course.sections;
   const one = course.section || course.sections[0];
-  const instructors = [...new Set(sec.map((s) => s.instructor).filter(Boolean))];
+  const instructorEntries = [...new Map(sec.map((section) => {
+    if (section.instructor && section.instructor !== "Staff") {
+      return [section.instructor, { name: section.instructor, recent: false }];
+    }
+    if (section.instructorPrevious) {
+      return [section.instructorPrevious, { name: section.instructorPrevious, recent: true }];
+    }
+    return null;
+  }).filter(Boolean)).values()];
+  const firstInstructor = instructorEntries[0];
+  const instructorNameParts = firstInstructor?.name.split(/\s*;\s*/).filter(Boolean) || [];
+  const primaryInstructor = instructorNameParts[0] || "";
+  const additionalInstructorCount = Math.max(0, instructorNameParts.length - 1) + Math.max(0, instructorEntries.length - 1);
+  const instructorText = firstInstructor
+    ? `${displayInstructorName(primaryInstructor)}${additionalInstructorCount ? ` +${additionalInstructorCount}` : ""}${firstInstructor.recent ? "†" : ""}`
+    : "";
+  const instructorTitle = firstInstructor?.recent
+    ? `${displayInstructorName(firstInstructor.name)} was the most recent assigned instructor. This section is currently listed as Staff/TBA.`
+    : "Open instructor profile";
   const credits = one.pointsLabel || one.points || course.minPoints;
   const meeting = meetingParts(one);
   const daysSet = new Set(one.days || []);
@@ -1544,6 +1573,8 @@ function cardHTML(course, opts = {}) {
     </div>`;
   const timePill = `<button class="time-chip" data-act="cal" title="Add this section to your schedule">${esc(meeting.time)}</button>`;
   const an = enrollAnalysis(course);
+  const termStart = semesterStart(state.term);
+  const beforeTerm = Boolean(termStart && termStart > new Date().toISOString().slice(0, 10));
   const hasEnroll = course.enrolledTotal > 0;
   const pct = course.hasCapacity && course.capacityTotal
     ? Math.min(100, Math.round((course.enrolledTotal / course.capacityTotal) * 100)) : null;
@@ -1557,8 +1588,20 @@ function cardHTML(course, opts = {}) {
   const fillTip = pct != null ? `${pct}% of seats filled${openSeats != null ? ` · ${openSeats} open` : ""}` : "Capacity unknown";
   let dropTip = "No post-start enrollment data for this section.";
   let dropChip = `<span class="enroll-box drop muted" data-tip="${esc(dropTip)}" title="${esc(dropTip)}">—</span>`;
+  if (state.school === "miami" && (!an || !an.hasPostStart)) {
+    if (beforeTerm) {
+      dropTip = "Drop-rate tracking begins after classes start. This term is still in its registration period.";
+      dropChip = `<span class="enroll-box drop muted" data-tip="${esc(dropTip)}" title="${esc(dropTip)}">Pre-term</span>`;
+    } else {
+      dropTip = "Miami does not publish the enrollment history needed to calculate a drop rate for this term.";
+      dropChip = `<span class="enroll-box drop muted" data-tip="${esc(dropTip)}" title="${esc(dropTip)}">N/A</span>`;
+    }
+  }
   if (an && an.hasPostStart) {
-    if (an.ended) {
+    if (state.school === "miami" && an.samplePoints < 2) {
+      dropTip = "Drop-rate tracking needs at least two post-start enrollment snapshots.";
+      dropChip = `<span class="enroll-box drop muted" data-tip="${esc(dropTip)}" title="${esc(dropTip)}">Tracking</span>`;
+    } else if (an.ended) {
       dropTip = "Enrollment reached near zero — this is likely an ended or module section.";
       dropChip = `<span class="enroll-box drop muted" data-tip="${esc(dropTip)}" title="${esc(dropTip)}">Ended</span>`;
     } else {
@@ -1594,9 +1637,9 @@ function cardHTML(course, opts = {}) {
           </span>
         </div>
         <div class="cc-meta">
-          ${instructors.length
-            ? `<button class="info-pill instructor-pill" data-instructor="${esc(instructors[0])}" title="Open instructor profile">
-                <span>${esc(instructors[0])}${instructors.length > 1 ? ` +${instructors.length - 1}` : ""}</span>
+          ${firstInstructor
+            ? `<button class="info-pill instructor-pill" data-instructor="${esc(primaryInstructor)}" title="${esc(instructorTitle)}">
+                <span>${esc(instructorText)}</span>
               </button>`
             : ""}
           ${course.culpa ? `<span class="chip warn">CULPA ${course.culpa}</span>` : ""}
@@ -1862,7 +1905,7 @@ function renderComparison(comp) {
           <b>${x.enrolled || 0}${x.capacity != null ? ` / ${x.capacity}` : ""}</b>
           ${dropLabel}
         </div>
-        <div class="cmp-inst" title="${esc(x.instructor)}">${esc(x.instructor)}</div>
+        <div class="cmp-inst" title="${esc(x.instructor)}">${esc(displayInstructorName(x.instructor))}</div>
       </div>`;
   };
   return `
@@ -2100,6 +2143,11 @@ function openOxfordCourse(code, sectionId = "") {
   if (!sections.length) return;
   state.modalCourse = { code, sectionId };
   const selected = sections.find((section) => section.classId === sectionId || String(section.callNumber) === sectionId) || sections[0];
+  const instructorFact = selected.instructor && selected.instructor !== "Staff"
+    ? displayInstructorName(selected.instructor)
+    : selected.instructorPrevious
+      ? `TBA · recent: ${displayInstructorName(selected.instructorPrevious)}`
+      : "TBA";
   const coursePath = coursePermalink(code, state.term, selected.callNumber || selected.classId);
   state.courseReturnPath ||= location.pathname.startsWith("/course/") ? "/browse/?school=oxford" : location.pathname + location.search;
   if (location.pathname + location.search !== coursePath) history.replaceState(history.state, "", coursePath);
@@ -2125,7 +2173,7 @@ function openOxfordCourse(code, sectionId = "") {
             <div><b>Academic term</b><strong>${esc(termLabel(state.term))}</strong></div>
             <div><b>Credits</b><strong>${esc(selected.pointsLabel || selected.points || "—")}</strong></div>
             <div><b>Delivery</b><strong>${esc(selected.method || "TBA")}</strong></div>
-            <div><b>Instructor</b><strong>${esc(selected.instructor || "TBA")}</strong></div>
+            <div><b>Instructor</b><strong>${esc(instructorFact)}</strong></div>
           </div>
           <div class="course-entry-links"><a href="https://miamioh.edu/courselist" target="_blank" rel="noopener">Official Course List ↗</a></div>
         </aside>
@@ -6249,19 +6297,19 @@ function renderDataFreshness(status = latestDataStatus) {
   const syncedAt = !isOxford && matchesActiveTerm
     ? status.lastSuccessfulSyncAt || status.snapshotUpdatedAt || history.updatedAt
     : history.updatedAt;
-  const state = status.status || "ready";
+  const statusState = status.status || "ready";
   $("#data-as-of-date").textContent = formatDataDate(dataThrough);
   $("#data-as-of-time").textContent = isOxford
     ? "Official catalog snapshot"
-    : state === "syncing"
+    : statusState === "syncing"
     ? "Checking now…"
     : syncedAt ? `Synced ${formatSyncTime(syncedAt)}` : "Sync pending";
-  host.classList.toggle("is-syncing", state === "syncing");
-  host.classList.toggle("is-error", state === "error");
-  host.classList.toggle("is-stale", state === "ready" && Boolean(status.lastError));
+  host.classList.toggle("is-syncing", statusState === "syncing");
+  host.classList.toggle("is-error", statusState === "error");
+  host.classList.toggle("is-stale", statusState === "ready" && Boolean(status.lastError));
   host.title = isOxford
     ? `Source: ${status.source || "Miami University Course List"} · ${OXFORD_CATALOG_SUMMARY.semesterCount} terms · ${OXFORD_CATALOG_SUMMARY.sectionCount} sections`
-    : state === "error"
+    : statusState === "error"
     ? `Last sync failed: ${status.lastError || "unknown error"}`
     : `Source: ${status.source || "Columbia course data"} · refreshed hourly`;
   const hasNewData = matchesActiveTerm && Boolean(dataThrough && history.latestDate && dataThrough > history.latestDate);
@@ -7643,7 +7691,8 @@ function bindGlobal() {
     const inst = e.target.closest("button[data-instructor]");
     if (inst) {
       e.stopPropagation();
-      openInstructor(inst.dataset.instructor);
+      if (state.school === "miami") openSearch(inst.dataset.instructor);
+      else openInstructor(inst.dataset.instructor);
       return;
     }
     const addBtn = e.target.closest(".card-add");
