@@ -13,6 +13,7 @@
   let pendingMessages = [];
   let communityTab = 'chats';
   let stickToMessagesBottom = true;
+  const readRequests = new Set();
   let watch, own, locationRefreshPending = false, sharing = false, locationWrites = Promise.resolve(), lastSent = 0, sentLocation = false;
 
   async function call(body) {
@@ -37,25 +38,37 @@
     const accepted = social.friends.filter((friend) => friend.accepted);
     if (!accepted.some((friend) => friend.code === activeFriend)) activeFriend = accepted[0]?.code;
     const selected = accepted.find((friend) => friend.code === activeFriend);
+    const selectedIsOfficial = Boolean(selected?.official);
+    const canBroadcast = selectedIsOfficial && Boolean(social.officialAdmin);
+    const personalAccepted = accepted.filter((friend) => !friend.official);
     const incomingRows = incoming.map((friend) => `<li class="is-incoming"><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Needs your response</span></div>
       <div class="campus-friend-actions"><button data-friend-action="accept" data-code="${text(friend.code)}">Accept</button>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Decline</button></div></li>`).join("");
     const outgoingRows = outgoing.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Awaiting response</span></div>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Cancel request</button></li>`).join("");
-    const acceptedRows = accepted.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b></div>
+    const acceptedRows = personalAccepted.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b></div>
       <div class="campus-friend-actions"><button data-friend-action="open" data-code="${text(friend.code)}">Message</button>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Remove</button></div></li>`).join("");
     const messages = (social.messages || []).filter((entry) => entry.code === activeFriend);
     const conversations = accepted.map((friend) => {
       const last = (social.messages || []).filter((entry) => entry.code === friend.code).at(-1);
+      const unread = Math.max(0, Number(friend.unread) || 0);
+      const displayName = friend.official ? "ANTIVERGIL" : friend.name;
       const preview = last?.attachment?.kind === "schedule"
         ? `${scheduleTermLabel(last.attachment.term)} schedule · ${last.attachment.sections?.length || 0} courses`
         : last?.body || "Start a conversation";
-      return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(preview)}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
+      return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""} ${unread ? "has-unread" : ""} ${friend.official ? "is-official" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar ${friend.official ? "is-official" : ""}" aria-hidden="true">${friend.official ? '<img src="/assets/favicon.png" alt="">' : text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(displayName)}${friend.official ? '<span class="community-official-badge">Official</span>' : ""}</b><small>${text(preview)}</small></span>${unread ? `<span class="community-unread-count" aria-label="${unread} unread ${unread === 1 ? "message" : "messages"}">${unread > 99 ? "99+" : unread}</span>` : ""}${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
     }).join("");
-    const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b></header>
-      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : entry.attachment?.kind === "file" ? `has-file ${String(entry.attachment.mime || "").startsWith("image/") ? "has-image" : ""}` : ""}">${messageContent(entry)}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
-      <form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
+    const normalComposer = `<form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>`;
+    const broadcastComposer = `<form id="community-broadcast-form" class="community-broadcast-compose">
+      <header><span class="community-broadcast-mark" aria-hidden="true"><img src="/assets/favicon.png" alt=""></span><div><b>Official broadcast</b><span>Visible to every user</span></div><output data-broadcast-count>0 / 2000</output></header>
+      <div class="community-broadcast-row"><label class="community-sr-only" for="community-broadcast-input">Announcement</label><textarea id="community-broadcast-input" name="body" maxlength="2000" required placeholder="Write an announcement for everyone…"></textarea><button type="submit" disabled><span>Publish</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button></div>
+    </form>`;
+    const officialReadonly = `<div class="community-official-readonly"><b>ANTIVERGIL updates</b><span>Only the official team can publish here.</span></div>`;
+    const composer = selected ? (selectedIsOfficial ? (canBroadcast ? broadcastComposer : officialReadonly) : normalComposer) : "";
+    const chat = selected ? `<header class="community-chat-head"><div>${selected.official ? '<span class="community-chat-avatar" aria-hidden="true"><img src="/assets/favicon.png" alt=""></span>' : ""}<b>${text(selected.name)}</b>${selected.official ? '<span class="community-official-badge">Official</span>' : ""}</div></header>
+      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.official ? "is-official" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : entry.attachment?.kind === "file" ? `has-file ${String(entry.attachment.mime || "").startsWith("image/") ? "has-image" : ""}` : entry.attachment?.kind === "ad" ? "has-ad" : ""}">${messageContent(entry)}<div class="community-message-meta"><time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time>${entry.mine ? `<span class="community-read-state ${entry.pending ? "is-sending" : entry.readAt ? "is-read" : "is-delivered"}">${entry.pending ? "Sending" : entry.readAt ? "Read" : "Delivered"}</span>` : ""}</div></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
+      ${composer}` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
       <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
       <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
@@ -75,7 +88,7 @@
       ${outgoing.length ? `<section class="campus-friend-group" aria-labelledby="campus-outgoing-heading">
         <div class="campus-friend-group-head"><h3 id="campus-outgoing-heading">Sent requests</h3></div>
         <ul class="campus-friend-list">${outgoingRows}</ul></section>` : ""}
-      ${accepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
+      ${personalAccepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
         <div class="campus-friend-group-head"><h3 id="campus-accepted-heading">Your friends</h3></div>
         <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
       </section>
@@ -90,6 +103,7 @@
       scroller.scrollTop = scroller.scrollHeight;
     }
     hydrateMediaAttachments();
+    if (selected) markConversationRead(selected.code);
   }
 
   const scheduleCatalogCache = new Map();
@@ -214,7 +228,15 @@
     </article>`;
   }
 
+  function officialAd(entry) {
+    return `<article class="community-ad-card">
+      <header><span class="community-official-mark" aria-hidden="true"><img src="/assets/favicon.png" alt=""></span><b>ANTIVERGIL Official</b><span class="community-official-badge">Official</span></header>
+      <p>${text(entry.body)}</p>
+    </article>`;
+  }
+
   function messageContent(entry) {
+    if (entry.attachment?.kind === "ad") return officialAd(entry);
     if (entry.attachment?.kind === "schedule") return scheduleAttachment(entry);
     if (entry.attachment?.kind === "file") return fileAttachment(entry);
     return `<p>${text(entry.body)}</p>`;
@@ -301,6 +323,30 @@
       setTimeout(() => { toast.hidden = true; }, 180);
     }, 2800);
   }
+
+  function markConversationRead(code) {
+    const friend = social?.friends?.find((entry) => entry.code === code);
+    if (!friend) return;
+    const unread = Math.max(0, Number(friend.unread) || 0);
+    const unreadMessages = (social.messages || []).some((message) =>
+      message.code === code && !message.mine && !message.readAt);
+    if (!unread && !unreadMessages) return;
+    friend.unread = 0;
+    const readAt = new Date().toISOString();
+    for (const message of social.messages || []) {
+      if (message.code === code && !message.mine && !message.readAt) message.readAt = readAt;
+    }
+    const row = [...(panel?.querySelectorAll(".community-conversation") || [])]
+      .find((item) => item.dataset.code === code);
+    row?.classList.remove("has-unread");
+    row?.querySelector(".community-unread-count")?.remove();
+    if (readRequests.has(code)) return;
+    readRequests.add(code);
+    call({ action: "read", code })
+      .catch(() => {})
+      .finally(() => readRequests.delete(code));
+  }
+
   panel?.addEventListener("change", event => {
     if (!event.target.matches("[data-upload]")) return;
     const file = event.target.files[0], code = activeFriend;
@@ -401,8 +447,8 @@
         ...responseMessages,
         ...pendingMessages.filter((pending) => pending.userSub === account),
       ];
-      const changed = !previous || JSON.stringify([previous.code, previous.shares, previous.messages, previous.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])])
-        !== JSON.stringify([response.code, response.shares, response.messages, response.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])]);
+      const changed = !previous || JSON.stringify([previous.code, previous.shares, previous.messages, previous.friends.map(({code, name, accepted, outgoing, unread}) => [code, name, accepted, outgoing, unread])])
+        !== JSON.stringify([response.code, response.shares, response.messages, response.friends.map(({code, name, accepted, outgoing, unread}) => [code, name, accepted, outgoing, unread])]);
       social = { ...response, messages: visibleMessages };
       if (changed) {
         const draft = panel.querySelector('#community-message-input')?.value || '';
@@ -466,6 +512,25 @@
   });
   panel?.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (event.target.id === "community-broadcast-form") {
+      const form = event.target;
+      const input = form.elements.body;
+      const body = input.value.trim();
+      if (!body) return;
+      const button = form.querySelector('[type="submit"]');
+      button.disabled = true;
+      call({ action: "broadcast", body }).then(async (result) => {
+        input.value = "";
+        await refresh();
+        showCommunityToast(`Announcement published to ${result.delivered || 0} users.`);
+      }).catch((error) => {
+        showCommunityToast(error.message, true);
+      }).finally(() => {
+        const current = panel.querySelector("#community-broadcast-form [type='submit']");
+        if (current) current.disabled = false;
+      });
+      return;
+    }
     if (event.target.id === "community-message-form") {
       const form = event.target;
       const input = form.elements.body;
@@ -510,6 +575,12 @@
     }
   });
   panel?.addEventListener('input', (event) => {
+    if (event.target.id === "community-broadcast-input") {
+      const form = event.target.form;
+      form.querySelector("[data-broadcast-count]").textContent = `${event.target.value.length} / 2000`;
+      form.querySelector('[type="submit"]').disabled = !event.target.value.trim();
+      return;
+    }
     if (event.target.id !== 'community-search-input') return;
     const query = event.target.value.trim().toLowerCase();
     panel.querySelectorAll('.community-conversation').forEach((row) => { row.hidden = !row.dataset.name.includes(query); });
