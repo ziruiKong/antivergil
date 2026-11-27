@@ -15260,6 +15260,8 @@ body.auth-authenticated #view-me .campus-friend-status { position: absolute; z-i
 body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .app-shell { height: 100dvh; min-height: 0; }
 body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .main-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .topbar { flex: none; z-index: 300; }
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .topbar-search { display: none; }
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .topbar-meta-row { border-bottom: 2px solid var(--sa-line); }
 body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .main-wrap > main { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
 body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) { height: 100%; min-height: 0; padding: 0; }
 body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) #my-page { height: 100%; min-height: 0; max-width: none; margin: 0; padding: 0; }
