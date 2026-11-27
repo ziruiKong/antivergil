@@ -12,6 +12,7 @@
   let user, term, social, activeFriend, request, streetLoad, map, markers;
   let pendingMessages = [];
   let communityTab = 'chats';
+  let stickToMessagesBottom = true;
   let watch, own, locationRefreshPending = false, sharing = false, locationWrites = Promise.resolve(), lastSent = 0, sentLocation = false;
 
   async function call(body) {
@@ -80,7 +81,14 @@
       </section>
       <div id="community-toast" class="community-toast" role="status" aria-live="polite" hidden></div>`;
     const scroller = panel.querySelector(".community-messages");
-    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    if (scroller) {
+      stickToMessagesBottom = true;
+      scroller.addEventListener("scroll", () => {
+        stickToMessagesBottom =
+          scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+      }, { passive: true });
+      scroller.scrollTop = scroller.scrollHeight;
+    }
     hydrateMediaAttachments();
   }
 
@@ -217,8 +225,7 @@
     if (slot.dataset.loading === "true") return;
     slot.dataset.loading = "true";
     const scroller = slot.closest(".community-messages");
-    const followBottom = scroller
-      && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 100;
+    const followBottom = scroller && stickToMessagesBottom;
     const entry = social?.messages?.find((message) => String(message.id) === slot.dataset.imageAttachment);
     try {
       const { data } = await window.AntivergilScheduleCloud.attachment(user, slot.dataset.imageAttachment);
