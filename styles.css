@@ -15256,6 +15256,16 @@ body.auth-authenticated #view-me .community-conversations { min-height: 0; flex:
 body.auth-authenticated #view-me .community-friend-settings { min-height: 0; overflow-y: auto; }
 body.auth-authenticated #view-me .community-exit { display: grid; place-items: center; width: 38px; height: 30px; color: #60635e; text-decoration: none; font-size: 22px; }
 body.auth-authenticated #view-me .campus-friend-status { position: absolute; z-index: 2; bottom: 3px; right: 18px; }
+/* Keep the main navigation visible above the fixed-height Community workspace. */
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .app-shell { height: 100dvh; min-height: 0; }
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .main-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .topbar { flex: none; z-index: 300; }
+body.auth-authenticated:has(#view-me:not([hidden]) .community-tabs) .main-wrap > main { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
+body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) { height: 100%; min-height: 0; padding: 0; }
+body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) #my-page { height: 100%; min-height: 0; max-width: none; margin: 0; padding: 0; }
+body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) #my-page > :not(#my-friends-mount) { display: none; }
+body.auth-authenticated #view-me:not([hidden]):has(.community-tabs) #my-friends-mount { height: 100%; min-height: 0; }
+body.auth-authenticated #view-me:not([hidden]) .campus-friends:has(.community-tabs) { position: relative; inset: auto; width: 100%; height: 100%; }
 @media (max-width: 600px) {
   body.auth-authenticated #view-me .campus-friends:has(.community-tabs) { grid-template-columns: 50px minmax(0, 1fr); }
   body.auth-authenticated #view-me .community-layout { grid-template-columns: minmax(110px, 35%) minmax(0, 1fr); height: 70vh; min-height: 440px; }
