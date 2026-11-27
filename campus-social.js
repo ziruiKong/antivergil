@@ -225,7 +225,9 @@
     if (slot.dataset.loading === "true") return;
     slot.dataset.loading = "true";
     const scroller = slot.closest(".community-messages");
-    const followBottom = scroller && stickToMessagesBottom;
+    const messages = scroller ? [...scroller.querySelectorAll(".community-message")] : [];
+    const messageIndex = scroller ? messages.indexOf(slot.closest(".community-message")) : -1;
+    const followBottom = scroller && (stickToMessagesBottom || messageIndex >= messages.length - 3);
     const entry = social?.messages?.find((message) => String(message.id) === slot.dataset.imageAttachment);
     try {
       const { data } = await window.AntivergilScheduleCloud.attachment(user, slot.dataset.imageAttachment);
