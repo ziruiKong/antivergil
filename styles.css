@@ -15416,6 +15416,14 @@ body[data-view="community"] #view-community #community-chat-root .attachment-men
   background: #f7f8f3;
   color: #202420;
   text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+.community-file-card:hover { border-color: #aeb9af; }
+.community-file-card:focus-visible,
+.community-image-message:focus-visible {
+  outline: 2px solid #516b5b;
+  outline-offset: 2px;
 }
 .community-file-info {
   display: flex;
@@ -15455,6 +15463,24 @@ body[data-view="community"] #view-community #community-chat-root .attachment-men
   color: #73766f;
   font: 10px/1.35 system-ui, sans-serif;
 }
+.community-file-arrow {
+  margin-left: auto;
+  color: #626a63;
+  font: 18px/1 system-ui, sans-serif;
+}
+.community-image-message {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #c4cbc1;
+  border-radius: 10px;
+  background: #ecefe9;
+  cursor: pointer;
+  outline: none;
+}
+.community-image-message .community-image-preview {
+  min-height: 120px;
+  border: 0;
+}
 .community-image-preview {
   display: grid;
   min-height: 150px;
@@ -15471,35 +15497,6 @@ body[data-view="community"] #view-community #community-chat-root .attachment-men
   max-height: 380px;
   object-fit: contain;
 }
-#community-chat-root .community-file-card > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  box-sizing: border-box;
-  width: 100%;
-  height: auto;
-  padding: 9px 12px;
-  border: 0;
-  border-top: 1px solid #d5dbd2;
-  border-radius: 0;
-  background: #e9ede6;
-  color: #34413a;
-  font: 600 11px/1.3 system-ui, sans-serif;
-  text-align: center;
-}
-#community-chat-root .community-file-card > button::before {
-  content: "↓";
-  font-size: 14px;
-  font-weight: 500;
-}
-#community-chat-root .community-file-card > button span {
-  color: #72776f;
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: .06em;
-}
-#community-chat-root .community-file-card > button:hover { background: #dde4da; }
 .community-schedule-card {
   box-sizing: border-box;
   width: 100%;

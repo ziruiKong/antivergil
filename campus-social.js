@@ -193,13 +193,17 @@
   function fileAttachment(entry) {
     const item = entry.attachment;
     const file = fileDetails(item, entry);
-    return `<article class="community-file-card ${file.isImage ? "is-image" : ""}" data-file-kind="${file.kind}">
+    if (file.isImage) {
+      return `<article class="community-image-message" data-download-attachment="${text(entry.id)}" role="button" tabindex="0" aria-label="Download ${text(file.name)}" title="Click to download ${text(file.name)}">
+        <div class="community-image-preview" data-image-attachment="${text(entry.id)}"><span>Loading image…</span></div>
+      </article>`;
+    }
+    return `<article class="community-file-card" data-file-kind="${file.kind}" data-download-attachment="${text(entry.id)}" role="button" tabindex="0" aria-label="Download ${text(file.name)}" title="Click to download ${text(file.name)}">
       <div class="community-file-info">
         <span class="community-file-icon" aria-hidden="true">${text(file.extension)}</span>
         <div class="community-file-copy"><b>${text(file.name)}</b><span>${text(file.label)}</span></div>
+        <span class="community-file-arrow" aria-hidden="true">↓</span>
       </div>
-      ${file.isImage ? `<div class="community-image-preview" data-image-attachment="${text(entry.id)}"><span>Loading image…</span></div>` : ""}
-      <button type="button" data-download-attachment="${text(entry.id)}">Download <span>${text(file.extension)}</span></button>
     </article>`;
   }
 
@@ -297,12 +301,12 @@
     });
   });
   panel?.addEventListener("click", event => {
-    const button = event.target.closest("[data-download-attachment]");
-    if (!button) return;
+    const target = event.target.closest("[data-download-attachment]");
+    if (!target) return;
     attachmentAction(async () => {
-      button.disabled = true;
+      target.setAttribute("aria-busy", "true");
       try {
-        const entry = social.messages.find((message) => String(message.id) === button.dataset.downloadAttachment);
+        const entry = social.messages.find((message) => String(message.id) === target.dataset.downloadAttachment);
         if (!entry) throw new Error("Attachment unavailable.");
         const { data } = await window.AntivergilScheduleCloud.attachment(user, entry.id);
         const blob = new Blob(
@@ -317,9 +321,15 @@
         setTimeout(() => URL.revokeObjectURL(url), 60_000);
         showCommunityToast(`Downloading ${link.download}`);
       } finally {
-        button.disabled = false;
+        target.removeAttribute("aria-busy");
       }
     });
+  });
+  panel?.addEventListener("keydown", (event) => {
+    const target = event.target.closest?.('[data-download-attachment][role="button"]');
+    if (!target || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    target.click();
   });
   panel?.addEventListener("click", event => {
     const button = event.target.closest("[data-share-term],[data-attachment]");
