@@ -10,6 +10,7 @@
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
   const center = [40.8077, -73.9621];
   let user, term, social, activeFriend, request, streetLoad, map, markers;
+  let communityTab = 'chats';
   let watch, own, locationRefreshPending = false, sharing = false, locationWrites = Promise.resolve(), lastSent = 0, sentLocation = false;
 
   async function call(body) {
@@ -32,6 +33,7 @@
     const incoming = social.friends.filter((friend) => !friend.accepted && !friend.outgoing);
     const outgoing = social.friends.filter((friend) => !friend.accepted && friend.outgoing);
     const accepted = social.friends.filter((friend) => friend.accepted);
+    if (!accepted.some((friend) => friend.code === activeFriend)) activeFriend = undefined;
     const selected = accepted.find((friend) => friend.code === activeFriend);
     const shares = selected ? social.shares.filter((entry) => entry.code === selected.code) : [];
     const incomingRows = incoming.map((friend) => `<li class="is-incoming"><div class="campus-friend-person"><b>${text(friend.name)}</b><span class="campus-friend-tag">Needs your response</span></div>
@@ -42,7 +44,18 @@
     const acceptedRows = accepted.map((friend) => `<li><div class="campus-friend-person"><b>${text(friend.name)}</b></div>
       <div class="campus-friend-actions"><button data-friend-action="open" data-code="${text(friend.code)}">View profile</button>
       <button data-friend-action="remove" data-code="${text(friend.code)}">Remove</button></div></li>`).join("");
-    panel.innerHTML = `<div class="my-panel-head"><h2>Friends</h2><span>Share course plans</span></div>
+    const messages = (social.messages || []).filter((entry) => entry.code === activeFriend);
+    const conversations = accepted.map((friend) => {
+      const last = (social.messages || []).filter((entry) => entry.code === friend.code).at(-1);
+      return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(last?.body || "Start a conversation")}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
+    }).join("");
+    const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b><button type="button" data-friend-action="share" data-code="${text(selected.code)}">Share courses</button></header>
+      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""}"><p>${text(entry.body)}</p><time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
+      <form id="community-message-form" class="community-compose"><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required placeholder="Write a message…"></textarea><button type="submit">Send</button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
+    panel.innerHTML = `<div class="community-tabs" role="tablist" aria-label="Community sections"><a class="community-exit" href="/browse/" aria-label="Back to courses" title="Back to courses">←</a><div class="community-rail-avatar" aria-hidden="true">${text((user.name || 'U').charAt(0).toUpperCase())}</div><button type="button" role="tab" id="community-tab-chats" aria-label="Chats" title="Chats" aria-controls="community-panel-chats" aria-selected="${communityTab === 'chats'}" data-community-tab="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5c0 4.2-3.6 7.5-8 7.5-1 0-2-.2-2.9-.5L5 20l1-3.6A7.2 7.2 0 0 1 4 11.5C4 7.4 7.6 4 12 4s8 3.4 8 7.5Z"/></svg></button><button type="button" role="tab" id="community-tab-friends" aria-label="Friends" title="Friends" aria-controls="community-panel-friends" aria-selected="${communityTab === 'friends'}" data-community-tab="friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="8" r="3.2"/><path d="M4 19c0-3.2 2.7-5.3 6-5.3s6 2.1 6 5.3H4ZM17 8h4m-4 4h4"/></svg>${incoming.length ? `<span class="community-tab-count">${incoming.length}</span>` : ''}</button></div>
+      <div id="community-panel-chats" role="tabpanel" aria-labelledby="community-tab-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
+      <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
+      <section id="community-panel-friends" class="community-friend-settings" role="tabpanel" aria-labelledby="community-tab-friends" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div>
       <div class="campus-friend-toolbar">
         <div class="campus-friend-code"><span>Your friend code</span><code>${text(social.code)}</code></div>
         <form id="campus-friend-invite" class="campus-friend-invite"><label for="campus-friend-code">Add a friend</label>
@@ -50,7 +63,6 @@
           <button type="submit">Send request</button></div>
         </form>
       </div>
-      <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
       <section class="campus-friend-group" aria-labelledby="campus-incoming-heading">
         <div class="campus-friend-group-head"><h3 id="campus-incoming-heading">Incoming requests</h3>
           <span class="campus-friend-request-count ${incoming.length ? "has-requests" : ""}">${incoming.length ? `${incoming.length} waiting` : "None"}</span></div>
@@ -67,7 +79,9 @@
         <button data-friend-action="share" data-code="${text(selected.code)}">Share my ${text(term.replace("-", " "))} courses</button>
         <h4>Courses shared with you</h4>
         ${shares.length ? shares.map((entry) => `<p><strong>${text(entry.term.replace("-", " "))}</strong> · ${entry.sections.map((section) => text(section.code)).join(", ")}</p>`).join("") : "<p>No courses shared yet.</p>"}
-      </section>` : ""}`;
+      </section>` : ""}</section>`;
+    const scroller = panel.querySelector(".community-messages");
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
   async function refresh() {
@@ -80,10 +94,12 @@
         && response.friends.some((next) => next.code === friend.code && next.accepted));
       const newIncoming = response.friends.filter((friend) => !friend.accepted && !friend.outgoing
         && !previous?.friends.some((old) => old.code === friend.code && !old.accepted && !old.outgoing));
-      const changed = !previous || JSON.stringify([previous.code, previous.shares, previous.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])])
-        !== JSON.stringify([response.code, response.shares, response.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])]);
+      const changed = !previous || JSON.stringify([previous.code, previous.shares, previous.messages, previous.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])])
+        !== JSON.stringify([response.code, response.shares, response.messages, response.friends.map(({code, name, accepted, outgoing}) => [code, name, accepted, outgoing])]);
       social = response;
       if (changed) {
+        const draft = panel.querySelector('#community-message-input')?.value || '';
+        const composing = document.activeElement === panel.querySelector('#community-message-input');
         const message = acceptedByOther
           ? `${acceptedByOther.name} accepted your friend request. You are now friends.`
           : newIncoming.length === 1
@@ -92,6 +108,8 @@
               ? `You have ${newIncoming.length} new friend requests.`
               : "";
         renderFriends(message);
+        if (panel.querySelector('#community-message-input')) panel.querySelector('#community-message-input').value = draft;
+        if (composing) panel.querySelector('#community-message-input')?.focus();
       }
       share.hidden = false;
       renderPoints();
@@ -131,6 +149,23 @@
 
   panel?.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (event.target.id === "community-message-form") {
+      const form = event.target;
+      const input = form.elements.body;
+      const body = input.value.trim();
+      if (!body || !activeFriend) return;
+      const recipient = activeFriend;
+      form.querySelector('button').disabled = true;
+      call({action: 'message', code: recipient, body}).then(async () => {
+        input.value = '';
+        if (request) await request;
+        await refresh();
+      }).catch((error) => {
+        const status = find('campus-friend-status');
+        if (status) { status.textContent = error.message; status.classList.add('is-error'); }
+      }).finally(() => { form.querySelector('button').disabled = false; });
+      return;
+    }
     if (event.target.matches("[data-campus-google-verify]")) {
       const code = new FormData(event.target).get("code").trim();
       document.dispatchEvent(new CustomEvent("campus-google-verification", { detail: { code } }));
@@ -140,7 +175,19 @@
       perform("invite", new FormData(event.target).get("code").trim());
     }
   });
+  panel?.addEventListener('input', (event) => {
+    if (event.target.id !== 'community-search-input') return;
+    const query = event.target.value.trim().toLowerCase();
+    panel.querySelectorAll('.community-conversation').forEach((row) => { row.hidden = !row.dataset.name.includes(query); });
+  });
   panel?.addEventListener("click", (event) => {
+    const tabButton = event.target.closest('[data-community-tab]');
+    if (tabButton) {
+      communityTab = tabButton.dataset.communityTab;
+      renderFriends();
+      panel.querySelector(`[data-community-tab="${communityTab}"]`)?.focus();
+      return;
+    }
     const button = event.target.closest("[data-friend-action]");
     if (!button) return;
     const { friendAction: action, code } = button.dataset;
