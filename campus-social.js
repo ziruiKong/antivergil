@@ -240,14 +240,20 @@
       image.alt = entry?.attachment?.name || entry?.body || "Shared image";
       image.loading = "lazy";
       image.decoding = "async";
-      image.onload = () => URL.revokeObjectURL(url);
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        if (followBottom) {
+          requestAnimationFrame(() => {
+            scroller.scrollTop = scroller.scrollHeight;
+          });
+        }
+      };
       image.onerror = () => {
         URL.revokeObjectURL(url);
         slot.innerHTML = "<span>Preview unavailable</span>";
       };
       image.src = url;
       slot.replaceChildren(image);
-      if (followBottom) requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
     } catch {
       slot.innerHTML = "<span>Preview unavailable</span>";
     }
