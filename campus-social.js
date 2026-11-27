@@ -56,7 +56,7 @@
       <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : ""}">${messageContent(entry)}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
       <form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
-      <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><h2>Chats</h2><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
+      <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
       <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
       <section id="community-panel-friends" class="community-friend-settings" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><button type="button" class="community-back-to-chats" data-community-tab="chats">← Chats</button><div><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div></div>
       <div class="campus-friend-toolbar">
@@ -77,7 +77,13 @@
       ${accepted.length ? `<section class="campus-friend-group" aria-labelledby="campus-accepted-heading">
         <div class="campus-friend-group-head"><h3 id="campus-accepted-heading">Your friends</h3></div>
         <ul class="campus-friend-list">${acceptedRows}</ul></section>` : ""}
-      </section>`;
+      </section>
+      <dialog id="community-popup" class="community-popup" aria-labelledby="community-popup-title">
+        <button type="button" class="community-popup-close" data-popup-close aria-label="Close">×</button>
+        <h3 id="community-popup-title"></h3>
+        <p></p>
+        <button type="button" class="community-popup-done" data-popup-close>Done</button>
+      </dialog>`;
     const scroller = panel.querySelector(".community-messages");
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
@@ -169,13 +175,27 @@
 
   function attachmentControl(entry) {
     const item = entry.attachment;
-    const label = item.mime.startsWith("image/") ? "View image" : "Download file";
+    const label = String(item.mime || "").startsWith("image/") ? "View image" : "Download file";
     return `<button type="button" data-attachment="${text(entry.id)}">${text(label)}</button>`;
   }
 
   async function attachmentAction(work) {
     try { await work(); }
-    catch (error) { const status = find("campus-friend-status"); if (status) { status.textContent = error.message; status.classList.add("is-error"); } }
+    catch (error) {
+      const status = find("campus-friend-status");
+      if (status) status.textContent = "";
+      showCommunityPopup("Couldn’t complete that", error.message, true);
+    }
+  }
+
+  function showCommunityPopup(title, message, error = false) {
+    const popup = find("community-popup");
+    if (!popup) return;
+    popup.querySelector("h3").textContent = title;
+    popup.querySelector("p").textContent = message;
+    popup.classList.toggle("is-error", error);
+    if (!popup.open) popup.showModal();
+    popup.querySelector("[data-popup-close]")?.focus();
   }
   panel?.addEventListener("change", event => {
     if (!event.target.matches("[data-upload]")) return;
@@ -215,11 +235,10 @@
           });
           button.textContent = "Added to my calendar";
           button.classList.add("is-added");
-          const status = find("campus-friend-status");
-          if (status) {
-            status.textContent = `${scheduleTermLabel(entry.attachment.term)} schedule added to your calendar.`;
-            status.classList.remove("is-error");
-          }
+          showCommunityPopup(
+            "Schedule added",
+            `${scheduleTermLabel(entry.attachment.term)} schedule was added to your calendar.`,
+          );
           return;
         }
         const {data} = await window.AntivergilScheduleCloud.attachment(user,entry.id);
@@ -372,6 +391,14 @@
     if (event.target.id !== 'community-search-input') return;
     const query = event.target.value.trim().toLowerCase();
     panel.querySelectorAll('.community-conversation').forEach((row) => { row.hidden = !row.dataset.name.includes(query); });
+  });
+  panel?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-popup-close]")) {
+      find("community-popup")?.close();
+      return;
+    }
+    const popup = event.target.closest("#community-popup");
+    if (popup && event.target === popup) popup.close();
   });
   panel?.addEventListener("click", (event) => {
     const tabButton = event.target.closest('[data-community-tab]');
