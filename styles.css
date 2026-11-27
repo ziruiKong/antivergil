@@ -15082,10 +15082,6 @@ body.auth-authenticated #view-me .campus-friend-status.is-error {
   column-gap: 0;
 }
 
-#search-results > .course-card {
-  width: 100%;
-}
-
 @media (max-width: 1199px) {
   #search-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
