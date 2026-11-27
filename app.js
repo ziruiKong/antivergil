@@ -9,13 +9,23 @@
 const COURSES_2027 = window.COURSES_2027_SPRING || window.COURSES || [];
 const COURSES_2026 = window.COURSES_2026_FALL || [];
 const COURSES_2026_SPRING = window.COURSES_2026_SPRING || [];
-const TERM_DATA = {
+const COLUMBIA_TERM_DATA = {
   "2027-Spring": COURSES_2027,
   "2026-Fall": COURSES_2026,
   "2026-Spring": COURSES_2026_SPRING,
 };
+const OXFORD_TERM_DATA = {};
+let TERM_DATA = COLUMBIA_TERM_DATA;
 const COURSES = COURSES_2027;
-const SEMESTERS = window.SEMESTERS || [];
+const COLUMBIA_SEMESTERS = window.SEMESTERS || [];
+const OXFORD_SEMESTERS = window.OXFORD_SEMESTERS || [];
+const OXFORD_DATA_VERSION = "20261127-oxford-1";
+const OXFORD_CATALOG_SUMMARY = {
+  semesterCount: OXFORD_SEMESTERS.length,
+  sectionCount: OXFORD_SEMESTERS.reduce((total, semester) => total + (Number(semester.sectionCount) || 0), 0),
+  asOf: OXFORD_SEMESTERS.find((semester) => semester.asOf)?.asOf || "",
+};
+let SEMESTERS = COLUMBIA_SEMESTERS;
 const BUILDINGS = window.BUILDINGS || [];
 const enrollHistoryCache = new Map();
 const culpaReviewCache = new Map();
@@ -30,6 +40,7 @@ const TERM_STORAGE_KEY = "cu-selected-term";
 const COURSE_RATINGS_KEY = "cu-course-ratings-v1";
 const PENDING_COURSE_KEY = "cu-auth-pending-course";
 const CONSENT_STORAGE_KEY = "antivergil-consent-v1";
+const SCHOOL_STORAGE_KEY = "antivergil-selected-school";
 let courseRatingCache = null;
 
 function preferenceStorageAllowed() {
@@ -64,14 +75,64 @@ function setCourseRating(code, value) {
 
 function readSavedTerm() {
   if (!preferenceStorageAllowed()) return null;
-  try { return localStorage.getItem(TERM_STORAGE_KEY); } catch { return null; }
+  try {
+    return localStorage.getItem(`${TERM_STORAGE_KEY}:${state.school}`)
+      || (state.school === "columbia" ? localStorage.getItem(TERM_STORAGE_KEY) : null);
+  } catch { return null; }
 }
 function saveSelectedTerm(term) {
   if (!preferenceStorageAllowed()) {
     try { localStorage.removeItem(TERM_STORAGE_KEY); } catch { /* ignore */ }
     return;
   }
-  try { localStorage.setItem(TERM_STORAGE_KEY, term); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(`${TERM_STORAGE_KEY}:${state.school}`, term);
+    if (state.school === "columbia") localStorage.setItem(TERM_STORAGE_KEY, term);
+  } catch { /* ignore */ }
+}
+
+const SCHOOL_INFO = {
+  columbia: { label: "Columbia", short: "Columbia", mark: "C" },
+  miami: { label: "Miami Oxford", short: "Oxford", mark: "M" },
+};
+
+function schoolFromEmail(email) {
+  const domain = String(email || "").trim().toLowerCase().split("@").at(-1);
+  return domain === "miamioh.edu" || domain.endsWith(".miamioh.edu") ? "miami" : "columbia";
+}
+
+function schoolPreferenceKey(email) {
+  return `${SCHOOL_STORAGE_KEY}:${String(email || "").trim().toLowerCase()}`;
+}
+
+function readSchoolPreference(email) {
+  if (!preferenceStorageAllowed() || !email) return null;
+  try {
+    const value = localStorage.getItem(schoolPreferenceKey(email));
+    return ["columbia", "miami"].includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSchoolPreference(email, school) {
+  if (!preferenceStorageAllowed() || !email) return;
+  try { localStorage.setItem(schoolPreferenceKey(email), school); } catch { /* ignore */ }
+}
+
+function studentSchool() {
+  const requested = new URLSearchParams(location.search).get("school");
+  if (requested === "miami" || requested === "oxford") return "miami";
+  if (requested === "columbia") return "columbia";
+  return readSchoolPreference(authUser?.email) || schoolFromEmail(authUser?.email);
+}
+
+function scheduleTermKey(term = state.term) {
+  return state.school === "miami" ? `oxford:${term}` : term;
+}
+
+function termWithoutSchoolPrefix(term) {
+  return String(term || "").replace(/^oxford:/, "");
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -106,6 +167,7 @@ function scopeOf(c) {
 function isInScope(c) { return scopeOf(c) !== null; }
 
 const state = {
+  school: "columbia",
   courses: COURSES,
   term: "2027-Spring",
   schedule: [],            // 加入课表的 section 对象
@@ -148,6 +210,13 @@ const state = {
   courseReturnPath: null,
 };
 
+window.AntivergilSchool = {
+  current: () => state.school,
+  label: () => SCHOOL_INFO[state.school]?.label || "Columbia",
+  term: () => state.term,
+  scheduleTerm: () => scheduleTermKey(),
+};
+
 let instructorIndexCache = null;
 let instructorIndexPromise = null;
 
@@ -162,7 +231,7 @@ function savedCourseSchedules() {
 }
 
 function restoreProfileSchedule() {
-  const saved = savedCourseSchedules()[state.term];
+  const saved = savedCourseSchedules()[scheduleTermKey()];
   if (!Array.isArray(saved)) {
     state.schedule = [];
     return;
@@ -220,17 +289,17 @@ function showCloudScheduleStatus(status) {
   });
 }
 
-function applyCloudSchedules(user, { schedules, calendar }, revision, repaint) {
+function applyCloudSchedules(user, { schedules, calendar }, revision, repaint, targetTermKey = scheduleTermKey()) {
   if (authUser?.sub !== user.sub || cloudScheduleRevision !== revision) return;
-  const before = savedCourseSchedules()[state.term] || [];
+  const before = savedCourseSchedules()[targetTermKey] || [];
   window.AntivergilProfile.cacheSchedules(user.email, schedules);
-  const coursesChanged = JSON.stringify(before) !== JSON.stringify(schedules[state.term] || []);
+  const coursesChanged = JSON.stringify(before) !== JSON.stringify(schedules[targetTermKey] || []);
   const calendarChanged = Array.isArray(calendar) && JSON.stringify(state.calendarEvents) !== JSON.stringify(calendar);
   if (calendarChanged) {
     state.calendarEvents = calendar;
     cacheCalendarEvents(calendar);
   }
-  if (repaint && (coursesChanged || calendarChanged)) {
+  if (repaint && targetTermKey === scheduleTermKey() && (coursesChanged || calendarChanged)) {
     restoreProfileSchedule();
     renderCalendar();
     refreshMapPins();
@@ -248,7 +317,7 @@ function refreshCloudSchedule({ force = false, repaint = true } = {}) {
   const revision = cloudScheduleRevision;
   cloudScheduleLastChecked = Date.now();
   cloudScheduleRefresh = cloud.sync(user, savedCourseSchedules()).then(
-    (schedules) => applyCloudSchedules(user, schedules, revision, repaint),
+      (schedules) => applyCloudSchedules(user, schedules, revision, repaint, scheduleTermKey()),
     (error) => {
       if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
         showCloudScheduleStatus(error.status === 401 ? "signIn" : "failed");
@@ -267,21 +336,22 @@ window.importCommunitySchedule = async ({term,sections}) => {
   const next = [...merged.values()];
   const revision = ++cloudScheduleRevision;
   const schedules = await window.AntivergilScheduleCloud.update(account,term,previous,next);
-  applyCloudSchedules(account,schedules,revision,true);
+  applyCloudSchedules(account,schedules,revision,true,term);
 };
 
 function persistProfileSchedule() {
   if (!authUser) return true;
   const cloud = window.AntivergilScheduleCloud;
   try {
-    const previous = savedCourseSchedules()[state.term] || [];
-    const saved = Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, state.term, state.schedule));
+    const activeTermKey = scheduleTermKey();
+    const previous = savedCourseSchedules()[activeTermKey] || [];
+    const saved = Boolean(window.AntivergilProfile?.saveSchedule(authUser.email, activeTermKey, state.schedule));
     if (saved && cloud?.enabled) {
       const user = authUser;
       const revision = ++cloudScheduleRevision;
       showCloudScheduleStatus("pending");
-      cloud.update(user, state.term, previous, state.schedule).then(
-        (schedules) => applyCloudSchedules(user, schedules, revision, true),
+      cloud.update(user, activeTermKey, previous, state.schedule).then(
+        (schedules) => applyCloudSchedules(user, schedules, revision, true, activeTermKey),
         (error) => {
           if (authUser?.sub === user.sub && cloudScheduleRevision === revision) {
             showCloudScheduleStatus(error.status === 401 ? "signIn" : "failed");
@@ -296,6 +366,7 @@ function persistProfileSchedule() {
 }
 
 function profileAllowsCourse(code) {
+  if (state.school === "miami") return true;
   const profile = currentProfile();
   return !profile || !window.AntivergilProfile || window.AntivergilProfile.canViewCourse(profile, code);
 }
@@ -377,9 +448,9 @@ function cleanLocation(location) {
 }
 
 function termShort(term) {
-  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall)$/i);
+  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/i);
   if (!m) return term || "";
-  const season = { spring: "SP", summer: "SU", fall: "AU" }[m[2].toLowerCase()];
+  const season = { spring: "SP", summer: "SU", fall: "AU", winter: "WI" }[m[2].toLowerCase()];
   return `${season}${m[1]}`;
 }
 
@@ -390,8 +461,12 @@ function termLabel(term) {
 }
 
 function semesterStart(term) {
-  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall)$/);
+  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
   if (!m) return null;
+  if (state.school === "miami") {
+    const md = { Spring: "01-18", Summer: "05-20", Fall: "08-24", Winter: "01-02" }[m[2]];
+    return `${m[1]}-${md}`;
+  }
   const knownStart = typeof CALENDAR_ACADEMIC_DATES !== "undefined"
     ? CALENDAR_ACADEMIC_DATES.find((event) =>
         event.date.startsWith(`${m[1]}-`) && /classes begin/i.test(event.title))
@@ -404,6 +479,7 @@ function semesterStart(term) {
 function calendarTermStartKey(term) {
   const year = String(term || "").match(/^(\d{4})-/)?.[1];
   if (!year) return null;
+  if (state.school === "miami") return semesterStart(term);
   const academicStart = CALENDAR_ACADEMIC_DATES.find((event) =>
     event.date.startsWith(`${year}-`) && /classes begin/i.test(event.title));
   return academicStart?.date || semesterStart(term);
@@ -428,10 +504,11 @@ function nthMondayOfMonth(year, month, nth) {
 
 /** 可以 drop 课的最后一天（Course Drop Deadline，与 snapshot.mjs 一致）。 */
 function termDropDeadline(term) {
-  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall)$/);
+  const m = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
   if (!m) return null;
   const year = Number(m[1]);
   if (m[2] === "Fall") return `${year}-10-20`;
+  if (m[2] === "Winter") return `${year}-01-20`;
   if (m[2] === "Spring") {
     const start = year === 2021 ? `${year}-01-11` : addDaysStr(nthMondayOfMonth(year, 1, 3), 1);
     return addDaysStr(start, 35);
@@ -542,7 +619,7 @@ function difficultySignal(rate, ended = false) {
 }
 
 function levelOf(code) {
-  const m = String(code || "").match(/(\d{4})/);
+  const m = String(code || "").match(/(\d{3,4})/);
   return m ? Number(m[1]) : 0;
 }
 
@@ -683,6 +760,11 @@ const NAV = [
   ["calendar", "Calendar"],
   ["map", "Map"],
 ];
+const MIAMI_VIEWS = new Set(["browse", "planner", "calendar", "community", "me"]);
+
+function currentNav() {
+  return state.school === "miami" ? NAV.filter(([id]) => MIAMI_VIEWS.has(id)) : NAV;
+}
 
 const AUTH_REQUIRED_VIEWS = new Set(["rankings", "analysis", "history", "instructor", "department", "me", "community"]);
 
@@ -901,6 +983,7 @@ function goView(delta) {
 }
 
 function switchView(id, opts = {}) {
+  if (state.school === "miami" && !MIAMI_VIEWS.has(id)) id = "browse";
   $("#mobile-nav-toggle").setAttribute("aria-expanded", "false");
   const targetPath = authViewPath(id);
   if (AUTH_REQUIRED_VIEWS.has(id) && !requireAuthenticated(targetPath)) return;
@@ -912,8 +995,8 @@ function switchView(id, opts = {}) {
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
-  $("#mobile-nav-label").textContent = NAV.find(([view]) => view === navId)?.[1] || "Menu";
-  document.title = "Antivergil";
+  $("#mobile-nav-label").textContent = currentNav().find(([view]) => view === navId)?.[1] || "Menu";
+  document.title = state.school === "miami" ? "Antivergil · Miami Oxford" : "Antivergil";
   if (id !== "browse") setFilterPanelOpen(false);
   if (document.body.dataset.view === "map" && id !== "map") window.CampusSocial?.stop();
   document.body.dataset.view = id;
@@ -987,7 +1070,7 @@ const NAV_ICONS = {
 function buildNav() {
   const nav = $("#nav");
   const inkPath = "M110 27C105 14 82 7 56 7C30 7 8 13 5 23C2 34 24 44 53 46C80 48 105 40 111 31C116 24 105 16 94 12C82 8 68 7 55 8";
-  const items = NAV.filter(([id]) => id !== "community" || authUser);
+  const items = currentNav().filter(([id]) => id !== "community" || authUser);
   nav.innerHTML = items.map(([id, label]) =>
     `<button data-view="${id}" title="${esc(label)}" aria-label="${esc(label)}">
       <span class="nav-label">
@@ -1023,19 +1106,19 @@ function buildNav() {
 
 function renderTermSwitch() {
   const terms = SEMESTERS
-    .filter((s) => /(?:Spring|Fall)$/i.test(s.term))
-    .map((s) => s.term)
-    .sort((a, b) => b.localeCompare(a));
+    .filter((s) => /(?:Spring|Summer|Fall|Winter)$/i.test(s.term))
+    .sort((a, b) => String(b.sourceTermCode || b.term).localeCompare(String(a.sourceTermCode || a.term)))
+    .map((s) => s.term);
   const selectTerms = [...new Set([state.term, ...terms])].filter(Boolean);
   const labelText = (t) => {
-    const m = String(t).match(/^(\d{4})-(Spring|Summer|Fall)$/);
+    const m = String(t).match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
     return m ? `${m[2]} ${m[1]}` : t;
   };
   const labelEl = $("#term-menu-label");
   if (labelEl) {
     const fullLabel = labelText(state.term);
-    const m = String(state.term).match(/^(\d{4})-(Spring|Summer|Fall)$/);
-    const shortSeason = { Spring: "SP", Summer: "SU", Fall: "AU" };
+    const m = String(state.term).match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
+    const shortSeason = { Spring: "SP", Summer: "SU", Fall: "AU", Winter: "WI" };
     labelEl.dataset.fullLabel = fullLabel;
     labelEl.dataset.shortLabel = m ? `${shortSeason[m[2]]}${m[1]}` : fullLabel;
     syncTermMenuLabel();
@@ -1091,7 +1174,7 @@ const termBundleLoading = new Map();
 /** 按需加载本地打包的学期数据（完整课表 + 选课记录）。 */
 function loadTermBundle(term) {
   if (TERM_DATA[term] && TERM_DATA[term].length) return Promise.resolve(TERM_DATA[term]);
-  const globalName = `COURSES_${term.replace("-", "_").toUpperCase()}`;
+  const globalName = `${state.school === "miami" ? "OXFORD_" : ""}COURSES_${term.replace("-", "_").toUpperCase()}`;
   if (window[globalName] && window[globalName].length) {
     TERM_DATA[term] = window[globalName];
     return Promise.resolve(TERM_DATA[term]);
@@ -1099,7 +1182,9 @@ function loadTermBundle(term) {
   if (termBundleLoading.has(term)) return termBundleLoading.get(term);
   const p = new Promise((resolve) => {
     const s = document.createElement("script");
-    s.src = `data/courses-${term}.js`;
+    s.src = state.school === "miami"
+      ? `data/oxford/courses-${term}.js?v=${OXFORD_DATA_VERSION}`
+      : `data/courses-${term}.js`;
     s.onload = () => {
       const data = window[globalName];
       if (data && data.length) TERM_DATA[term] = data;
@@ -1113,6 +1198,93 @@ function loadTermBundle(term) {
   return p;
 }
 
+function renderSchoolSwitch() {
+  const school = state.school;
+  const info = SCHOOL_INFO[school];
+  const label = $("#school-menu-label");
+  const mark = $("#school-menu-mark");
+  if (label) label.textContent = info.label;
+  if (mark) mark.textContent = info.mark;
+  $("#school-menu-btn")?.setAttribute("aria-expanded", "false");
+  const menu = $("#school-menu");
+  if (menu) {
+    menu.hidden = true;
+    menu.querySelectorAll("[data-school-option]").forEach((button) => {
+      const active = button.dataset.schoolOption === school;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+  }
+  document.documentElement.dataset.school = school;
+  document.body.dataset.school = school;
+}
+
+async function activateSchool(school, { initial = false } = {}) {
+  if (!SCHOOL_INFO[school]) school = "columbia";
+  if (!initial && state.school !== school) persistProfileSchedule();
+  state.school = school;
+  TERM_DATA = school === "miami" ? OXFORD_TERM_DATA : COLUMBIA_TERM_DATA;
+  SEMESTERS = school === "miami" ? OXFORD_SEMESTERS : COLUMBIA_SEMESTERS;
+  saveSchoolPreference(authUser?.email, school);
+  renderSchoolSwitch();
+  document.title = school === "miami" ? "Antivergil · Miami Oxford" : "Antivergil";
+
+  const available = SEMESTERS.map((item) => item.term).filter(Boolean);
+  const fallback = school === "miami"
+    ? (available.includes("2027-Spring") ? "2027-Spring" : available[0])
+    : "2027-Spring";
+  const savedTerm = readSavedTerm();
+  let term = available.includes(savedTerm) ? savedTerm : fallback;
+  if (!available.length) {
+    state.term = fallback;
+    state.courses = [];
+    return;
+  }
+  state.courses = [];
+  const candidates = [term, ...available.filter((item) => item !== term)];
+  for (const candidate of candidates) {
+    const data = await loadTermBundle(candidate);
+    if (data?.length) {
+      term = candidate;
+      state.term = candidate;
+      state.courses = data;
+      break;
+    }
+  }
+  if (!state.courses.length) return;
+  state.browsePage = 0;
+  state.filters = { ...state.filters, scope: "all", dept: "all", level: "all", campus: "all", method: "all", day: "all" };
+  groupedCache = null;
+  sectionCache = null;
+  state.calendarSelected = defaultCalendarDateForTerm(term);
+  state.calendarMiniMonth = new Date(state.calendarSelected.getFullYear(), state.calendarSelected.getMonth(), 1);
+  saveSelectedTerm(term);
+  restoreProfileSchedule();
+
+  if (!initial) {
+    buildNav();
+    buildFilters();
+    renderBrowse();
+    renderTermSwitch();
+    renderCalendar();
+    renderSchoolSwitch();
+    renderHistory();
+    const current = document.body.dataset.view;
+    if (school === "miami" && !MIAMI_VIEWS.has(current)) switchView("browse");
+    else {
+      updateViewNav();
+      window.scrollTo({ top: 0 });
+    }
+  }
+}
+
+async function syncSchoolForAccount() {
+  const desired = readSchoolPreference(authUser?.email) || schoolFromEmail(authUser?.email);
+  if (desired === state.school) return;
+  await activateSchool(desired);
+  window.CampusSocial?.setAccount(authUser, state.term);
+}
+
 /** 选择任一学期：优先用本地完整数据包，缺失时再回退到镜像。 */
 async function selectTerm(term) {
   if (TERM_DATA[term] && TERM_DATA[term].length) { setTerm(term); return; }
@@ -1121,6 +1293,10 @@ async function selectTerm(term) {
   toast(`Loading ${termShort(term)}…`);
   const bundled = await loadTermBundle(term);
   if (bundled) { setTerm(term); return; }
+  if (state.school === "miami") {
+    toast(`Could not load ${termShort(term)} from the Miami catalog.`);
+    return;
+  }
   try {
     const res = await fetch(info.json);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1216,16 +1392,25 @@ function buildFilters() {
   const all = getSections();
   const depts = [...new Set(all.map((c) => c.deptCode).filter(Boolean))].sort();
   const campuses = [...new Set(all.map((c) => c.section.campus).filter(Boolean))].sort();
+  const levelOptions = state.school === "miami"
+    ? [["all", "All levels"], ["1", "100 level"], ["2", "200 level"], ["3", "300 level"], ["4", "400 level"], ["5", "500 level"], ["6", "600+ level"]]
+    : LEVEL_OPTIONS;
+  const methodOptions = state.school === "miami"
+    ? [["all", "All modes"], ...[...new Set(all.map((c) => c.section.method).filter(Boolean))].sort().map((method) => [method, method])]
+    : METHOD_OPTIONS;
   const f = state.filters;
   if (f.dept !== "all" && !depts.includes(f.dept)) f.dept = "all";
   if (f.campus !== "all" && !campuses.includes(f.campus)) f.campus = "all";
-  const deptOptions = [["all", "All depts"], ...depts.map((d) => [d, d])];
+  const deptNames = new Map(all.map((course) => [course.deptCode, course.dept]).filter(([, name]) => name));
+  const deptOptions = state.school === "miami"
+    ? [["all", "All colleges & departments"], ...depts.map((code) => [code, deptNames.get(code) ? `${code} · ${deptNames.get(code)}` : code])]
+    : [["all", "All depts"], ...depts.map((dept) => [dept, dept])];
   const campusOptions = [["all", "All campuses"], ...campuses.map((c) => [c, c])];
   $("#filters").innerHTML = [
     filterSelectHTML("dept", deptOptions, f.dept),
-    filterSelectHTML("level", LEVEL_OPTIONS, f.level),
+    filterSelectHTML("level", levelOptions, f.level),
     filterSelectHTML("campus", campusOptions, f.campus),
-    filterSelectHTML("method", METHOD_OPTIONS, f.method),
+    filterSelectHTML("method", methodOptions, f.method),
     filterSelectHTML("sort", SORT_OPTIONS.map(([value, label]) =>
       value === "default" && currentProfile() ? [value, "Sort: For you"] : [value, label]), f.sort),
     filterSelectHTML("day", DAY_OPTIONS, f.day),
@@ -1272,11 +1457,12 @@ function setFilterPanelOpen(open) {
 
 function matchesFilters(course) {
   const f = state.filters;
-  if (f.scope !== "all" && scopeOf(course) !== f.scope) return false;
+  if (state.school !== "miami" && f.scope !== "all" && scopeOf(course) !== f.scope) return false;
   if (f.dept !== "all" && course.deptCode !== f.dept) return false;
   if (f.level !== "all") {
-    if (f.level === "6" && course.level < 6000) return false;
-    if (f.level !== "6" && Math.floor(course.level / 1000) * 1000 !== Number(f.level) * 1000) return false;
+    const unit = state.school === "miami" ? 100 : 1000;
+    if (f.level === "6" && course.level < (state.school === "miami" ? 600 : 6000)) return false;
+    if (f.level !== "6" && Math.floor(course.level / unit) * unit !== Number(f.level) * unit) return false;
   }
   if (f.campus !== "all" && !course.campuses.includes(f.campus)) return false;
   if (f.method !== "all" && !course.sections.some((s) => (s.method || "").toLowerCase() === f.method.toLowerCase())) return false;
@@ -1734,12 +1920,14 @@ function coursePermalink(code, term, section = "") {
   const slug = normCode(code).toLowerCase().replace(/\s+/g, "-");
   const params = new URLSearchParams({ term });
   if (section) params.set("section", section);
+  if (state.school === "miami") params.set("school", "oxford");
   return `/course/${encodeURIComponent(slug)}/?${params}`;
 }
 
 function vergilSectionURL(term, callNumber) {
+  if (state.school === "miami") return "https://miamioh.edu/courselist";
   const [year, semester] = term.split("-");
-  const index = { Spring: 1, Summer: 2, Fall: 3 }[semester];
+  const index = { Spring: 1, Summer: 2, Fall: 3, Winter: 0 }[semester];
   return index && /^\d{4,6}$/.test(String(callNumber))
     ? `https://vergil.columbia.edu/vergil/class/${year}${index}/${callNumber}`
     : "https://vergil.columbia.edu/vergil/";
@@ -1899,9 +2087,78 @@ function bindCourseCommunity(host, course, section, files) {
   load().catch(failure);
 }
 
+function openOxfordCourse(code, sectionId = "") {
+  const sections = state.courses.filter((course) => normCode(course.code) === normCode(code));
+  if (!sections.length) return;
+  state.modalCourse = { code, sectionId };
+  const selected = sections.find((section) => section.classId === sectionId || String(section.callNumber) === sectionId) || sections[0];
+  const coursePath = coursePermalink(code, state.term, selected.callNumber || selected.classId);
+  state.courseReturnPath ||= location.pathname.startsWith("/course/") ? "/browse/?school=oxford" : location.pathname + location.search;
+  if (location.pathname + location.search !== coursePath) history.replaceState(history.state, "", coursePath);
+  const body = $("#modal-body");
+  body.innerHTML = `<div class="m-folder">
+    <div class="m-folder-head">
+      <div class="course-code-label">${esc(normCode(code))} · Section ${esc(sectionLabel(selected))}</div>
+      <h2>${esc(selected.title)}</h2>
+      <div class="m-sub">${esc(selected.dept || selected.deptCode || "")} · Miami University, Oxford</div>
+    </div>
+    <section class="m-folder-panel" id="m-panel-overview" data-mpanel="overview">
+      <div class="course-overview">
+        <div class="course-overview-main">
+          <div class="course-seat-summary">
+            <div><b>Enrolled</b><strong>${selected.enrolled ?? "—"}</strong></div>
+            <div><b>Capacity</b><strong>${selected.capacity ?? "—"}</strong></div>
+            <div><b>Open seats</b><strong>${Number.isFinite(selected.enrolled) && selected.capacity > 0 ? Math.max(0, selected.capacity - selected.enrolled) : "—"}</strong></div>
+          </div>
+          <div class="m-desc">${esc(selected.meetingRaw || "Meeting time not published.")}</div>
+        </div>
+        <aside class="course-overview-side" aria-label="Section details">
+          <div class="course-facts">
+            <div><b>Academic term</b><strong>${esc(termLabel(state.term))}</strong></div>
+            <div><b>Credits</b><strong>${esc(selected.pointsLabel || selected.points || "—")}</strong></div>
+            <div><b>Delivery</b><strong>${esc(selected.method || "TBA")}</strong></div>
+            <div><b>Instructor</b><strong>${esc(selected.instructor || "TBA")}</strong></div>
+          </div>
+          <div class="course-entry-links"><a href="https://miamioh.edu/courselist" target="_blank" rel="noopener">Official Course List ↗</a></div>
+        </aside>
+      </div>
+      <section class="course-section-details" aria-label="Course sections">
+        <h3 class="section-title m-folder-section-title">Sections</h3>
+        <div class="course-sections-scroll"><table class="sections-table">
+          <thead><tr><th>Section</th><th>CRN</th><th>Days</th><th>Time</th><th>Location</th><th>Enrolled</th></tr></thead>
+          <tbody>${sections.map((section) => `<tr class="${section.classId === selected.classId ? "selected" : ""}">
+            <td>${esc(sectionLabel(section) || "—")}</td>
+            <td>${esc(section.callNumber || "—")}</td>
+            <td>${esc((section.days || []).map((day) => DAY_MINI[day - 1]).join("/") || "TBA")}</td>
+            <td>${section.start == null ? "TBA" : esc(timeRangeLabel(section.start, section.end))}</td>
+            <td>${esc(cleanLocation(section.location) || "TBA")}</td>
+            <td>${section.enrolled ?? "—"}${section.capacity != null ? ` / ${section.capacity}` : ""}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+      </section>
+    </section>
+    <div class="modal-actions">
+      <button class="btn ghost" data-addplan="${esc(code)}">Add to plan</button>
+      <button class="btn primary" data-addcal="${esc(code)}">Add to schedule</button>
+    </div>
+  </div>`;
+  body.querySelector("[data-addcal]")?.addEventListener("click", () => {
+    addSectionsToSchedule(code, selected.classId);
+    closeModal();
+  });
+  body.querySelector("[data-addplan]")?.addEventListener("click", () => addToPlan(code));
+  $("#modal").hidden = false;
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
+}
+
 function openCourse(code, sectionId = "") {
   if (!profileAllowsCourse(code)) {
     toast("This course is outside your current undergraduate/graduate course range.");
+    return;
+  }
+  if (state.school === "miami") {
+    openOxfordCourse(code, sectionId);
     return;
   }
   const locked = !authUser;
@@ -5973,28 +6230,37 @@ function renderDataFreshness(status = latestDataStatus) {
   const host = $("#data-as-of");
   if (!host) return;
   latestDataStatus = status;
+  const isOxford = state.school === "miami";
   const history = dailyHistoryForTerm() || window.ENROLL_HISTORY || {};
   const matchesActiveTerm = !status.term || status.term === state.term;
-  const dataThrough = matchesActiveTerm
+  const dataThrough = isOxford
+    ? OXFORD_CATALOG_SUMMARY.asOf
+    : matchesActiveTerm
     ? status.dataThrough || history.latestDate || history.baseDate
     : history.latestDate || history.baseDate;
-  const syncedAt = matchesActiveTerm
+  const syncedAt = !isOxford && matchesActiveTerm
     ? status.lastSuccessfulSyncAt || status.snapshotUpdatedAt || history.updatedAt
     : history.updatedAt;
   const state = status.status || "ready";
   $("#data-as-of-date").textContent = formatDataDate(dataThrough);
-  $("#data-as-of-time").textContent = state === "syncing"
+  $("#data-as-of-time").textContent = isOxford
+    ? "Official catalog snapshot"
+    : state === "syncing"
     ? "Checking now…"
     : syncedAt ? `Synced ${formatSyncTime(syncedAt)}` : "Sync pending";
   host.classList.toggle("is-syncing", state === "syncing");
   host.classList.toggle("is-error", state === "error");
   host.classList.toggle("is-stale", state === "ready" && Boolean(status.lastError));
-  host.title = state === "error"
+  host.title = isOxford
+    ? `Source: ${status.source || "Miami University Course List"} · ${OXFORD_CATALOG_SUMMARY.semesterCount} terms · ${OXFORD_CATALOG_SUMMARY.sectionCount} sections`
+    : state === "error"
     ? `Last sync failed: ${status.lastError || "unknown error"}`
     : `Source: ${status.source || "Columbia course data"} · refreshed hourly`;
   const hasNewData = matchesActiveTerm && Boolean(dataThrough && history.latestDate && dataThrough > history.latestDate);
-  $(".data-as-of-cadence").textContent = matchesActiveTerm ? "Refreshed hourly" : "Historical snapshot";
-  $("#data-as-of-refresh").hidden = !hasNewData;
+  $(".data-as-of-cadence").textContent = isOxford
+    ? `${OXFORD_CATALOG_SUMMARY.semesterCount} terms · ${OXFORD_CATALOG_SUMMARY.sectionCount.toLocaleString()} sections`
+    : matchesActiveTerm ? "Refreshed hourly" : "Historical snapshot";
+  $("#data-as-of-refresh").hidden = isOxford || !hasNewData;
 }
 
 function loadedCourseDataDate() {
@@ -6064,6 +6330,14 @@ async function refreshLoadedCourseData(status) {
 }
 
 async function refreshDataFreshness() {
+  if (state.school === "miami") {
+    renderDataFreshness({
+      status: "ready",
+      source: "Miami University Course List",
+      dataThrough: OXFORD_CATALOG_SUMMARY.asOf,
+    });
+    return;
+  }
   try {
     let response = await fetch("/api/data-status", { cache: "no-store" });
     if (!response.ok) response = await fetch("data/sync-status.json", { cache: "no-store" });
@@ -6269,7 +6543,7 @@ function previewSignIn() {
   if (email) localSignIn(email);
 }
 
-function localSignIn(email) {
+async function localSignIn(email) {
   const clean = String(email || "").trim().toLowerCase();
   if (!isValidEmail(clean)) {
     toast("Use a valid email address.");
@@ -6278,6 +6552,7 @@ function localSignIn(email) {
   const name = clean.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   authUser = { name, email: clean, picture: null, provider: "local" };
   saveAuthUser(authUser);
+  await syncSchoolForAccount();
   restoreProfileSchedule();
   renderCalendar();
   refreshMapPins();
@@ -6328,7 +6603,7 @@ async function setupGoogleSignIn(container) {
   }
 }
 
-function handleGoogleCredential(response) {
+async function handleGoogleCredential(response) {
   try {
     let b64 = String(response.credential || "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     b64 += "=".repeat((4 - (b64.length % 4)) % 4);
@@ -6348,6 +6623,7 @@ function handleGoogleCredential(response) {
       provider: "google",
     };
     saveAuthUser(authUser);
+    await syncSchoolForAccount();
     restoreProfileSchedule();
     renderCalendar();
     refreshMapPins();
@@ -6371,6 +6647,7 @@ async function finishFriendsGoogleConnection(result) {
   localStorage.setItem("antivergil-schedule-session", JSON.stringify({ sub: result.user.sub, token: result.token }));
   authUser = { ...result.user, email: String(result.user.email || "").toLowerCase() };
   saveAuthUser(authUser);
+  await syncSchoolForAccount();
   try {
     const secure = location.protocol === "https:" ? "; Secure" : "";
     document.cookie = `${AUTH_COOKIE}=${encodeURIComponent(JSON.stringify(authUser))}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
@@ -7276,6 +7553,40 @@ function bindGlobal() {
     e.stopPropagation();
     setTermMenuOpen(!$("#term-menu").classList.contains("open"));
   });
+  const schoolBtn = $("#school-menu-btn");
+  const schoolMenu = $("#school-menu");
+  schoolBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = schoolBtn.getAttribute("aria-expanded") === "true";
+    schoolBtn.setAttribute("aria-expanded", String(!open));
+    if (schoolMenu) schoolMenu.hidden = open;
+    if (!open) {
+      setTermMenuOpen(false);
+      schoolMenu?.querySelector('[aria-selected="true"]')?.focus();
+    }
+  });
+  schoolMenu?.addEventListener("click", async (event) => {
+    const option = event.target.closest("[data-school-option]");
+    if (!option || option.dataset.schoolOption === state.school) return;
+    schoolBtn?.setAttribute("aria-expanded", "false");
+    schoolMenu.hidden = true;
+    const nextSchool = option.dataset.schoolOption;
+    toast(`Switching to ${SCHOOL_INFO[nextSchool].label}…`);
+    await activateSchool(nextSchool);
+    window.CampusSocial?.setAccount(authUser, state.term);
+    toast(`${SCHOOL_INFO[nextSchool].label} courses loaded.`);
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("#school-picker")) return;
+    schoolBtn?.setAttribute("aria-expanded", "false");
+    if (schoolMenu) schoolMenu.hidden = true;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !schoolMenu || schoolMenu.hidden) return;
+    schoolBtn?.setAttribute("aria-expanded", "false");
+    schoolMenu.hidden = true;
+    schoolBtn?.focus();
+  });
   $("#term-menu").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-term-option]");
     if (!b) return;
@@ -7616,6 +7927,8 @@ function startIntro() {
 }
 
 async function init() {
+  if (studentSchool() === "columbia") loadCustomTerms();
+  await activateSchool(studentSchool(), { initial: true });
   window.CampusSocial?.setAccount(authUser, state.term);
   if (window.AntivergilScheduleCloud?.enabled) {
     const refreshVisibleSchedule = () => {
@@ -7625,21 +7938,7 @@ async function init() {
     document.addEventListener("visibilitychange", refreshVisibleSchedule);
     window.setInterval(refreshVisibleSchedule, 30000);
   }
-  loadCustomTerms();
   document.body.classList.remove("sidebar-collapsed");
-  let pendingSavedTerm = null;
-  const savedTerm = readSavedTerm();
-  if (savedTerm && SEMESTERS.some((s) => s.term === savedTerm)) {
-    if (TERM_DATA[savedTerm] && TERM_DATA[savedTerm].length) {
-      state.term = savedTerm;
-      state.courses = TERM_DATA[savedTerm];
-    } else {
-      state.term = savedTerm;
-      state.courses = [];
-      pendingSavedTerm = savedTerm;
-    }
-  }
-  if (!pendingSavedTerm) restoreProfileSchedule();
   buildNav();
   renderRailBrand();
   renderTermSwitch();
@@ -7680,7 +7979,6 @@ async function init() {
   fitCourseCardTitles();
   document.fonts?.ready.then(fitCourseCardTitles);
   document.fonts?.ready.then(positionSearchCaret);
-  if (pendingSavedTerm && !new URLSearchParams(queryStr).has("course")) await selectTerm(pendingSavedTerm);
   if (queryStr) {
     const params = new URLSearchParams(queryStr);
     const qTerm = params.get("term");

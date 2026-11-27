@@ -124,33 +124,74 @@
     }
     hydrateMediaAttachments();
     if (selected) markConversationRead(selected.code);
+    if (messages.length) queueScheduleCatalogLoads(messages);
   }
 
+  const OXFORD_DATA_VERSION = "20261127-oxford-1";
   const scheduleCatalogCache = new Map();
+  const scheduleCatalogLoading = new Map();
+  const scheduleCatalogFailures = new Set();
   const weekdayShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   function scheduleTermLabel(term) {
-    const match = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
+    const raw = String(term || "");
+    const match = raw.replace(/^oxford:/, "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
     return match ? `${match[2]} ${match[1]}` : String(term || "Course");
   }
 
   function scheduleCatalog(term) {
     if (scheduleCatalogCache.has(term)) return scheduleCatalogCache.get(term);
-    const globalName = `COURSES_${String(term || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
-    const sources = [
-      window[globalName],
-      window.COURSES_2027_SPRING,
-      window.COURSES_2026_FALL,
-      window.COURSES_2026_SPRING,
-    ];
+    const isOxford = /^oxford:/i.test(term);
+    const plainTerm = String(term || "").replace(/^oxford:/i, "");
+    const globalName = `${isOxford ? "OXFORD_" : ""}COURSES_${plainTerm.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+    const sources = isOxford
+      ? [window[globalName]]
+      : [window[globalName], window.COURSES_2027_SPRING, window.COURSES_2026_FALL, window.COURSES_2026_SPRING];
     const catalog = new Map();
     const key = (classId, code) => `${String(classId)}:${String(code || "").trim().toUpperCase().replace(/\s+/g, " ")}`;
     for (const course of sources.flatMap((source) => Array.isArray(source) ? source : [])) {
       if (!course?.classId) continue;
       catalog.set(key(course.classId, course.code), course);
     }
-    scheduleCatalogCache.set(term, catalog);
+    if (sources.some((source) => Array.isArray(source))) scheduleCatalogCache.set(term, catalog);
     return catalog;
+  }
+
+  function loadScheduleCatalog(term) {
+    if (!/^oxford:/i.test(term) || scheduleCatalogCache.has(term) || scheduleCatalogFailures.has(term)) return Promise.resolve(false);
+    if (scheduleCatalogLoading.has(term)) return scheduleCatalogLoading.get(term);
+    const plainTerm = String(term).replace(/^oxford:/i, "");
+    const globalName = `OXFORD_COURSES_${plainTerm.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+    if (Array.isArray(window[globalName])) return Promise.resolve(false);
+    const loading = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = `/data/oxford/courses-${plainTerm}.js?v=${OXFORD_DATA_VERSION}`;
+      script.onload = () => {
+        if (Array.isArray(window[globalName])) scheduleCatalogCache.delete(term);
+        scheduleCatalogLoading.delete(term);
+        resolve(true);
+      };
+      script.onerror = () => {
+        scheduleCatalogFailures.add(term);
+        scheduleCatalogLoading.delete(term);
+        resolve(false);
+      };
+      document.head.append(script);
+    });
+    scheduleCatalogLoading.set(term, loading);
+    return loading;
+  }
+
+  function queueScheduleCatalogLoads(messages) {
+    const terms = [...new Set(messages
+      .filter((entry) => entry.attachment?.kind === "schedule" && /^oxford:/i.test(entry.attachment.term || ""))
+      .map((entry) => entry.attachment.term))];
+    for (const scheduleTerm of terms) {
+      if (scheduleCatalogCache.has(scheduleTerm) || scheduleCatalogFailures.has(scheduleTerm)) continue;
+      loadScheduleCatalog(scheduleTerm).then((loaded) => {
+        if (loaded && user && social) renderFriends();
+      });
+    }
   }
 
   function formatScheduleTime(section) {
@@ -422,7 +463,8 @@
       button.disabled = true;
       try {
         if (button.hasAttribute("data-share-term")) {
-          await call({action:"schedule",code:activeFriend,term});
+          const scheduleTerm = window.AntivergilSchool?.scheduleTerm?.() || term;
+          await call({action:"schedule",code:activeFriend,term:scheduleTerm});
           if (request) await request;
           await refresh();
           return;

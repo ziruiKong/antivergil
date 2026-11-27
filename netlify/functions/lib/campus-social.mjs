@@ -104,7 +104,7 @@ export async function campusSocial(request, send, sql, subject) {
         return send({error:"Choose a file up to 2 MB."},400);
       attachment = {kind:"file", name:String(name || "File").slice(0,180), mime:["image/jpeg","image/png","image/webp","image/gif"].includes(mime) ? mime : "application/octet-stream"};
     } else {
-      if (!/^\d{4}-(Spring|Summer|Fall|Winter)$/.test(term)) return send({error:"Invalid term."},400);
+      if (!/^(?:oxford:)?\d{4}-(Spring|Summer|Fall|Winter)$/.test(term)) return send({error:"Invalid term."},400);
       const [schedule] = await sql`SELECT sections FROM course_schedules WHERE google_subject=${subject} AND term=${term}`;
       if (!schedule?.sections?.length) return send({error:"Sync courses to your calendar first."},409);
       attachment = {kind:"schedule", term, sections:schedule.sections};
@@ -137,7 +137,7 @@ export async function campusSocial(request, send, sql, subject) {
     await sql`WITH removed AS (
       DELETE FROM campus_friendships WHERE person_a = ${a} AND person_b = ${b}
     ) DELETE FROM campus_course_shares WHERE (sender = ${a} AND recipient = ${b}) OR (sender = ${b} AND recipient = ${a})`;
-  } else if (action === "share" && typeof term === "string" && /^\d{4}-(Spring|Summer|Fall|Winter)$/.test(term)) {
+  } else if (action === "share" && typeof term === "string" && /^(?:oxford:)?\d{4}-(Spring|Summer|Fall|Winter)$/.test(term)) {
     const rows = await sql`INSERT INTO campus_course_shares (sender, recipient, term, sections)
       SELECT ${subject}, ${person.subject}, s.term, s.sections FROM course_schedules s
       JOIN campus_friendships f ON f.person_a = ${a} AND f.person_b = ${b} AND f.accepted

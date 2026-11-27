@@ -10,7 +10,7 @@ import { courseComments } from "./lib/course-comments.mjs";
 
 const google = new OAuth2Client();
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
-const termPattern = /^\d{4}-(Spring|Summer|Fall|Winter)$/;
+const termPattern = /^(?:oxford:)?\d{4}-(Spring|Summer|Fall|Winter)$/;
 
 function hash(token) {
   return createHash("sha256").update(token).digest("hex");

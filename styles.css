@@ -15974,6 +15974,102 @@ body[data-view="community"] #view-community .community-friend-row.is-incoming .c
   }
   .community-official-contact > button { grid-column: 2; justify-self: start; }
 }
+/* School context picker. */
+.school-picker {
+  position: relative;
+  flex: none;
+}
+.topbar .school-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: 31px;
+  padding: 0 8px 0 5px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .045);
+  color: var(--sa-ink);
+  font: 650 11px/1 system-ui, sans-serif;
+}
+.school-menu-mark,
+.school-option-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: #222;
+  color: #fff;
+  font-weight: 700;
+}
+.school-menu-mark {
+  width: 21px;
+  height: 21px;
+  font-size: 9px;
+}
+body[data-school="miami"] .school-menu-mark {
+  background: #b51f38;
+}
+.school-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 260px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 14%);
+}
+.school-menu[hidden] { display: none; }
+.school-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sa-ink);
+  text-align: left;
+}
+.school-menu button:hover,
+.school-menu button.active {
+  background: rgba(0, 0, 0, .055);
+}
+.school-option-mark {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+.school-menu button > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+.school-menu button b {
+  font: 650 12px/1.3 system-ui, sans-serif;
+}
+.school-menu button small {
+  color: #777b74;
+  font: 10px/1.3 system-ui, sans-serif;
+}
+body[data-school="miami"] {
+  --sa-brown: #a5273c;
+}
+@media (max-width: 720px) {
+  .topbar .school-menu-btn {
+    width: 31px;
+    padding: 0;
+    justify-content: center;
+  }
+  .school-menu-btn > span:not(.school-menu-mark),
+  .school-menu-btn > svg {
+    display: none;
+  }
+  .school-menu { left: 0; width: min(260px, calc(100vw - 24px)); }
+}
 .community-conversation.has-unread .community-conversation-copy b {
   color: #193a5f;
   font-weight: 680;
