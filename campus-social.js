@@ -217,6 +217,9 @@
   async function loadCommunityImage(slot) {
     if (slot.dataset.loading === "true") return;
     slot.dataset.loading = "true";
+    const scroller = slot.closest(".community-messages");
+    const followBottom = scroller
+      && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 100;
     const entry = social?.messages?.find((message) => String(message.id) === slot.dataset.imageAttachment);
     try {
       const { data } = await window.AntivergilScheduleCloud.attachment(user, slot.dataset.imageAttachment);
@@ -236,6 +239,7 @@
       };
       image.src = url;
       slot.replaceChildren(image);
+      if (followBottom) requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; });
     } catch {
       slot.innerHTML = "<span>Preview unavailable</span>";
     }
