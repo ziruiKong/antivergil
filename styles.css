@@ -15306,11 +15306,36 @@ body.auth-authenticated[data-view="me"] .topbar-search { display: none; }
 body.auth-authenticated[data-view="me"] .topbar-meta-row { border-bottom: 2px solid var(--sa-line); }
 body.auth-authenticated[data-view="me"] .main-wrap > main { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
 body.auth-authenticated[data-view="me"] #view-me:not([hidden]) { height: 100%; min-height: 0; padding: 0; }
-body.auth-authenticated[data-view="me"] #view-me:not([hidden]):has(.community-tabs) #my-page { width: min(1200px, 100%); height: 100%; min-height: 0; max-width: 1200px; margin-inline: auto; padding: 0; }
+body.auth-authenticated[data-view="me"] #view-me:not([hidden]):has(.community-tabs) #my-page { width: calc(100% - 64px); height: 100%; min-height: 0; max-width: none; margin-inline: auto; padding: 0; }
 body.auth-authenticated[data-view="me"] #my-page > :not(#my-friends-mount) { display: none; }
 body.auth-authenticated[data-view="me"] #my-friends-mount { height: 100%; min-height: 0; }
 body.auth-authenticated[data-view="me"] #campus-friends { position: relative; inset: auto; width: 100%; height: 100%; margin-inline: auto; }
+body.auth-authenticated[data-view="me"] #campus-friends:has(.community-tabs) { box-sizing: border-box; border: 2px solid var(--sa-line); border-top: 0; }
 body.auth-authenticated[data-view="me"] .community-layout { height: 100%; min-height: 0; }
 body.auth-authenticated[data-view="me"] #view-me .campus-friends .community-conversation:not(:last-child) { border-bottom: 1px solid #d3d4d7; }
+body.auth-authenticated[data-view="me"] #view-me .community-empty-state { background: var(--sa-bg); }
+body.auth-authenticated[data-view="me"] #view-me .community-message p { border-radius: 16px; }
+body.auth-authenticated[data-view="me"] #data-as-of { display: none; }
 body.auth-authenticated[data-view="me"] #community-message-input { scrollbar-width: none; -ms-overflow-style: none; }
 body.auth-authenticated[data-view="me"] #community-message-input::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (max-width: 600px) {
+  body.auth-authenticated[data-view="me"] #view-me:not([hidden]):has(.community-tabs) #my-page { width: calc(100% - 24px); }
+}
+
+/* Keep the Field Notes rail available as a compact, reversible panel. */
+#view-map .campus-model-rail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; margin-bottom: 8px; }
+#view-map .campus-model-rail-toggle { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 1px solid var(--sa-line); border-radius: 4px; background: transparent; color: inherit; font: 20px/1 sans-serif; cursor: pointer; }
+#view-map .campus-model-rail-toggle:hover { background: rgba(0, 0, 0, .06); }
+#view-map .campus-model-rail-body { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+#view-map .campus-model-shell.is-rail-collapsed { grid-template-columns: minmax(0, 1fr) 42px; }
+#view-map .campus-model-shell.is-rail-collapsed .campus-model-rail { align-items: center; padding-inline: 5px; }
+#view-map .campus-model-shell.is-rail-collapsed .campus-model-rail-head { flex-direction: column; }
+#view-map .campus-model-shell.is-rail-collapsed .campus-rail-kicker { writing-mode: vertical-rl; }
+#view-map .campus-model-shell.is-rail-collapsed .campus-model-rail-body { display: none; }
+@media (max-width: 900px) {
+  #view-map .campus-model-rail { display: flex; border-top: 2px solid var(--sa-line); border-left: 0; }
+  #view-map .campus-model-shell.is-rail-collapsed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 42px; }
+  #view-map .campus-model-shell.is-rail-collapsed .campus-model-rail { max-height: none; padding: 6px 12px; }
+  #view-map .campus-model-shell.is-rail-collapsed .campus-model-rail-head { flex-direction: row; justify-content: space-between; }
+  #view-map .campus-model-shell.is-rail-collapsed .campus-rail-kicker { writing-mode: horizontal-tb; }
+}

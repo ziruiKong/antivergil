@@ -23,7 +23,8 @@
         calendar: "/calendar/",
         map: "/map/",
         history: "/history/",
-        me: "/profile/",
+        me: "/community/",
+        community: "/community/",
         search: "/search/",
         instructor: "/instructor/",
         department: "/department/",
@@ -47,7 +48,7 @@
   <title>Antivergil</title>
   <link rel="icon" href="assets/favicon.png?v=20261124-favicon-1" type="image/png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261124-favicon-1" />
-  <link rel="stylesheet" href="styles.css?v=20261126-community-navigation-11" />
+  <link rel="stylesheet" href="styles.css?v=20261126-community-navigation-13" />
 </head>
 <body>
   <svg class="ink-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -341,17 +342,22 @@
             <span class="campus-model-source">OSM geometry · NYC building footprints</span>
           </div>
         </div>
-        <aside class="campus-model-rail">
-          <div class="campus-rail-kicker">Field notes</div>
-          <label class="campus-model-rail-search">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
-            <input id="map-search" type="search" placeholder="Find a building" autocomplete="off" />
-          </label>
-          <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
-          <div id="map-list" class="cal-list campus-model-course-list"></div>
-          <div class="campus-model-links">
-            <a id="map-open-earth" href="https://earth.google.com/web/@40.8077,-73.9621,20a,800d,35y,0h,0t,0r" target="_blank" rel="noopener">Google Earth ↗</a>
-            <a id="map-open-apple" href="https://maps.apple.com/?ll=40.8077,-73.9621&q=Columbia%20University&t=k" target="_blank" rel="noopener">Apple Maps ↗</a>
+        <aside class="campus-model-rail" id="campus-model-rail">
+          <div class="campus-model-rail-head">
+            <div class="campus-rail-kicker">Field notes</div>
+            <button type="button" class="campus-model-rail-toggle" id="map-rail-toggle" aria-label="Collapse field notes" aria-expanded="true" aria-controls="campus-model-rail-body"><span aria-hidden="true">›</span></button>
+          </div>
+          <div class="campus-model-rail-body" id="campus-model-rail-body">
+            <label class="campus-model-rail-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+              <input id="map-search" type="search" placeholder="Find a building" autocomplete="off" />
+            </label>
+            <div class="cloud-schedule-status" data-cloud-schedule-status hidden aria-live="polite"></div>
+            <div id="map-list" class="cal-list campus-model-course-list"></div>
+            <div class="campus-model-links">
+              <a id="map-open-earth" href="https://earth.google.com/web/@40.8077,-73.9621,20a,800d,35y,0h,0t,0r" target="_blank" rel="noopener">Google Earth ↗</a>
+              <a id="map-open-apple" href="https://maps.apple.com/?ll=40.8077,-73.9621&q=Columbia%20University&t=k" target="_blank" rel="noopener">Apple Maps ↗</a>
+            </div>
           </div>
         </aside>
       </div>
@@ -404,7 +410,7 @@
   <script src="profile-store.js?v=20261125-all-accounts-1"></script>
   <script src="schedule-cloud.js?v=6"></script>
   <script src="privacy.js?v=20261126-privacy-1"></script>
-  <script src="campus-social.js?v=20261126-community-navigation-10"></script>
-  <script src="app.js?v=20261126-community-navigation-10"></script>
+  <script src="campus-social.js?v=20261126-community-navigation-12"></script>
+  <script src="app.js?v=20261126-community-navigation-12"></script>
 </body>
 </html>

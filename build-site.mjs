@@ -36,6 +36,7 @@ const appRoutes = [
   "history",
   "account",
   "profile",
+  "community",
   "search",
   "instructor",
   "department",

@@ -682,7 +682,7 @@ const VIEW_PATHS = {
   calendar: "/calendar/",
   map: "/map/",
   history: "/history/",
-  me: "/profile/",
+  me: "/community/",
   search: "/search/",
   instructor: "/instructor/",
   department: "/department/",
@@ -701,6 +701,7 @@ const PATH_VIEWS = {
   account: "me",
   profile: "me",
   me: "me",
+  community: "me",
   search: "search",
   instructor: "instructor",
   department: "department",
@@ -7120,6 +7121,17 @@ function applySuggestion(it) {
 
 function bindGlobal() {
   const searchInput = $("#search");
+  const mapRailToggle = $("#map-rail-toggle");
+  mapRailToggle?.addEventListener("click", () => {
+    const shell = $("#view-map .campus-model-shell");
+    if (!shell) return;
+    const collapsed = shell.classList.toggle("is-rail-collapsed");
+    mapRailToggle.setAttribute("aria-expanded", String(!collapsed));
+    mapRailToggle.setAttribute("aria-label", collapsed ? "Expand field notes" : "Collapse field notes");
+    const icon = mapRailToggle.querySelector("span");
+    if (icon) icon.textContent = collapsed ? "‹" : "›";
+    requestAnimationFrame(onMapResize);
+  });
   searchInput.addEventListener("input", () => {
     renderSearchSuggestions();
     positionSearchCaret();
@@ -7592,7 +7604,6 @@ function startIntro() {
 async function init() {
   window.CampusSocial?.setAccount(authUser, state.term);
   if (window.AntivergilScheduleCloud?.enabled) {
-    await refreshCloudSchedule({ force: true, repaint: false });
     const refreshVisibleSchedule = () => {
       if (["calendar", "map", "me"].includes(document.body.dataset.view)) refreshCloudSchedule();
     };
@@ -7640,6 +7651,9 @@ async function init() {
   const queryStr = location.search.replace(/^\?/, "") || legacyQuery;
   restoreViewEntry(initialEntry);
   switchView(initialEntry.view, { replaceHistory: true });
+  // Render the requested view before network sync so Community never flashes
+  // the default Browse screen while the schedule service responds.
+  if (window.AntivergilScheduleCloud?.enabled) refreshCloudSchedule({ force: true });
   if (authUser) {
     try {
       const pendingCourse = JSON.parse(sessionStorage.getItem(PENDING_COURSE_KEY) || "null");
