@@ -15396,6 +15396,125 @@ body[data-view="community"] #view-community #community-chat-root {
 #community-chat-root .attachment-menu summary {cursor:pointer;list-style:none;font:22px system-ui}
 #community-chat-root .attachment-menu div {position:absolute;bottom:100%;left:0;background:white;border:1px solid #ddd;border-radius:12px;padding:8px;width:160px;z-index:5}
 body[data-view="community"] #view-community #community-chat-root .attachment-menu :is(label,button) {box-sizing:border-box;border:0;border-radius:6px;white-space:nowrap;display:block;width:100%;height:auto;padding:9px;background:white;color:#222;font:14px system-ui;text-align:left;cursor:pointer}
+/* Shared schedules render as a readable course table, not a text-only message. */
+.community-message.has-schedule {
+  max-width: min(100%, 660px);
+  width: min(100%, 660px);
+}
+.community-schedule-card {
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--sa-ink) 14%, var(--sa-bg));
+  border-radius: 18px;
+  background: #fff;
+  color: #202124;
+  text-align: left;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 5%);
+}
+.community-message.is-mine .community-schedule-card {
+  border-color: color-mix(in srgb, #7da8e8 46%, #fff);
+}
+.community-schedule-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #ecece8;
+  background: color-mix(in srgb, #eaf2fd 42%, #fff);
+}
+.community-schedule-card > header > div {
+  display: grid;
+  gap: 3px;
+}
+.community-schedule-card > header b {
+  font-size: 15px;
+  font-weight: 650;
+}
+.community-schedule-card > header span {
+  color: #71736f;
+  font-size: 11px;
+}
+.community-schedule-mark {
+  flex: none;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: #52657a !important;
+  font-size: 9px !important;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.community-schedule-table-wrap {
+  overflow: hidden;
+  padding: 2px 8px;
+}
+.community-schedule-card table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.community-schedule-card th {
+  padding: 9px 8px 7px;
+  color: #858680;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .07em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.community-schedule-card th:nth-child(1) { width: 43%; }
+.community-schedule-card th:nth-child(2) { width: 24%; }
+.community-schedule-card th:nth-child(3) { width: 33%; }
+.community-schedule-card td {
+  padding: 9px 8px;
+  border-top: 1px solid #efefeb;
+  color: #343633;
+  font-size: 11px;
+  line-height: 1.35;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.community-schedule-card td b {
+  display: block;
+  color: #1f2521;
+  font-size: 11px;
+  font-weight: 650;
+}
+.community-schedule-card td span {
+  display: block;
+  margin-top: 2px;
+  color: #747670;
+  font-size: 10px;
+}
+.community-schedule-card > button {
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  margin: 5px 12px 12px;
+  padding: 9px 14px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #263b33 !important;
+  color: #fff !important;
+  font: 600 12px/1.3 system-ui, sans-serif !important;
+  text-align: center !important;
+  cursor: pointer;
+}
+.community-schedule-card > button:hover { background: #18291f !important; }
+.community-schedule-card > button.is-added { background: #5d7167 !important; }
+.community-schedule-empty {
+  margin: 0;
+  padding: 16px;
+  color: #777970;
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .community-schedule-card th:nth-child(2),
+  .community-schedule-card td:nth-child(2) { display: none; }
+  .community-schedule-card th:nth-child(1) { width: 50%; }
+  .community-schedule-card th:nth-child(3) { width: 50%; }
+}
 /* Community follows the same horizontal bounds as its navigation rule. */
 body[data-view="community"] .main-wrap { --community-gutter: 32px; }
 body[data-view="community"] .main-wrap > .topbar { padding-inline: var(--community-gutter); }

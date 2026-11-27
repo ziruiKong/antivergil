@@ -47,10 +47,13 @@
     const messages = (social.messages || []).filter((entry) => entry.code === activeFriend);
     const conversations = accepted.map((friend) => {
       const last = (social.messages || []).filter((entry) => entry.code === friend.code).at(-1);
-      return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(last?.body || "Start a conversation")}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
+      const preview = last?.attachment?.kind === "schedule"
+        ? `${scheduleTermLabel(last.attachment.term)} schedule · ${last.attachment.sections?.length || 0} courses`
+        : last?.body || "Start a conversation";
+      return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(preview)}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
     }).join("");
     const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b></header>
-      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""}"><p>${text(entry.body)}</p>${entry.attachment ? attachmentControl(entry) : ""}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
+      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""} ${entry.attachment?.kind === "schedule" ? "has-schedule" : ""}">${messageContent(entry)}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
       <form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
       <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><h2>Chats</h2><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
@@ -79,10 +82,94 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
+  const scheduleCatalogCache = new Map();
+  const weekdayShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function scheduleTermLabel(term) {
+    const match = String(term || "").match(/^(\d{4})-(Spring|Summer|Fall|Winter)$/);
+    return match ? `${match[2]} ${match[1]}` : String(term || "Course");
+  }
+
+  function scheduleCatalog(term) {
+    if (scheduleCatalogCache.has(term)) return scheduleCatalogCache.get(term);
+    const globalName = `COURSES_${String(term || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+    const sources = [
+      window[globalName],
+      window.COURSES_2027_SPRING,
+      window.COURSES_2026_FALL,
+      window.COURSES_2026_SPRING,
+    ];
+    const catalog = new Map();
+    const key = (classId, code) => `${String(classId)}:${String(code || "").trim().toUpperCase().replace(/\s+/g, " ")}`;
+    for (const course of sources.flatMap((source) => Array.isArray(source) ? source : [])) {
+      if (!course?.classId) continue;
+      catalog.set(key(course.classId, course.code), course);
+    }
+    scheduleCatalogCache.set(term, catalog);
+    return catalog;
+  }
+
+  function formatScheduleTime(section) {
+    const minutes = (value) => {
+      if (!Number.isFinite(value)) return "";
+      const hour = Math.floor(value / 60);
+      const minute = value % 60;
+      const ampm = hour < 12 ? "am" : "pm";
+      return `${hour % 12 || 12}:${String(minute).padStart(2, "0")}${ampm}`;
+    };
+    const start = section.startLabel || minutes(section.start);
+    const end = section.endLabel || minutes(section.end);
+    return start && end ? `${start}–${end}` : "Time TBA";
+  }
+
+  function scheduleRows(item) {
+    const catalog = scheduleCatalog(item.term);
+    return (Array.isArray(item.sections) ? item.sections : []).map((section) => {
+      const classId = String(section.classId || "");
+      const normalizedCode = String(section.code || "").trim().toUpperCase().replace(/\s+/g, " ");
+      const course = catalog.get(`${classId}:${normalizedCode}`) || null;
+      const days = (course?.days || section.days || [])
+        .map((day) => weekdayShort[Number(day) - 1])
+        .filter(Boolean);
+      return {
+        source: section,
+        course,
+        code: course?.code || section.code || "Course",
+        title: course?.title || section.title || "",
+        section: classId.split("-").pop() || section.callNumber || "—",
+        instructor: course?.instructor || section.instructor || "",
+        meeting: days.length ? `${days.join(" ")} · ${formatScheduleTime(course || section)}` : "Time TBA",
+      };
+    });
+  }
+
+  function scheduleAttachment(entry) {
+    const item = entry.attachment;
+    const rows = scheduleRows(item);
+    const count = rows.length;
+    const table = count ? `<div class="community-schedule-table-wrap"><table>
+      <thead><tr><th>Course</th><th class="community-schedule-section-col">Section</th><th>Meeting</th></tr></thead>
+      <tbody>${rows.map((row) => `<tr>
+        <td><b>${text(row.code)}</b>${row.title ? `<span>${text(row.title)}</span>` : ""}</td>
+        <td class="community-schedule-section-col"><b>${text(row.section)}</b>${row.instructor ? `<span>${text(row.instructor)}</span>` : ""}</td>
+        <td>${text(row.meeting)}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>` : '<p class="community-schedule-empty">No courses in this schedule.</p>';
+    return `<section class="community-schedule-card" aria-label="${text(scheduleTermLabel(item.term))} course schedule">
+      <header><div><b>${text(scheduleTermLabel(item.term))} schedule</b><span>${count} ${count === 1 ? "course" : "courses"}</span></div><span class="community-schedule-mark">SCHEDULE</span></header>
+      ${table}
+      <button type="button" data-attachment="${text(entry.id)}" data-schedule-count="${count}">Add ${count} ${count === 1 ? "course" : "courses"} to my calendar</button>
+    </section>`;
+  }
+
+  function messageContent(entry) {
+    if (entry.attachment?.kind === "schedule") return scheduleAttachment(entry);
+    return `<p>${text(entry.body)}</p>${entry.attachment ? attachmentControl(entry) : ""}`;
+  }
+
   function attachmentControl(entry) {
     const item = entry.attachment;
-    if (item.kind === "schedule" && entry.mine) return "";
-    const label = item.kind === "schedule" ? "Sync " + item.sections.length + " courses" : item.mime.startsWith("image/") ? "View image" : "Download file";
+    const label = item.mime.startsWith("image/") ? "View image" : "Download file";
     return `<button type="button" data-attachment="${text(entry.id)}">${text(label)}</button>`;
   }
 
@@ -121,8 +208,18 @@
         }
         const entry = social.messages.find(m => String(m.id) === button.dataset.attachment);
         if (entry.attachment.kind === "schedule") {
-          await window.importCommunitySchedule(entry.attachment);
-          button.textContent = "Synced";
+          const rows = scheduleRows(entry.attachment);
+          await window.importCommunitySchedule({
+            term: entry.attachment.term,
+            sections: rows.map((row) => row.course || row.source),
+          });
+          button.textContent = "Added to my calendar";
+          button.classList.add("is-added");
+          const status = find("campus-friend-status");
+          if (status) {
+            status.textContent = `${scheduleTermLabel(entry.attachment.term)} schedule added to your calendar.`;
+            status.classList.remove("is-error");
+          }
           return;
         }
         const {data} = await window.AntivergilScheduleCloud.attachment(user,entry.id);
