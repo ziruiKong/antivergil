@@ -141,6 +141,12 @@
       url.searchParams.set("alerts", "1");
       return request(body ? "PUT" : "GET", body, session(user), url);
     },
+    attachment(user,id) {
+      const url = new URL(endpoint,location.href);
+      url.searchParams.set("social","1");
+      url.searchParams.set("attachment",id);
+      return request("GET",undefined,session(user),url);
+    },
     social(user, body) {
       const url = new URL(endpoint, location.href);
       url.searchParams.set("social", "1");

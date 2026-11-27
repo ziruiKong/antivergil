@@ -7,6 +7,14 @@ export async function registerCampusPerson(sql, subject, name) {
 }
 
 export async function campusSocial(request, send, sql, subject) {
+  const fileId = new URL(request.url).searchParams.get("attachment");
+  if (fileId && request.method === "GET") {
+    if (!/^\d{1,19}$/.test(fileId)) return send({error:"Invalid file."},400);
+    const [file] = await sql`SELECT m.file_data AS data FROM campus_messages m JOIN campus_friendships f
+      ON f.person_a = least(m.sender,m.recipient) AND f.person_b = greatest(m.sender,m.recipient) AND f.accepted
+      WHERE m.id::text = ${fileId} AND ${subject} IN (m.sender,m.recipient) AND m.file_data IS NOT NULL`;
+    return file ? send(file) : send({error:"File unavailable."},404);
+  }
   if (request.method === "GET") {
     const [person] = await sql`SELECT invite_code AS code FROM campus_people WHERE subject = ${subject}`;
     if (!person) return send({ error: "Reconnect your Google account to use Friends." }, 401);
@@ -24,7 +32,7 @@ export async function campusSocial(request, send, sql, subject) {
         ((f.person_a = s.sender AND f.person_b = s.recipient) OR (f.person_b = s.sender AND f.person_a = s.recipient))
       WHERE s.recipient = ${subject}`;
     const messages = await sql`SELECT m.id::text AS id, p.invite_code AS code,
-        m.sender = ${subject} AS mine, m.body, m.created_at AS "createdAt"
+        m.sender = ${subject} AS mine, m.body, m.attachment, m.created_at AS "createdAt"
       FROM campus_messages m
       JOIN campus_people p ON p.subject = CASE WHEN m.sender = ${subject} THEN m.recipient ELSE m.sender END
       JOIN campus_friendships f ON f.accepted AND
@@ -34,8 +42,8 @@ export async function campusSocial(request, send, sql, subject) {
     return send({ code: person.code, friends, shares, messages: messages.reverse() });
   }
   if (request.method !== "PUT") return send({ error: "Method not allowed." }, 405);
-  if (Number(request.headers.get("content-length")) > 12000) return send({ error: "Request is too large." }, 413);
-  const { action, code, term, latitude, longitude, body } = await request.json();
+  if (Number(request.headers.get("content-length")) > 2850000) return send({ error: "Request is too large." }, 413);
+  const { action, code, term, latitude, longitude, body, data, name, mime } = await request.json();
   if (action === "location") {
     if (latitude === null && longitude === null) {
       await sql`UPDATE campus_people SET latitude = NULL, longitude = NULL, location_expires_at = NULL WHERE subject = ${subject}`;
@@ -53,7 +61,23 @@ export async function campusSocial(request, send, sql, subject) {
   const [person] = await sql`SELECT subject FROM campus_people WHERE invite_code = ${code}`;
   if (!person || person.subject === subject) return send({ error: "Friend code unavailable." }, 404);
   const [a, b] = [subject, person.subject].sort();
-  if (action === "message") {
+  if (action === "file" || action === "schedule") {
+    let attachment;
+    if (action === "file") {
+      if (typeof data !== "string" || !data.length || data.length > 2796204 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data) || Buffer.from(data,"base64").length > 2097152)
+        return send({error:"Choose a file up to 2 MB."},400);
+      attachment = {kind:"file", name:String(name || "File").slice(0,180), mime:["image/jpeg","image/png","image/webp","image/gif"].includes(mime) ? mime : "application/octet-stream"};
+    } else {
+      if (!/^\d{4}-(Spring|Summer|Fall|Winter)$/.test(term)) return send({error:"Invalid term."},400);
+      const [schedule] = await sql`SELECT sections FROM course_schedules WHERE google_subject=${subject} AND term=${term}`;
+      if (!schedule?.sections?.length) return send({error:"Sync courses to your calendar first."},409);
+      attachment = {kind:"schedule", term, sections:schedule.sections};
+    }
+    const rows = await sql`INSERT INTO campus_messages(sender,recipient,body,attachment,file_data)
+      SELECT ${subject},${person.subject},${attachment.name || term + " schedule"},${JSON.stringify(attachment)}::jsonb,${action === "file" ? data : null}
+      FROM campus_friendships WHERE person_a=${a} AND person_b=${b} AND accepted RETURNING id`;
+    if (!rows.length) return send({error:"Friendship required."},403);
+  } else if (action === "message") {
     if (typeof body !== "string" || !body.trim() || body.trim().length > 2000) return send({ error: "Enter a message of up to 2,000 characters." }, 400);
     const rows = await sql`INSERT INTO campus_messages (sender, recipient, body)
       SELECT ${subject}, ${person.subject}, ${body.trim()} FROM campus_friendships

@@ -258,6 +258,18 @@ function refreshCloudSchedule({ force = false, repaint = true } = {}) {
   return cloudScheduleRefresh;
 }
 
+window.importCommunitySchedule = async ({term,sections}) => {
+  const account = authUser;
+  const previous = savedCourseSchedules()[term] || [];
+  const merged = new Map(previous.map(section => [section.classId + ":" + normCode(section.code),section]));
+  for (const section of sections) merged.set(section.classId + ":" + normCode(section.code), section);
+  if (merged.size > 100) throw new Error("Calendar limit is 100 sections.");
+  const next = [...merged.values()];
+  const revision = ++cloudScheduleRevision;
+  const schedules = await window.AntivergilScheduleCloud.update(account,term,previous,next);
+  applyCloudSchedules(account,schedules,revision,true);
+};
+
 function persistProfileSchedule() {
   if (!authUser) return true;
   const cloud = window.AntivergilScheduleCloud;

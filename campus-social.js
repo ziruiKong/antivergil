@@ -50,10 +50,10 @@
       return `<button type="button" class="community-conversation ${friend.code === activeFriend ? "is-active" : ""}" data-name="${text(friend.name.toLowerCase())}" data-friend-action="open" data-code="${text(friend.code)}"><span class="community-avatar">${text(friend.name.trim().charAt(0).toUpperCase())}</span><span class="community-conversation-copy"><b>${text(friend.name)}</b><small>${text(last?.body || "Start a conversation")}</small></span>${last ? `<time class="community-list-time">${text(new Date(last.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}</time>` : ''}</button>`;
     }).join("");
     const chat = selected ? `<header class="community-chat-head"><b>${text(selected.name)}</b></header>
-      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""}"><p>${text(entry.body)}</p><time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
-      <form id="community-message-form" class="community-compose"><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message">↑</button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
+      <div class="community-messages" aria-live="polite">${messages.length ? messages.map((entry) => `<div class="community-message ${entry.mine ? "is-mine" : ""} ${entry.pending ? "is-pending" : ""}"><p>${text(entry.body)}</p>${entry.attachment ? attachmentControl(entry) : ""}<time datetime="${text(entry.createdAt)}">${text(new Date(entry.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}))}</time></div>`).join("") : '<p class="community-chat-empty">Say hello to start your conversation.</p>'}</div>
+      <form id="community-message-form" class="community-compose"><details class="attachment-menu"><summary aria-label="Add attachment">＋</summary><div><label>File or photo<input type="file" data-upload hidden></label><button type="button" data-share-term>Share schedule</button></div></details><label class="community-sr-only" for="community-message-input">Message</label><textarea id="community-message-input" name="body" maxlength="2000" required></textarea><button type="submit" aria-label="Send message" title="Send (Enter)"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></form>` : `<div class="community-empty-state"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none"><path d="M7 21c0-7.2 7-13 15.6-13S38 13.8 38 21 31 34 22.6 34c-2 0-4-.3-5.7-1l-6.4 3 1.5-5.5C8.9 28.2 7 24.8 7 21Z" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="#f8f8f7"/><circle cx="27" cy="19" r="1.6" fill="#f8f8f7"/></svg><span>${accepted.length ? 'Select a conversation' : 'Add a friend to start chatting'}</span></div>`;
     panel.innerHTML = `<div class="community-tabs" hidden></div>
-      <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
+      <div id="community-panel-chats" ${communityTab === 'chats' ? '' : 'hidden'}><div class="community-layout"><aside class="community-sidebar"><header class="community-list-heading"><h2>Chats</h2><button type="button" class="community-add" data-community-tab="friends" aria-label="Add a friend" title="Add a friend">＋</button></header><div class="community-search"><label class="community-sr-only" for="community-search-input">Search conversations</label><input id="community-search-input" type="search" placeholder="Search"></div><div class="community-conversations">${conversations || '<p class="community-chat-empty">No conversations yet.</p>'}</div></aside><section class="community-chat" aria-label="Conversation">${chat}</section></div></div>
       <p id="campus-friend-status" class="campus-friend-status ${message ? "has-update" : ""}" role="status" aria-live="polite">${text(message)}</p>
       <section id="community-panel-friends" class="community-friend-settings" ${communityTab === 'friends' ? '' : 'hidden'}><div class="community-friends-heading"><button type="button" class="community-back-to-chats" data-community-tab="chats">← Chats</button><div><h3>Friends and invitations</h3><p>Manage your friends and requests.</p></div></div>
       <div class="campus-friend-toolbar">
@@ -78,6 +78,66 @@
     const scroller = panel.querySelector(".community-messages");
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
+
+  function attachmentControl(entry) {
+    const item = entry.attachment;
+    if (item.kind === "schedule" && entry.mine) return "";
+    const label = item.kind === "schedule" ? "Sync " + item.sections.length + " courses" : item.mime.startsWith("image/") ? "View image" : "Download file";
+    return `<button type="button" data-attachment="${text(entry.id)}">${text(label)}</button>`;
+  }
+
+  async function attachmentAction(work) {
+    try { await work(); }
+    catch (error) { const status = find("campus-friend-status"); if (status) { status.textContent = error.message; status.classList.add("is-error"); } }
+  }
+  panel?.addEventListener("change", event => {
+    if (!event.target.matches("[data-upload]")) return;
+    const file = event.target.files[0], code = activeFriend;
+    if (!file) return;
+    attachmentAction(async () => {
+      if (!file.size || file.size > 2097152) throw new Error("Choose a nonempty file up to 2 MB.");
+      const reader = new FileReader();
+      const encoded = await new Promise((resolve,reject) => {
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = () => reject(new Error("Could not read file."));
+        reader.readAsDataURL(file);
+      });
+      await call({action:"file",code,name:file.name,mime:file.type,data:encoded});
+      if (request) await request;
+      await refresh();
+    });
+  });
+  panel?.addEventListener("click", event => {
+    const button = event.target.closest("[data-share-term],[data-attachment]");
+    if (!button) return;
+    attachmentAction(async () => {
+      button.disabled = true;
+      try {
+        if (button.hasAttribute("data-share-term")) {
+          await call({action:"schedule",code:activeFriend,term});
+          if (request) await request;
+          await refresh();
+          return;
+        }
+        const entry = social.messages.find(m => String(m.id) === button.dataset.attachment);
+        if (entry.attachment.kind === "schedule") {
+          await window.importCommunitySchedule(entry.attachment);
+          button.textContent = "Synced";
+          return;
+        }
+        const {data} = await window.AntivergilScheduleCloud.attachment(user,entry.id);
+        const blob = new Blob([Uint8Array.from(atob(data), c => c.charCodeAt(0))],{type:entry.attachment.mime});
+        const url = URL.createObjectURL(blob);
+        if (blob.type.startsWith("image/")) {
+          const img = new Image(); img.alt = entry.attachment.name; img.style.maxWidth = "100%";
+          img.onload = () => URL.revokeObjectURL(url); img.src = url; button.replaceWith(img);
+        } else {
+          const link = document.createElement("a"); link.href = url; link.download = entry.attachment.name; link.click();
+          setTimeout(() => URL.revokeObjectURL(url),60000);
+        }
+      } finally { button.disabled = false; }
+    });
+  });
 
   async function refresh() {
     if (!user?.sub || request) return request;
@@ -157,6 +217,15 @@
     }
   }
 
+  panel?.addEventListener("keydown", (event) => {
+    const input = event.target;
+    if (input.id !== "community-message-input" || event.key !== "Enter" ||
+        event.shiftKey || event.ctrlKey || event.metaKey || event.altKey ||
+        event.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    const send = input.form.querySelector('button[type="submit"]');
+    if (!event.repeat && input.value.trim() && !send.disabled) input.form.requestSubmit(send);
+  });
   panel?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (event.target.id === "community-message-form") {
@@ -165,7 +234,7 @@
       const body = input.value.trim();
       if (!body || !activeFriend) return;
       const recipient = activeFriend;
-      form.querySelector('button').disabled = true;
+      form.querySelector('[type="submit"]').disabled = true;
       const optimistic = {
         id: `pending-${crypto.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}`,
         userSub: user?.sub,
@@ -188,7 +257,7 @@
         if (social) social.messages = social.messages.filter((message) => message.id !== optimistic.id);
         renderFriends(error.message);
       }).finally(() => {
-        const sendButton = panel.querySelector('#community-message-form button');
+        const sendButton = panel.querySelector('#community-message-form [type="submit"]');
         if (sendButton) sendButton.disabled = false;
       });
       return;
