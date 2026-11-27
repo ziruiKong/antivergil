@@ -15660,3 +15660,45 @@ body[data-view="community"] #view-community #community-chat-root .community-layo
     grid-template-columns: clamp(100px, 28%, 142px) minmax(0, 1fr);
   }
 }
+/* Keep sender avatars visible in the compact conversation list. */
+body[data-view="community"] #view-community #community-chat-root .community-conversation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+body[data-view="community"] #view-community #community-chat-root .community-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e2ecf8;
+  color: #345d8d;
+  font: 650 12px/1 system-ui, sans-serif;
+}
+body[data-view="community"] #view-community #community-chat-root .community-conversation.is-active .community-avatar {
+  background: #d2e3f7;
+  color: #214c80;
+}
+body[data-view="community"] #view-community #community-chat-root .community-conversation-copy {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+body[data-view="community"] #view-community #community-chat-root .community-conversation small,
+body[data-view="community"] #view-community #community-chat-root .community-list-time {
+  display: none;
+}
+@media (max-width: 720px) {
+  body[data-view="community"] #view-community #community-chat-root .community-conversation {
+    gap: 7px;
+    padding-inline: 6px;
+  }
+  body[data-view="community"] #view-community #community-chat-root .community-avatar {
+    flex-basis: 28px;
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+}
