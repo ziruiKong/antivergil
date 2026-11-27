@@ -147,6 +147,7 @@ const server = http.createServer(async (req, res) => {
     "/account",
     "/profile",
     "/me",
+    "/community",
     "/search",
     "/instructor",
     "/department",
