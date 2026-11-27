@@ -23,11 +23,19 @@ export async function campusSocial(request, send, sql, subject) {
       JOIN campus_friendships f ON f.accepted AND
         ((f.person_a = s.sender AND f.person_b = s.recipient) OR (f.person_b = s.sender AND f.person_a = s.recipient))
       WHERE s.recipient = ${subject}`;
-    return send({ code: person.code, friends, shares });
+    const messages = await sql`SELECT m.id::text AS id, p.invite_code AS code,
+        m.sender = ${subject} AS mine, m.body, m.created_at AS "createdAt"
+      FROM campus_messages m
+      JOIN campus_people p ON p.subject = CASE WHEN m.sender = ${subject} THEN m.recipient ELSE m.sender END
+      JOIN campus_friendships f ON f.accepted AND
+        ((f.person_a = m.sender AND f.person_b = m.recipient) OR (f.person_b = m.sender AND f.person_a = m.recipient))
+      WHERE m.sender = ${subject} OR m.recipient = ${subject}
+      ORDER BY m.id DESC LIMIT 500`;
+    return send({ code: person.code, friends, shares, messages: messages.reverse() });
   }
   if (request.method !== "PUT") return send({ error: "Method not allowed." }, 405);
-  if (Number(request.headers.get("content-length")) > 2000) return send({ error: "Request is too large." }, 413);
-  const { action, code, term, latitude, longitude } = await request.json();
+  if (Number(request.headers.get("content-length")) > 12000) return send({ error: "Request is too large." }, 413);
+  const { action, code, term, latitude, longitude, body } = await request.json();
   if (action === "location") {
     if (latitude === null && longitude === null) {
       await sql`UPDATE campus_people SET latitude = NULL, longitude = NULL, location_expires_at = NULL WHERE subject = ${subject}`;
@@ -45,7 +53,13 @@ export async function campusSocial(request, send, sql, subject) {
   const [person] = await sql`SELECT subject FROM campus_people WHERE invite_code = ${code}`;
   if (!person || person.subject === subject) return send({ error: "Friend code unavailable." }, 404);
   const [a, b] = [subject, person.subject].sort();
-  if (action === "invite") {
+  if (action === "message") {
+    if (typeof body !== "string" || !body.trim() || body.trim().length > 2000) return send({ error: "Enter a message of up to 2,000 characters." }, 400);
+    const rows = await sql`INSERT INTO campus_messages (sender, recipient, body)
+      SELECT ${subject}, ${person.subject}, ${body.trim()} FROM campus_friendships
+      WHERE person_a = ${a} AND person_b = ${b} AND accepted RETURNING id`;
+    if (!rows.length) return send({ error: "You can only message an accepted friend." }, 403);
+  } else if (action === "invite") {
     await sql`INSERT INTO campus_friendships (person_a, person_b, requested_by)
       VALUES (${a}, ${b}, ${subject}) ON CONFLICT DO NOTHING`;
   } else if (action === "accept") {
