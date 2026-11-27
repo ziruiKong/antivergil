@@ -202,7 +202,6 @@
       <div class="community-file-info">
         <span class="community-file-icon" aria-hidden="true">${text(file.extension)}</span>
         <div class="community-file-copy"><b>${text(file.name)}</b><span>${text(file.label)}</span></div>
-        <span class="community-file-arrow" aria-hidden="true">↓</span>
       </div>
     </article>`;
   }
